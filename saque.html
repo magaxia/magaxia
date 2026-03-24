@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Saque</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+body{
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(135deg,#667eea,#764ba2,#f093fb);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  visibility:hidden;
+}
+
+.container{
+  max-width:420px;
+  width:100%;
+  text-align:center;
+  padding:25px;
+}
+
+.card{
+  background:rgba(255,255,255,0.1);
+  padding:25px;
+  border-radius:20px;
+}
+
+#saldo{
+  font-size:28px;
+  font-weight:bold;
+  margin:15px 0;
+}
+
+input,select,button{
+  width:100%;
+  padding:14px;
+  margin-top:12px;
+  border-radius:12px;
+  border:none;
+  text-align:center;
+}
+
+button{
+  background:#39c6ff;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>💸 SAQUE</h2>
+
+<div class="card">
+
+<p>Saldo disponível</p>
+<div id="saldo">R$ 0,00</div>
+
+<input type="number" id="valor" placeholder="Valor do saque">
+
+<select id="tipoPix">
+<option value="">Tipo de chave Pix</option>
+<option value="cpf">CPF</option>
+<option value="email">E-mail</option>
+<option value="telefone">Telefone</option>
+<option value="aleatoria">Aleatória</option>
+</select>
+
+<input type="text" id="chave" placeholder="Chave Pix">
+
+<button onclick="solicitarSaque()">
+Solicitar Saque
+</button>
+
+</div>
+</div>
+
+<script>
+
+const firebaseConfig={
+apiKey:"AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
+authDomain:"vastbitloud-2872a.firebaseapp.com",
+projectId:"vastbitloud-2872a"
+};
+
+if(!firebase.apps.length)
+firebase.initializeApp(firebaseConfig);
+
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+let uid=null;
+let saldoAtual=0;
+
+const formatador=new Intl.NumberFormat(
+"pt-BR",
+{
+style:"currency",
+currency:"BRL"
+}
+);
+
+// =============================
+// ESCUTAR DEPÓSITOS APROVADOS
+// =============================
+
+function escutarDepositosAprovados(){
+
+  // Query simplificada - remover creditado != true para evitar erro de índice
+  db.collection("depositos")
+    .where("uid","==",uid)
+    .where("status","==","aprovado")
+    .get()
+    .then(snapshot => {
+
+      snapshot.forEach(async change => {
+
+        const deposito = change.data();
+        
+        // Verificar se já foi creditado
+        if(deposito.creditado === true) {
+          return; // Já foi creditado, pular
+        }
+
+        const depositoRef = change.ref;
+        const userRef = db.collection("users").doc(uid);
+
+        try {
+
+          await db.runTransaction(async t => {
+
+            const userDoc = await t.get(userRef);
+
+            const saldoBanco = userDoc.data().saldo || 0;
+            const novoSaldo = saldoBanco + deposito.valor;
+
+            t.update(userRef, {
+              saldo: novoSaldo
+            });
+
+            t.update(depositoRef, {
+              creditado: true
+            });
+
+            saldoAtual = novoSaldo;
+
+          });
+
+          document.getElementById("saldo")
+            .innerText = formatador.format(saldoAtual);
+
+          console.log("✅ Saldo atualizado automaticamente: R$ " + formatador.format(saldoAtual));
+
+        } catch(error) {
+          console.error("❌ Erro ao atualizar saldo:", error);
+        }
+
+      });
+
+    })
+    .catch(error => {
+      console.error("Erro ao escutar depósitos:", error);
+    });
+
+  // Recarregar a cada 5 segundos como fallback
+  setInterval(() => {
+    atualizarSaldoManualmente();
+  }, 5000);
+
+}
+
+// Atualizar saldo manualmente como fallback
+async function atualizarSaldoManualmente() {
+
+  try {
+    const docUser = await db.collection("users").doc(uid).get();
+    
+    if(docUser.exists) {
+      const novoSaldo = docUser.data().saldo || 0;
+      
+      if(novoSaldo !== saldoAtual) {
+        saldoAtual = novoSaldo;
+        document.getElementById("saldo")
+          .innerText = formatador.format(saldoAtual);
+        
+        console.log("✅ Saldo atualizado (manual): R$ " + formatador.format(saldoAtual));
+      }
+    }
+  } catch(error) {
+    console.error("Erro ao atualizar saldo manualmente:", error);
+  }
+
+}
+
+// LOGIN
+
+auth.onAuthStateChanged(async user=>{
+
+if(!user){
+location.href="login.html";
+return;
+}
+
+uid=user.uid;
+
+const docUser=await db
+.collection("users")
+.doc(uid)
+.get();
+
+if(!docUser.exists){
+
+await db
+.collection("users")
+.doc(uid)
+.set({
+
+saldo:10,
+bonusRecebido:true,
+dataCadastro:
+firebase.firestore
+.FieldValue
+.serverTimestamp()
+
+});
+
+saldoAtual=10;
+
+}else{
+
+saldoAtual=
+(docUser.data().saldo||0);
+
+}
+
+document.getElementById("saldo")
+.innerText=
+formatador.format(saldoAtual);
+
+document.body.style.visibility="visible";
+
+escutarDepositosAprovados();
+
+});
+
+// SOLICITAR SAQUE
+
+async function solicitarSaque(){
+
+const valor=
+Number(
+document.getElementById("valor").value
+);
+
+const tipo=
+document.getElementById("tipoPix").value;
+
+const chave=
+document.getElementById("chave").value.trim();
+
+if(!valor)
+return alert("Informe um valor");
+
+if(valor>saldoAtual)
+return alert("Saldo insuficiente");
+
+await db.collection("saques").add({
+
+uid: uid,
+valor: valor,
+tipoPix: tipo,
+chave: chave,
+status: "pendente",
+
+data:
+firebase.firestore
+.FieldValue
+.serverTimestamp()
+
+});
+
+await db
+.collection("users")
+.doc(uid)
+.update({
+
+saldo:
+saldoAtual - valor
+
+});
+
+saldoAtual-=valor;
+
+
+document.getElementById("saldo")
+.innerText=
+formatador.format(saldoAtual);
+
+alert("Saque solicitado");
+
+}
+
+</script>
+
+</body>
+</html>
