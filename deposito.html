@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Depósito</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+body{
+font-family: Arial, Helvetica, sans-serif;
+background: linear-gradient(135deg,#667eea,#764ba2,#f093fb);
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+visibility:hidden;
+}
+
+.container{
+max-width:500px;
+width:100%;
+text-align:center;
+padding:25px;
+}
+
+.card{
+background:rgba(255,255,255,0.1);
+padding:25px;
+border-radius:20px;
+}
+
+button,input{
+width:100%;
+padding:14px;
+margin-top:12px;
+border-radius:12px;
+border:none;
+text-align:center;
+}
+
+button{
+background:#39c6ff;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>💎 DEPÓSITO</h2>
+
+<div class="card">
+
+<button onclick="setValor(10)">R$ 10</button>
+<button onclick="setValor(20)">R$ 20</button>
+<button onclick="setValor(30)">R$ 30</button>
+<button onclick="setValor(65)">R$ 65</button>
+<button onclick="setValor(85)">R$ 85</button>
+<button onclick="setValor(100)">R$ 100</button>
+
+<input type="number" id="valor" placeholder="Digite o valor">
+
+<button onclick="confirmar()">
+Confirmar Depósito
+</button>
+
+<p>
+Saldo será creditado após aprovação do administrador
+</p>
+
+</div>
+</div>
+
+<script>
+
+const firebaseConfig={
+apiKey:"AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
+authDomain:"vastbitloud-2872a.firebaseapp.com",
+projectId:"vastbitloud-2872a"
+};
+
+if(!firebase.apps.length)
+firebase.initializeApp(firebaseConfig);
+
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+let uid=null;
+let valorAtual=0;
+
+// LOGIN
+
+auth.onAuthStateChanged(user=>{
+
+if(!user){
+location.href="login.html";
+return;
+}
+
+uid=user.uid;
+
+document.body.style.visibility="visible";
+
+});
+
+function setValor(v){
+
+valorAtual=v;
+
+document.getElementById("valor")
+.value=v;
+
+}
+
+// CONFIRMAR DEPÓSITO
+
+async function confirmar(){
+
+const valor=
+Number(
+document.getElementById("valor").value
+);
+
+if(!valor)
+return alert("Informe um valor");
+
+const existente=await db
+.collection("depositos")
+.where("uid","==",uid)
+.where("status","==","pendente")
+.get();
+
+if(!existente.empty){
+
+alert(
+"Você já possui um depósito pendente"
+);
+
+return;
+
+}
+
+await db.collection("depositos")
+.add({
+
+uid: uid,
+valor: valor,
+status: "pendente",
+creditado: false,
+
+data:
+firebase.firestore
+.FieldValue
+.serverTimestamp()
+
+});
+
+alert(
+"Depósito enviado para aprovação"
+);
+
+}
+
+</script>
+
+</body>
+</html>
