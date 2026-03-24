@@ -2,52 +2,88 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Depósito</title>
+<title>Depósito • Magaxia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+<!-- QRCode -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <style>
 body{
-font-family: Arial, Helvetica, sans-serif;
-background: linear-gradient(135deg,#667eea,#764ba2,#f093fb);
-min-height:100vh;
-display:flex;
-align-items:center;
-justify-content:center;
-color:white;
-visibility:hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    background: linear-gradient(135deg,#667eea,#764ba2,#f093fb);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    visibility:hidden;
 }
 
 .container{
-max-width:500px;
-width:100%;
-text-align:center;
-padding:25px;
+    max-width:500px;
+    width:100%;
+    text-align:center;
+    padding:30px;
 }
 
 .card{
-background:rgba(255,255,255,0.1);
-padding:25px;
-border-radius:20px;
+    background:rgba(255,255,255,0.1);
+    padding:30px;
+    border-radius:20px;
 }
 
-button,input{
-width:100%;
-padding:14px;
-margin-top:12px;
-border-radius:12px;
-border:none;
-text-align:center;
+.valores{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+}
+
+.valor-btn{
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    background:#ffffff22;
+    color:white;
+    font-weight:bold;
+}
+
+input{
+    width:100%;
+    padding:14px;
+    margin-top:15px;
+    border-radius:12px;
+    border:none;
+    text-align:center;
 }
 
 button{
-background:#39c6ff;
-color:white;
-font-weight:bold;
-cursor:pointer;
+    width:100%;
+    padding:14px;
+    margin-top:12px;
+    border:none;
+    border-radius:12px;
+    background:#39c6ff;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+#qrcode{
+    margin-top:20px;
+    display:flex;
+    justify-content:center;
+}
+
+.info{
+    margin-top:15px;
+    font-size:14px;
 }
 </style>
 </head>
@@ -55,46 +91,61 @@ cursor:pointer;
 <body>
 
 <div class="container">
-<h2>💎 DEPÓSITO</h2>
+
+<h1>💎 DEPÓSITO</h1>
+<p>Escolha um valor e pague via Pix</p>
 
 <div class="card">
 
-<button onclick="setValor(10)">R$ 10</button>
-<button onclick="setValor(20)">R$ 20</button>
-<button onclick="setValor(30)">R$ 30</button>
-<button onclick="setValor(65)">R$ 65</button>
-<button onclick="setValor(85)">R$ 85</button>
-<button onclick="setValor(100)">R$ 100</button>
+<div class="valores">
+<button class="valor-btn" onclick="setValor(10)">R$ 10</button>
+<button class="valor-btn" onclick="setValor(20)">R$ 20</button>
+<button class="valor-btn" onclick="setValor(30)">R$ 30</button>
+<button class="valor-btn" onclick="setValor(65)">R$ 65</button>
+<button class="valor-btn" onclick="setValor(85)">R$ 85</button>
+<button class="valor-btn" onclick="setValor(100)">R$ 100</button>
+</div>
 
-<input type="number" id="valor" placeholder="Digite o valor">
+<input type="number" id="valor" placeholder="Digite o valor" min="1">
 
-<button onclick="confirmar()">
-Confirmar Depósito
+<button onclick="gerarPix()">
+📲 Gerar QR Code Pix
 </button>
 
-<p>
-Saldo será creditado após aprovação do administrador
-</p>
+<div id="qrcode"></div>
+
+<div id="pix-area" style="display:none;">
+<textarea id="pixCode" readonly></textarea>
+<button onclick="copyPixCode()">📋 Copiar código Pix</button>
+</div>
+
+<button onclick="confirmar()">
+✅ Já fiz o Pix
+</button>
+
+<div class="info">
+⏱️ O saldo será creditado após aprovação do administrador
+</div>
 
 </div>
 </div>
 
 <script>
 
-const firebaseConfig={
-apiKey:"AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
-authDomain:"vastbitloud-2872a.firebaseapp.com",
-projectId:"vastbitloud-2872a"
+const firebaseConfig = {
+apiKey: "AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
+authDomain: "vastbitloud-2872a.firebaseapp.com",
+projectId: "vastbitloud-2872a"
 };
 
 if(!firebase.apps.length)
 firebase.initializeApp(firebaseConfig);
 
-const auth=firebase.auth();
-const db=firebase.firestore();
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-let uid=null;
-let valorAtual=0;
+let uid = null;
+let valorAtual = 0;
 
 // LOGIN
 
@@ -105,67 +156,218 @@ location.href="login.html";
 return;
 }
 
-uid=user.uid;
+uid = user.uid;
 
 document.body.style.visibility="visible";
 
 });
 
+// DEFINIR VALOR
+
 function setValor(v){
 
-valorAtual=v;
+valorAtual = v;
 
-document.getElementById("valor")
-.value=v;
+document.getElementById("valor").value = v;
 
 }
 
+// GERAR PIX
+
+function gerarPix(){
+
+const inp = document.getElementById("valor");
+
+const parsed = Number(inp.value);
+
+if(!parsed || parsed <= 0){
+alert("Selecione um valor");
+return;
+}
+
+valorAtual = parsed;
+
+const valoresAceitos = [10,20,30,65,85,100];
+
+if(!valoresAceitos.includes(valorAtual)){
+alert("Valor inválido");
+return;
+}
+
+// REDIRECIONAMENTO
+
+const urls = {
+10: "https://pixgo.org/recurrence/checkout.php?id=392",
+20: "https://pixgo.org/recurrence/checkout.php?id=431",
+30: "https://pixgo.org/recurrence/checkout.php?id=432",
+65: "https://pixgo.org/recurrence/checkout.php?id=433",
+85: "https://pixgo.org/recurrence/checkout.php?id=434",
+100: "https://pixgo.org/recurrence/checkout.php?id=435"
+};
+
+if(urls[valorAtual]){
+window.location.href = urls[valorAtual];
+return;
+}
+
+// QR LOCAL
+
+const payloadPix = `PIX|VALOR:${valorAtual}|UID:${uid}`;
+
+const pixArea = document.getElementById("pix-area");
+
+pixArea.style.display = "block";
+
+document.getElementById("pixCode").value = payloadPix;
+
+const qrDiv = document.getElementById("qrcode");
+
+qrDiv.innerHTML = "";
+
+new QRCode(qrDiv,{
+text: payloadPix,
+width: 200,
+height: 200
+});
+
+}
+
+// COPIAR PIX
+
+function copyPixCode(){
+
+const text = document.getElementById("pixCode").value;
+
+navigator.clipboard.writeText(text);
+
+alert("Código Pix copiado");
+
+}
+
+// =============================
+// ATUALIZAR SALDO AUTOMATICAMENTE
+// =============================
+
+function escutarDepositosAprovados(){
+
+    db.collection("depositos")
+    .where("uid","==",uid)
+    .where("status","==","aprovado")
+    .where("creditado","!=",true)
+    .onSnapshot(snapshot=>{
+
+        snapshot.docChanges().forEach(async change=>{
+
+            if(change.type === "added"){
+
+                const deposito = change.doc.data();
+                const depositoRef = change.doc.ref;
+
+                const userRef = db
+                .collection("users")
+                .doc(uid);
+
+                try{
+
+                    await db.runTransaction(async t=>{
+
+                        const userDoc = await t.get(userRef);
+
+                        const saldoAtual =
+                        userDoc.data().saldo || 0;
+
+                        const novoSaldo =
+                        saldoAtual + deposito.valor;
+
+                        t.update(userRef,{
+                            saldo: novoSaldo
+                        });
+
+                        // MARCA COMO CREDITADO
+                        t.update(depositoRef,{
+                            creditado: true
+                        });
+
+                    });
+
+                    console.log("Saldo atualizado automaticamente");
+
+                }
+
+                catch(error){
+
+                    console.error(
+                    "Erro ao atualizar saldo:",
+                    error
+                    );
+
+                }
+
+            }
+
+        });
+
+    });
+
+}
+
+// Inicia escuta após login
+
+auth.onAuthStateChanged(user=>{
+
+    if(!user){
+        location.href="login.html";
+        return;
+    }
+
+    uid = user.uid;
+
+    document.body.style.visibility="visible";
+
+    escutarDepositosAprovados();
+
+});
+
+// =============================
 // CONFIRMAR DEPÓSITO
 
 async function confirmar(){
 
-const valor=
-Number(
-document.getElementById("valor").value
-);
+if(valorAtual <= 0){
+alert("Selecione um valor primeiro");
+return;
+}
 
-if(!valor)
-return alert("Informe um valor");
+// BLOQUEAR DUPLICADO
 
-const existente=await db
+const existente = await db
 .collection("depositos")
 .where("uid","==",uid)
 .where("status","==","pendente")
 .get();
 
 if(!existente.empty){
-
-alert(
-"Você já possui um depósito pendente"
-);
-
+alert("Você já possui um depósito pendente");
 return;
-
 }
 
-await db.collection("depositos")
-.add({
+await db.collection("depositos").add({
 
 uid: uid,
-valor: valor,
-status: "pendente",
-creditado: false,
 
-data:
-firebase.firestore
+valor: valorAtual,
+
+status: "pendente",
+
+data: firebase.firestore
 .FieldValue
 .serverTimestamp()
 
 });
 
-alert(
-"Depósito enviado para aprovação"
-);
+alert("Depósito registrado com sucesso");
+
+location.reload();
 
 }
 
