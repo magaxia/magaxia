@@ -441,30 +441,27 @@ async function entrar(){
   const statusEl = document.getElementById('pendingStatus');
 
   try{
-    // Buscar usuário no Firestore pelo telefone
-    console.log('Buscando usuário com telefone:', telefone);
-    const q = await db.collection('users').where('telefone','==',telefone).limit(1).get();
-    
-    if(q.empty){
-      alert('Usuário não encontrado com esse telefone.');
-      return;
-    }
-
-    // Recuperar dados do usuário
-    const userDoc = q.docs[0];
-    const userData = userDoc.data();
-    const authEmail = userData.authEmail || userData.email || null;
-
-    if(!authEmail){
-      alert('Email de autenticação não encontrado. Contacte o suporte.');
-      return;
-    }
-
-    console.log('Tentando login com email:', authEmail);
     if(statusEl) statusEl.innerText = 'Autenticando...';
 
-    // Fazer login com o email correto
-    const userCred = await retryAsync(()=>auth.signInWithEmailAndPassword(authEmail, senha), 4, 800);
+    // Normalizar telefone e criar email sintético
+    const telNorm = telefone.replace(/\D/g,'');
+    const syntheticEmail = `user${telNorm}@noemail.local`;
+
+    console.log('Tentando login com email sintético:', syntheticEmail);
+
+    // Fazer login com o email sintético
+    const userCred = await retryAsync(()=>auth.signInWithEmailAndPassword(syntheticEmail, senha), 4, 800);
+    const uid = userCred.user.uid;
+
+    // Puxar dados do usuário do Firestore
+    const userDoc = await db.collection('users').doc(uid).get();
+    if(!userDoc.exists){
+      alert('Dados do usuário não encontrados. Contacte o suporte.');
+      await auth.signOut();
+      return;
+    }
+
+    const userData = userDoc.data();
 
     // Armazenar dados do usuário em sessionStorage para uso posterior
     sessionStorage.setItem('userDados', JSON.stringify(userData));
