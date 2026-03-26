@@ -185,6 +185,12 @@ button:active {
     transform: translateY(0);
 }
 
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+}
+
 .msg {
     margin-top: 12px;
     font-size: 0.9rem;
@@ -309,7 +315,7 @@ button:active {
 
     <div id="msgConvite" class="msg" style="display:none;"></div>
 
-    <button onclick="cadastrar()">
+    <button onclick="cadastrar()" id="btnCadastrar">
         <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Criar Conta
     </button>
 
@@ -363,6 +369,7 @@ async function cadastrar(){
     const senha=senhaEl.value;
     const confirmSenha=confirmSenhaEl.value;
     const convite=codigoConvite.value.trim() || null;
+    const btn = document.getElementById("btnCadastrar");
 
     if(!nome || !telefone || !senha){
         alert("Preencha todos os campos.");
@@ -373,9 +380,31 @@ async function cadastrar(){
         return;
     }
 
-    const email=`user${Date.now()}@noemail.local`;
+    // Desabilitar botão durante o processo
+    btn.disabled = true;
+    const textOriginal = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Verificando...';
 
     try{
+        // ✅ VERIFICAR SE TELEFONE JÁ EXISTE
+        const telefoneDuplicado = await db.collection("users")
+            .where("telefone", "==", telefone)
+            .limit(1)
+            .get();
+
+        if(!telefoneDuplicado.empty){
+            btn.disabled = false;
+            btn.innerHTML = textOriginal;
+            alert("❌ Telefone já cadastrado no sistema!");
+            telefoneEl.focus();
+            telefoneEl.style.borderColor = "#ef4444";
+            return;
+        }
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Criando conta...';
+
+        const email=`user${Date.now()}@noemail.local`;
+
         const cred=await auth.createUserWithEmailAndPassword(email,senha);
         const user=cred.user;
 
@@ -392,12 +421,14 @@ async function cadastrar(){
             createdAt:firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        alert("Cadastro realizado!");
+        alert("✅ Cadastro realizado com sucesso!");
         try{ sessionStorage.setItem('showGroupPanel','1'); }catch(e){}
         window.location.href="login.html";
 
     }catch(e){
-        alert(e.message);
+        btn.disabled = false;
+        btn.innerHTML = textOriginal;
+        alert("❌ Erro: " + e.message);
     }
 }
 
