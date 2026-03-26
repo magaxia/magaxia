@@ -498,7 +498,7 @@ auth.onAuthStateChanged(user => {
       if(statusEl) statusEl.innerText = 'Usuário autenticado.';
       return; // permanecer na página quando suprimido
     }
-    // redireciona automaticamente para a página de retorno (ou index.html)
+    // redireciona automaticamente para a página de retorno (ou painel.html)
     const params = new URLSearchParams(window.location.search);
     const dest = decodeURIComponent(params.get('return') || 'painel.html');
     try{ if(dest && dest.indexOf('painel.html')!==-1) sessionStorage.setItem('showGroupPanel','1'); }catch(e){}
