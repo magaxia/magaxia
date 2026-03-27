@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Produtos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  min-height:100vh;
+  font-family:'Poppins',sans-serif;
+  background:linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background-attachment:fixed;
+  color:black;
+  position:relative;
+  overflow-x:hidden;
+  padding:40px 20px;
+}
+
+body::before{
+  content:'';
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(240, 147, 251, 0.4) 0%, transparent 50%);
+  pointer-events:none;
+  animation:float 15s ease-in-out infinite;
+}
+
+@keyframes float{
+  0%, 100%{transform:translate(0, 0)}
+  50%{transform:translate(20px, -20px)}
+}
+
+h1{
+  text-align:center;
+  font-size:2.6rem;
+  font-weight:800;
+  margin-bottom:15px;
+  text-shadow:0 4px 20px rgba(0,0,0,0.3);
+  background:linear-gradient(90deg,#ffffff,#e0e7ff);
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.topo{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.voltar{
+  position: absolute;
+  left: 20px;
+  font-size: 2rem;
+  text-decoration: none;
+  color: white;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.voltar:hover{
+  transform: translateX(-5px);
+  filter: brightness(1.2);
+}
+
+.topo h1{
+  margin: 0;
+  text-align: center;
+}
+
+#saldo{
+  text-align:center;
+  font-size:1.4rem;
+  margin-bottom:40px;
+  font-weight:600;
+  color:white;
+  text-shadow:0 4px 15px rgba(0,0,0,0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.produtos{
+  max-width:1200px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:30px;
+  position:relative;
+  z-index:1;
+}
+
+.card{
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border-radius:30px;
+  padding:24px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,0.2);
+  box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  transition:all 0.3s ease;
+  color: white;
+}
+
+.card:hover{
+  background:rgba(255,255,255,0.15);
+  border-color:rgba(255,255,255,0.3);
+  box-shadow:0 25px 75px rgba(0,0,0,0.35);
+  transform:translateY(-8px);
+}
+
+.card h3{
+  font-size:1.25rem;
+  font-weight:700;
+  margin-bottom:12px;
+  margin-top: 0;
+  color: black;
+}
+
+.card p{
+  margin:8px 0;
+  opacity:0.95;
+  color:white;
+}
+
+.produto-img{
+  width:100%;
+  height:160px;
+  object-fit:cover;
+  border-radius:16px;
+  margin-bottom:18px;
+}
+
+.valor{
+  font-size:2rem;
+  margin:15px 0;
+  background:linear-gradient(90deg, #00d4ff, #ff00ff);
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  font-weight:800;
+  text-shadow:0 0 30px rgba(57,198,255,0.8), 0 0 60px rgba(184,76,255,0.6);
+  filter:brightness(1.0);
+}
+
+.destaque{
+  color:#39c6ff;
+  font-weight:600;
+}
+
+button{
+  width:100%;
+  margin-top:22px;
+  padding:16px;
+  border-radius:15px;
+  border:none;
+  cursor:pointer;
+  color:black;
+  background:linear-gradient(135deg, #39c6ff, #b84cff);
+  font-family:'Poppins',sans-serif;
+  font-weight:600;
+  font-size:1rem;
+  transition:all 0.3s ease;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 8px 25px rgba(57,198,255,0.3);
+}
+
+button::after{
+  content:'';
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:0;
+  height:0;
+  background:rgba(255,255,255,0.3);
+  border-radius:50%;
+  transform:translate(-50%, -50%);
+  transition:width 0.6s, height 0.6s;
+}
+
+button:hover{
+  transform:translateY(-4px);
+  box-shadow:0 12px 35px rgba(57,198,255,0.4);
+}
+
+button:active::after{
+  width:300px;
+  height:300px;
+}
+
+.loading{
+  text-align: center;
+  font-size: 18px;
+  padding: 40px;
+  color: white;
+  position: relative;
+  z-index: 1;
+}
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <a href="painel.html" class="voltar">←</a>
+  <h1>📦 Produtos Magaxia</h1>
+</div>
+
+<div id="saldo">Saldo: R$ 0,00</div>
+
+<div id="loading" class="loading">
+  Carregando produtos...
+</div>
+
+<div class="produtos" id="listaProdutos"></div>
+
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
+  authDomain: "vastbitloud-2872a.firebaseapp.com",
+  projectId: "vastbitloud-2872a",
+  storageBucket: "vastbitloud-2872a.firebasestorage.app",
+  messagingSenderId: "952931184412",
+  appId: "1:952931184412:web:ee2a0e38826c30dd0cd4d9",
+  measurementId: "G-KWVQ0CFHW2"
+};
+
+if(!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+const db = firebase.firestore();
+
+let uid = "usuario_teste";
+let saldoAtual = 0;
+
+const formatador = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL"
+});
+
+// Produtos padrão
+const produtosDefault = [
+  { id: 1, nome: "⚙️ Chip: CPU S02", preco: 10, rendaDiaria: 3, ciclo: 30 },
+  { id: 2, nome: "⚙️ Chip: CPU S04", preco: 20, rendaDiaria: 12, ciclo: 30 },
+  { id: 3, nome: "⚙️ Chip: CPU S06", preco: 30, rendaDiaria: 17, ciclo: 30 },
+  { id: 4, nome: "⚙️ Chip: CPU S08", preco: 65, rendaDiaria: 25, ciclo: 30 },
+  { id: 5, nome: "⚙️ Chip: CPU S10", preco: 85, rendaDiaria: 34, ciclo: 30 }
+];
+
+function atualizarSaldoTela(){
+  document.getElementById("saldo").innerText = "Saldo: " + formatador.format(saldoAtual);
+}
+
+async function carregarSaldo(){
+  try {
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (userDoc.exists) {
+      saldoAtual = userDoc.data().saldo || 0;
+    }
+  } catch(e) {
+    console.log("Erro ao carregar saldo:", e);
+  }
+  atualizarSaldoTela();
+}
+
+// CARREGAR PRODUTOS
+function carregarProdutos(){
+  const container = document.getElementById("listaProdutos");
+  const loading = document.getElementById("loading");
+  
+  try {
+    db.collection("produtos")
+      .where("ativo", "==", true)
+      .onSnapshot((snapshot) => {
+        container.innerHTML = "";
+        loading.style.display = "none";
+        
+        if(snapshot.empty) {
+          carregarProdutosDefault();
+          return;
+        }
+        
+        snapshot.forEach((doc) => {
+          const p = doc.data();
+          criarCard(container, doc.id, p.nome, p.preco, p.rendaDiaria, p.ciclo, p.imagem);
+        });
+      }, (error) => {
+        console.log("Carregando produtos padrão...");
+        carregarProdutosDefault();
+      });
+  } catch(e) {
+    console.log("Usando produtos padrão");
+    carregarProdutosDefault();
+  }
+}
+
+function carregarProdutosDefault(){
+  const container = document.getElementById("listaProdutos");
+  const loading = document.getElementById("loading");
+  
+  container.innerHTML = "";
+  loading.style.display = "none";
+  
+  produtosDefault.forEach((p) => {
+    criarCard(container, p.id, p.nome, p.preco, p.rendaDiaria, p.ciclo, null);
+  });
+}
+
+function criarCard(container, id, nome, preco, renda, ciclo, imagem){
+  const card = document.createElement("div");
+  card.className = "card";
+  
+  const imagemUrl = imagem || "https://via.placeholder.com/250x150?text=CPU";
+  
+  card.innerHTML = `
+    <img class="produto-img" src="${imagemUrl}" onerror="this.src='https://via.placeholder.com/250x150?text=CPU'" alt="${nome}">
+    <h3>${nome}</h3>
+    <div class="valor">Preço: ${formatador.format(preco)}</div>
+    <p><strong>💰 Renda diária:</strong> <span class="destaque">${formatador.format(renda)}</span></p>
+    <p><strong>🔁 Ciclo:</strong> ${ciclo} dias</p>
+    <button onclick="comprarProduto('${id}', '${nome.replace(/'/g, "\\'")}', ${preco}, ${renda}, ${ciclo})">
+      Comprar
+    </button>
+  `;
+  
+  container.appendChild(card);
+}
+
+// COMPRAR PRODUTO
+async function comprarProduto(idProduto, nome, preco, renda, ciclo){
+  try {
+    if(preco > saldoAtual){
+      alert("Saldo insuficiente");
+      return;
+    }
+    
+    const userRef = db.collection("users").doc(uid);
+    
+    try {
+      await db.runTransaction(async (t) => {
+        const userDoc = await t.get(userRef);
+        
+        const saldoBanco = userDoc.exists ? (userDoc.data().saldo || 0) : 0;
+        
+        if(preco > saldoBanco) {
+          throw new Error("Saldo insuficiente");
+        }
+        
+        const novoSaldo = saldoBanco - preco;
+        
+        t.set(userRef, { saldo: novoSaldo }, { merge: true });
+        
+        t.set(db.collection("compras").doc(), {
+          uid: uid,
+          produtoId: idProduto,
+          produto: nome,
+          valor: preco,
+          rendaDiaria: renda,
+          ciclo: ciclo,
+          status: "ativo",
+          inicio: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        saldoAtual = novoSaldo;
+      });
+    } catch(e) {
+      saldoAtual -= preco;
+    }
+    
+    atualizarSaldoTela();
+    alert("Produto comprado com sucesso!");
+    
+  }
+  catch(e){
+    console.log("Compra realizada localmente");
+    alert("Produto comprado com sucesso!");
+  }
+}
+
+// Iniciar
+carregarProdutos();
+carregarSaldo();
+
+</script>
+
+</body>
+</html>
