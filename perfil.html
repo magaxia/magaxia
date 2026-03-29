@@ -1,0 +1,269 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Perfil | Magaxia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  min-height:100vh;
+  font-family:'Poppins',sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background-attachment:fixed;
+  display:flex;
+  justify-content:center;
+  color:black;
+  position:relative;
+  overflow-x:hidden;
+  padding:20px 0;
+}
+
+body::before{
+  content:'';
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(240, 147, 251, 0.4) 0%, transparent 50%);
+  pointer-events:none;
+  animation:float 15s ease-in-out infinite;
+}
+
+@keyframes float{
+  0%, 100%{transform:translate(0, 0)}
+  50%{transform:translate(20px, -20px)}
+}
+
+.container{
+  padding:40px 20px;
+  max-width:500px;
+  width:100%;
+  text-align:center;
+  position:relative;
+  z-index:1;
+  animation:slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn{
+  from{
+    opacity:0;
+    transform:translateY(30px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
+h1{
+  font-size:2.5rem;
+  font-weight:800;
+  letter-spacing:2px;
+  margin-bottom:20px;
+  text-shadow:0 4px 20px rgba(0,0,0,0.3);
+  background:linear-gradient(90deg,#ffffff,#e0e7ff);
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.card{
+  margin-top:20px;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  padding:30px 25px;
+  border-radius:30px;
+  border:1px solid rgba(255,255,255,0.2);
+  box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  transition:all 0.3s ease;
+}
+
+.card:hover{
+  background:rgba(255,255,255,0.15);
+  border-color:rgba(255,255,255,0.3);
+  box-shadow:0 25px 75px rgba(0,0,0,0.35);
+}
+
+.label{
+  font-size:.9rem;
+  font-weight:600;
+  color:black;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  margin-bottom:8px;
+}
+
+.value{
+  font-size:1.15rem;
+  font-weight:700;
+  color:black;
+  margin-bottom:12px;
+}
+
+button{
+  width:100%;
+  padding:16px;
+  margin-top:15px;
+  border-radius:15px;
+  border:none;
+  text-align:center;
+  font-family:'Poppins',sans-serif;
+  font-weight:600;
+  font-size:1rem;
+  cursor:pointer;
+  background:linear-gradient(135deg,#39c6ff,#b84cff);
+  color:black;
+  transition:all 0.3s ease;
+  position:relative;
+  z-index:2;
+  box-shadow:0 8px 25px rgba(57,198,255,0.3);
+}
+
+button::after{
+  content:'';
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:0;
+  height:0;
+  background:rgba(255,255,255,0.3);
+  border-radius:50%;
+  transform:translate(-50%, -50%);
+  transition:width 0.6s, height 0.6s;
+  pointer-events:none;
+}
+
+button:hover{
+  transform:translateY(-4px);
+  box-shadow:0 12px 35px rgba(57,198,255,0.4);
+}
+
+.btn-primary{
+  background:linear-gradient(135deg,#39c6ff,#b84cff);
+  color:black;
+}
+
+.btn-danger{
+  background:linear-gradient(135deg, #ff6b6b, #ff5252);
+  color:black;
+  margin-top:10px;
+}
+
+.back-btn{
+  position:fixed;
+  top:20px;
+  left:20px;
+  z-index:1000;
+  background:rgba(255,255,255,0.2);
+  border:2px solid rgba(255,255,255,0.3);
+  border-radius:50%;
+  width:50px;
+  height:50px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  color:black;
+  font-size:1.5rem;
+  transition:all 0.3s ease;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+.back-btn:hover{
+  background:rgba(255,255,255,0.3);
+  border-color:rgba(255,255,255,0.5);
+  transform:translateX(-5px);
+}
+
+</style>
+</head>
+<body>
+
+<a href="painel.html" class="back-btn">←</a>
+
+<div class="container">
+  <h1>🧑 Meu Perfil</h1>
+
+  <div class="card">
+    <div class="label">Nome</div>
+    <div class="value" id="nome">---</div>
+
+    <div class="label">Telefone</div>
+    <div class="value" id="telefone">---</div>
+
+    <div class="label">ID do Usuário</div>
+    <div class="value" id="uid">---</div>
+  </div>
+
+  <button class="btn-danger" onclick="logout()">🚪 Sair da conta</button>
+</div>
+
+
+
+<script>
+const firebaseConfig={
+  apiKey:"AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
+  authDomain:"vastbitloud-2872a.firebaseapp.com",
+  projectId:"vastbitloud-2872a"
+};
+
+if(!firebase.apps.length){
+  firebase.initializeApp(firebaseConfig);
+}
+
+const auth=firebase.auth();
+const db=firebase.firestore();
+
+auth.onAuthStateChanged(async user=>{
+  if(!user){
+    location.href='login.html';
+    return;
+  }
+
+  document.getElementById('uid').innerText = user.uid;
+
+  try{
+    const doc = await db.collection('users').doc(user.uid).get();
+    if(doc.exists){
+      const data = doc.data();
+      document.getElementById('nome').innerText = data.nome || user.displayName || 'Usuário';
+      document.getElementById('telefone').innerText = data.telefone || user.phoneNumber || 'Não informado';
+    } else {
+      document.getElementById('nome').innerText = user.displayName || 'Usuário';
+      document.getElementById('telefone').innerText = user.phoneNumber || 'Não informado';
+    }
+  }catch(e){
+    console.error('Erro ao buscar perfil:', e);
+    document.getElementById('nome').innerText = user.displayName || 'Usuário';
+    document.getElementById('telefone').innerText = user.phoneNumber || 'Não informado';
+  }
+});
+
+function logout(){
+  if(confirm('Deseja realmente sair da conta?')){
+    auth.signOut().then(()=>location.href='login.html');
+  }
+}
+</script>
+
+</body>
+</html>
