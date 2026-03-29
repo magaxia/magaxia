@@ -1,0 +1,378 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Magaxia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+:root{
+  --bg-1:#070617;
+  --bg-2:#0f1230;
+  --accent-1:#8a4bff;
+  --accent-2:#ff6aa6;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  min-height:100vh;
+  font-family:Inter, system-ui, sans-serif;
+  color:#eef0ff;
+  display:flex;
+  justify-content:center;
+  background:
+    radial-gradient(1200px 600px at 10% 10%, rgba(138,75,255,.08), transparent 10%),
+    radial-gradient(1000px 500px at 90% 90%, rgba(255,106,166,.06), transparent 12%),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  padding:28px 12px 110px;
+}
+
+/* 🔒 desativa seleção */
+body, *{
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+}
+
+.container{
+  width:100%;
+  max-width:440px;
+  background:linear-gradient(135deg,
+    rgba(138,75,255,0.13) 0%,
+    rgba(255,106,166,0.09) 50%,
+    rgba(138,75,255,0.07) 100%);
+  border-radius:24px;
+  padding:36px 24px;
+  box-shadow:
+    0 12px 40px rgba(4,6,23,.7),
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 0 50px rgba(138,75,255,0.18),
+    0 0 25px rgba(255,106,166,0.12);
+  border:1.5px solid rgba(138,75,255,0.25);
+  backdrop-filter:blur(10px);
+  text-align:center;
+}
+
+.logo{
+  width:100px;
+  height:100px;
+  border-radius:20px;
+  margin:0 auto 22px;
+  background:linear-gradient(135deg,var(--accent-1),var(--accent-2));
+  overflow:hidden;
+  display:block;
+  box-shadow:0 12px 30px rgba(138,75,255,0.3);
+  animation:logoFloat 3s ease-in-out infinite;
+}
+
+@keyframes logoFloat{
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.logo img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  border-radius:inherit;
+}
+
+h1{
+  font-size:2.2rem;
+  font-weight:800;
+  letter-spacing:3px;
+  background:linear-gradient(90deg,var(--accent-1),var(--accent-2));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:28px;
+  font-family:Poppins, sans-serif;
+}
+
+.buttons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.btn{
+  padding:14px 16px;
+  border-radius:14px;
+  border:none;
+  cursor:pointer;
+  font-size:.95rem;
+  font-weight:600;
+  color:#091023;
+  background:linear-gradient(90deg,var(--accent-1),var(--accent-2));
+  box-shadow:0 8px 20px rgba(138,75,255,.2);
+  transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family:Inter, sans-serif;
+}
+
+.btn:hover{
+  transform:translateY(-4px);
+  box-shadow:0 12px 30px rgba(138,75,255,.3);
+}
+
+.slogan{
+  margin-top:24px;
+  font-size:.95rem;
+  opacity:.8;
+  letter-spacing:.5px;
+  line-height:1.6;
+}
+
+.quem-somos{
+  display:inline-block;
+  margin:20px auto 0;
+  padding:12px 28px;
+  color:#00d4ff;
+  font-weight:600;
+  font-size:.95rem;
+  text-decoration:none;
+  border:2px solid rgba(0,212,255,0.4);
+  border-radius:12px;
+  background:rgba(0,212,255,0.08);
+  transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing:.5px;
+}
+
+.quem-somos:hover{
+  border-color:rgba(0,212,255,0.8);
+  background:rgba(0,212,255,0.15);
+  transform:translateY(-3px);
+  box-shadow:0 6px 20px rgba(0,212,255,0.25);
+}
+
+footer{
+  margin-top:26px;
+  font-size:.75rem;
+  opacity:.5;
+}
+
+.nav-app {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 70px;
+  padding: 10px 18px;
+  background: linear-gradient(90deg, rgba(138, 75, 255, .16), rgba(255, 106, 166, .14));
+  border-radius: 50px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(138, 75, 255, 0.2);
+  box-shadow: 0 8px 25px rgba(4,6,23,0.5);
+}
+
+.nav-app a {
+  color: #e6e2ff;
+  text-decoration: none;
+  font-size: .7rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: all .3s ease;
+}
+
+.nav-app a:hover {
+  background: rgba(138, 75, 255, 0.15);
+  color: #fff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="logo"><img src="magaxia.png" alt="Magaxia" onerror="this.style.display='none'"></div>
+  <h1>MAGAXIA</h1>
+
+  <div class="buttons">
+    <button class="btn" onclick="location.href='produtos.html'">🧩 Produtos</button>
+    <button class="btn" onclick="location.href='equipe.html'">👥 Equipe</button>
+    <button class="btn" onclick="location.href='saque.html'">💸 Saque</button>
+    <button class="btn" onclick="location.href='deposito.html'">💠 Depósito</button>
+  </div>
+
+  <p class="slogan">💎Invista e construa o seu futuro🚀</p>
+  <a class="quem-somos" href="quemsomos.html">Quem somos</a>
+</div>
+
+<nav class="nav-app">
+  <a href="painel.html">🏠<span>Home</span></a>
+  <a href="produtos.html">🧩<span>Produtos</span></a>
+  <a href="equipe.html">👥<span>Equipe</span></a>
+  <a href="ativo.html">📊<span>Ativos</span></a>
+  <a href="perfil.html">🧑<span>Perfil</span></a>
+</nav>
+
+<!-- Painel flutuante: Entrar no grupo Magaxia (azul-escuro, moderno) -->
+<div id="groupPanel" class="group-panel" role="dialog" aria-label="Entrar no grupo Magaxia">
+  <button id="groupClose" class="group-close" aria-label="Fechar">✕</button>
+  <div class="group-left">
+    <div class="group-icon">💎</div>
+    <div class="group-badge">NOVO</div>
+  </div>
+  <div class="group-body">
+    <div class="group-title">Grupo Magaxia</div>
+    <div class="group-desc">Participe da comunidade e receba novidades</div>
+  </div>
+  <a id="groupJoin" class="group-join" href="https://t.me/+goA_hKA3WltlOWU5" target="_blank" rel="noopener">Entrar no grupo</a>
+</div>
+
+<style>
+/* Painel flutuante azul-escuro moderno */
+.group-panel{
+  position:fixed;
+  left:50%;
+  top:50%;
+  right:auto;
+  bottom:auto;
+  width:380px;
+  max-width:calc(100% - 40px);
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 12px 12px 14px;
+  border-radius:14px;
+  background:linear-gradient(180deg, rgba(6,18,43,0.96), rgba(9,29,58,0.92));
+  border:1px solid rgba(30,64,120,0.22);
+  box-shadow:0 28px 80px rgba(6,18,43,0.6), 0 6px 24px rgba(14,44,94,0.28);
+  backdrop-filter: blur(10px) saturate(120%);
+  z-index:9999;
+  transform:translate(-50%,18px) scale(.99);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:transform .36s cubic-bezier(.2,.9,.2,1), opacity .28s ease;
+}
+.group-panel.show{ transform:translate(-50%,-50%) scale(1); opacity:1; visibility:visible; pointer-events:auto; }
+.group-left{ display:flex; align-items:center; gap:8px; position:relative; }
+.group-icon{ width:54px; height:54px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:26px; background:linear-gradient(135deg,#0b3b70,#11396a); box-shadow:0 8px 24px rgba(17,57,106,0.26); }
+.group-badge{ position:absolute; left:0; top:-10px; transform:translateX(-6px) rotate(-8deg); background:#0ea5e9; color:#021025; padding:6px 8px; font-weight:800; font-size:11px; border-radius:999px; box-shadow:0 8px 20px rgba(14,165,233,0.12); }
+.group-body{ flex:1; text-align:left; }
+.group-title{ font-weight:800; font-size:1rem; background:linear-gradient(90deg,#9ec5ff,#61a7ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.group-desc{ font-size:.82rem; color:rgba(220,230,255,0.8); margin-top:4px; }
+.group-join{ padding:10px 14px; background:linear-gradient(90deg,#0f4bbc,#1e90ff); color:#fff; border-radius:12px; font-weight:800; text-decoration:none; box-shadow:0 10px 36px rgba(30,64,120,0.18); transition:transform .18s ease, box-shadow .18s ease; white-space:nowrap; }
+.group-join:hover{ transform:translateY(-4px); box-shadow:0 18px 48px rgba(30,64,120,0.26); }
+.group-close{ position:absolute; top:8px; right:8px; border:none; background:rgba(255,255,255,0.03); color:rgba(220,230,255,0.9); padding:6px 8px; border-radius:8px; cursor:pointer; }
+.group-close:hover{ background:rgba(255,255,255,0.04); transform:translateY(-2px); }
+@media(max-width:480px){
+  .group-panel{ left:12px; right:12px; top:auto; bottom:100px; transform:translateY(18px) scale(.99); width:auto; }
+  .group-panel.show{ transform:translateY(0) scale(1); }
+  .group-icon{ width:48px; height:48px; }
+}
+</style>
+
+<script>
+// Mostrar painel com armazenamento de dismiss
+(function(){
+  try{
+    const panel = document.getElementById('groupPanel');
+    if(!panel) return;
+    const closeBtn = document.getElementById('groupClose');
+    const joinBtn = document.getElementById('groupJoin');
+
+    // Mostrar somente se veio de login/index (via flag) ou referrer indica origem
+    const shouldShowFlag = (function(){
+      try{
+        if(sessionStorage.getItem('showGroupPanel') === '1') return true;
+      }catch(e){ }
+      try{
+        const ref = document.referrer || '';
+        if(ref.indexOf('login.html') !== -1 || ref.indexOf('index.html') !== -1) return true;
+      }catch(e){ }
+      return false;
+    })();
+
+    if(shouldShowFlag){
+      // remove flag so it doesn't show every reload
+      try{ sessionStorage.removeItem('showGroupPanel'); }catch(e){}
+      setTimeout(()=>panel.classList.add('show'), 300);
+    }
+
+    if(closeBtn){
+      closeBtn.addEventListener('click', ()=>{
+        panel.classList.remove('show');
+        localStorage.setItem('groupPanelDismissed','1');
+      });
+    }
+
+    if(joinBtn){
+      joinBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        joinBtn.innerText='Abrindo...';
+        joinBtn.style.pointerEvents='none';
+        setTimeout(()=>{
+          try{ window.open(joinBtn.href,'_blank','noopener'); }catch(err){ location.href = joinBtn.href; }
+          localStorage.setItem('groupPanelDismissed','1');
+          panel.classList.remove('show');
+        },360);
+      });
+    }
+
+    // reabrir com tecla G
+    document.addEventListener('keydown', e=>{
+      if(e.key && e.key.toLowerCase()==='g'){
+        localStorage.removeItem('groupPanelDismissed');
+        if(panel) panel.classList.add('show');
+      }
+    });
+  }catch(e){ console.warn('group panel error',e); }
+})();
+</script>
+
+<script>
+/* 🔥 BLOQUEIOS */
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+document.addEventListener("keydown", e => {
+  if (
+    e.key === "F12" ||
+    (e.ctrlKey && ["u","s","p","i","j"].includes(e.key.toLowerCase()))
+  ) {
+    e.preventDefault();
+  }
+});
+
+// PrintScreen
+document.addEventListener("keyup", e => {
+  if (e.key === "PrintScreen") {
+    document.body.style.filter = "blur(10px)";
+    setTimeout(()=>document.body.style.filter="none",1000);
+    alert("🚫 Print desativado");
+  }
+});
+
+/* 🔐 FIREBASE AUTH */
+const firebaseConfig = {
+  apiKey: "AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
+  authDomain: "vastbitloud-2872a.firebaseapp.com",
+  projectId: "vastbitloud-2872a"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+firebase.auth().onAuthStateChanged(user=>{
+  if(!user){
+    location.href="index.html";
+  }
+});
+</script>
+
+</body>
+</html>
