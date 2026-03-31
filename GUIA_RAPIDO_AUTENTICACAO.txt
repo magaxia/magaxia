@@ -1,0 +1,80 @@
+🚀 COMO USAR - GUIA RÁPIDO
+============================
+
+📌 FLUXO CORRETO AGORA:
+
+1. Você clica no botão "ENTRAR" em login.html
+2. Sistema valida credenciais no Firestore
+3. Salva dados no sessionStorage
+4. Redireciona para painel.html ✅ (SEM loop!)
+5. Painel valida sessionStorage
+6. Carrega painel normalmente ✅
+
+---
+
+🔧 O QUE FOI CONSERTADO:
+
+❌ ANTES:
+firebase.auth().onAuthStateChanged(user=>{
+  if(!user) location.href="index.html"; // 🔴 LOOP!
+});
+
+✅ AGORA:
+window.addEventListener('DOMContentLoaded', () => {
+  if (!sessionStorage.getItem('userUID')) {
+    window.location.href = 'login.html';
+  }
+});
+
+---
+
+📁 ARQUIVOS NOVOS/MODIFICADOS:
+
+✅ auth-check.js (NOVO)
+   - Verificação centralizada
+   - Funções: fazerLogout(), obterDadosUsuario(), obterUserUID()
+
+✅ painel.html (MODIFICADO)
+   - Removido problema do onAuthStateChanged
+   - Adicionado verificação de sessionStorage
+
+✅ login.html (MODIFICADO)
+   - Verificação extra antes de redirecionar
+
+✅ produtos.html, perfil.html, saque.html, deposito.html (MODIFICADO)
+   - Adicionado <script src="auth-check.js"></script>
+
+---
+
+🧪 TESTANDO:
+
+1. Servidor rodando? ✅
+   http://localhost:8000
+
+2. Abra: http://localhost:8000/login.html
+
+3. Clique "Entrar" → vai para painel.html ✅
+
+4. Console (F12) mostra:
+   ✅ Firebase inicializado
+   ✅ Usuário logado: [No me]
+
+---
+
+🚨 SE NÃO FUNCIONAR:
+
+❓ Voltita para index.html depois de clicar "Entrar"?
+→ Verifique se as credenciais estão corretas
+→ Console deve mostrar qual erro específico
+
+❓ Diz "sessionStorage não foi setado"?
+→ Pode ser erro de conexão com Firebase
+→ Verifique regras de segurança do Firestore
+
+❓ Acesso negado ao painel?
+→ Verifique se auth-check.js está sendo carregado (F12 > Network)
+→ Verifique se sessionStorage tem dados (F12 > Application > Session Storage)
+
+---
+
+✅ PRONTO! Testeo agora!
