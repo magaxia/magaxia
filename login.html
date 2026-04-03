@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Login | Magaxia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase compat libraries -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- Sistema de autenticação centralizado -->
+<script src="sistema-auth.js"></script>
+
+<style>
+body { margin:0; font-family:'Inter',sans-serif; background: linear-gradient(135deg,#0f172a,#1e293b); color:#fff; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+.container { width: 100%; max-width: 420px; background: rgba(15,23,42,.8); border-radius: 16px; padding: 24px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+h1 { margin-bottom: 18px; text-align:center; color:#fff; }
+.input-group { margin-bottom: 14px; }
+input { width:100%; padding:12px 10px; border-radius:8px; border:1px solid #334155; background:rgba(15,23,42,.7); color:#fff; }
+button { width:100%; padding:12px; border:none; border-radius:8px; background:#22c55e; color:#062f1e; font-weight:700; cursor:pointer; }
+.message { margin-top:12px; font-size:0.9rem; }
+.message.info { color:#a5b4fc; }
+.message.success { color:#4ade80; }
+.message.error { color:#f87171; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Login</h1>
+  <div class="input-group"><input type="text" id="telefone" placeholder="Email, UID ou Telefone" autocomplete="off" /></div>
+  <div class="input-group"><input type="password" id="senha" placeholder="Senha" autocomplete="off" /></div>
+  <button id="btnEntrar">Entrar</button>
+  <p id="statusMessage" class="message info">Digite suas credenciais.</p>
+</div>
+
+<script>
+function mostrarMensagem(texto, tipo='info') {
+  const el = document.getElementById('statusMessage');
+  if (!el) return;
+  el.textContent = texto;
+  el.className = 'message ' + tipo;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.SistemaAuth && window.SistemaAuth.inicializar) {
+    window.SistemaAuth.inicializar();
+  }
+  // REMOVIDO: window.SistemaAuth.verificarLogin() - não deve verificar login na página de login
+
+  const btn = document.getElementById('btnEntrar');
+  btn.addEventListener('click', async function() {
+    const credencial = document.getElementById('telefone').value.trim();
+    const senha = document.getElementById('senha').value.trim();
+    if (!credencial || !senha) {
+      mostrarMensagem('Preencha email/UID/telefone e senha.', 'error');
+      return;
+    }
+
+    mostrarMensagem('Autenticando...', 'info');
+    btn.disabled = true;
+
+    try {
+      const loginFn = window.fazerLogin || window.SistemaAuth?.fazerLogin;
+      if (typeof loginFn !== 'function') {
+        throw new Error('Função de login não encontrada. Verifique se sistema-auth.js está carregado.');
+      }
+
+      await loginFn(credencial, senha);
+      // Se chegou aqui, login foi bem-sucedido
+      mostrarMensagem('Login efetuado. Redirecionando...', 'success');
+    } catch (error) {
+      mostrarMensagem('Erro no login: ' + (error.message || error), 'error');
+      btn.disabled = false;
+    }
+  });
+});
+</script>
+</body>
+</html>
