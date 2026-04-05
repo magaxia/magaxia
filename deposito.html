@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Depósito • Magaxia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- Sistema de Autenticação Centralizado -->
+<script src="sistema-auth.js"></script>
+
+<!-- QRCode -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    background: linear-gradient(135deg,#667eea,#764ba2,#f093fb);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    visibility:hidden;
+}
+
+.container{
+    max-width:500px;
+    width:100%;
+    text-align:center;
+    padding:30px;
+}
+
+.card{
+    background:rgba(255,255,255,0.1);
+    padding:30px;
+    border-radius:20px;
+}
+
+.valores{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+}
+
+.valor-btn{
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    background:#ffffff22;
+    color:white;
+    font-weight:bold;
+}
+
+input{
+    width:100%;
+    padding:14px;
+    margin-top:15px;
+    border-radius:12px;
+    border:none;
+    text-align:center;
+}
+
+button{
+    width:100%;
+    padding:14px;
+    margin-top:12px;
+    border:none;
+    border-radius:12px;
+    background:#39c6ff;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+#qrcode{
+    margin-top:20px;
+    display:flex;
+    justify-content:center;
+}
+
+.info{
+    margin-top:15px;
+    font-size:14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>💎 DEPÓSITO</h1>
+<p>Escolha um valor e pague via Pix</p>
+
+<div class="card">
+
+<div class="valores">
+<button class="valor-btn" onclick="setValor(10)">R$ 10</button>
+<button class="valor-btn" onclick="setValor(20)">R$ 20</button>
+<button class="valor-btn" onclick="setValor(30)">R$ 30</button>
+<button class="valor-btn" onclick="setValor(65)">R$ 65</button>
+<button class="valor-btn" onclick="setValor(85)">R$ 85</button>
+<button class="valor-btn" onclick="setValor(100)">R$ 100</button>
+</div>
+
+<input type="number" id="valor" placeholder="Digite o valor" min="1">
+
+<button onclick="gerarPix()">
+📲 Gerar QR Code Pix
+</button>
+
+<div id="qrcode"></div>
+
+<div id="pix-area" style="display:none;">
+<textarea id="pixCode" readonly></textarea>
+<button onclick="copyPixCode()">📋 Copiar código Pix</button>
+</div>
+
+<button onclick="confirmar()">
+✅ Já fiz o Pix
+</button>
+
+<div class="info">
+⏱️ O saldo será creditado após aprovação do administrador
+</div>
+
+</div>
+</div>
+
+<script>
+
+// Usando firebase-helper.js: auth e db já configurados
+
+let uid = null;
+let valorAtual = 0;
+
+// 🔐 Proteção de acesso e dados do depósito
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔐 Verificando autenticação no depósito...');
+
+  // Usar sistema centralizado para verificar login
+  window.SistemaAuth.verificarLogin((autenticado, dadosUsuario) => {
+    if (!autenticado) {
+      console.log('❌ Usuário não autenticado, redirecionando para login...');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    console.log('✅ Usuário autenticado, carregando dados do depósito...');
+
+    // Inicializar variáveis globais
+    uid = dadosUsuario.uid;
+
+    // RECUPERAR VALOR SALVO (se voltou de redirecionamento)
+    const valorSalvo = sessionStorage.getItem('depositoValor');
+    if (valorSalvo) {
+      valorAtual = parseFloat(valorSalvo);
+      document.getElementById("valor").value = valorAtual;
+      sessionStorage.removeItem('depositoValor'); // Limpar após usar
+      console.log('✅ Valor recuperado:', valorAtual);
+    }
+
+    // Tornar body visível
+    document.body.style.visibility = "visible";
+
+    // Escutar depósitos aprovados
+    escutarDepositosAprovados();
+  });
+});
+
+// DEFINIR VALOR
+
+function setValor(v){
+
+valorAtual = v;
+
+document.getElementById("valor").value = v;
+
+}
+
+// GERAR PIX
+
+function gerarPix(){
+
+const inp = document.getElementById("valor");
+
+const parsed = Number(inp.value);
+
+if(!parsed || parsed <= 0){
+alert("Selecione um valor");
+return;
+}
+
+valorAtual = parsed;
+
+const valoresAceitos = [10,20,30,65,85,100];
+
+if(!valoresAceitos.includes(valorAtual)){
+alert("Valor inválido");
+return;
+}
+
+// SALVAR VALOR PARA RECUPERAR APÓS REDIRECIONAMENTO
+sessionStorage.setItem('depositoValor', valorAtual.toString());
+
+// REDIRECIONAMENTO
+
+const urls = {
+10: "https://pixgo.org/recurrence/checkout.php?id=392",
+20: "https://pixgo.org/recurrence/checkout.php?id=431",
+30: "https://pixgo.org/recurrence/checkout.php?id=432",
+65: "https://pixgo.org/recurrence/checkout.php?id=433",
+85: "https://pixgo.org/recurrence/checkout.php?id=434",
+100: "https://pixgo.org/recurrence/checkout.php?id=435"
+};
+
+if(urls[valorAtual]){
+window.location.href = urls[valorAtual];
+return;
+}
+
+// QR LOCAL
+
+const payloadPix = `PIX|VALOR:${valorAtual}|UID:${uid}`;
+
+const pixArea = document.getElementById("pix-area");
+
+pixArea.style.display = "block";
+
+document.getElementById("pixCode").value = payloadPix;
+
+const qrDiv = document.getElementById("qrcode");
+
+qrDiv.innerHTML = "";
+
+new QRCode(qrDiv,{
+text: payloadPix,
+width: 200,
+height: 200
+});
+
+}
+
+// COPIAR PIX
+
+function copyPixCode(){
+
+const text = document.getElementById("pixCode").value;
+
+navigator.clipboard.writeText(text);
+
+alert("Código Pix copiado");
+
+}
+
+// =============================
+// SISTEMA DE COMISSÃO AUTOMÁTICA (3 NÍVEIS)
+// =============================
+
+async function processarComissaoAutomatica(usuarioId, valorDeposito, depositoId) {
+    try {
+        console.log(`\n🚀 ========== COMISSÃO AUTOMÁTICA ==========`);
+        console.log(`📊 Usuário: ${usuarioId} | Valor: R$ ${valorDeposito}\n`);
+
+        const db = window.SistemaAuth.db;
+        const firebase = window.SistemaAuth.firebase;
+
+        // 1️⃣ BUSCAR USUÁRIO QUE DEPOSITOU
+        const usuarioDoc = await db.collection("users").doc(usuarioId).get();
+        if (!usuarioDoc.exists) {
+            console.log("❌ Usuário não encontrado");
+            return;
+        }
+
+        const usuario = usuarioDoc.data();
+        const indicadoPor = usuario.indicadoPor;
+
+        if (!indicadoPor) {
+            console.log("ℹ️ Sem indicador - nenhuma comissão");
+            return;
+        }
+
+        // 2️⃣ NÍVEL 1 (20%)
+        await pagarNivel(db, firebase, indicadoPor, usuarioId, usuario.nome, valorDeposito, 1, depositoId);
+
+        // 3️⃣ NÍVEL 2 (5%)
+        const nivel1Doc = await db.collection("users").doc(indicadoPor).get();
+        if (nivel1Doc.exists && nivel1Doc.data().indicadoPor) {
+            await pagarNivel(db, firebase, nivel1Doc.data().indicadoPor, usuarioId, usuario.nome, valorDeposito, 2, depositoId);
+
+            // 4️⃣ NÍVEL 3 (3%)
+            const nivel2Doc = await db.collection("users").doc(nivel1Doc.data().indicadoPor).get();
+            if (nivel2Doc.exists && nivel2Doc.data().indicadoPor) {
+                await pagarNivel(db, firebase, nivel2Doc.data().indicadoPor, usuarioId, usuario.nome, valorDeposito, 3, depositoId);
+            }
+        }
+
+        console.log(`✅ COMISSÃO CONCLUÍDA\n`);
+
+    } catch(error) {
+        console.error("❌ ERRO NA COMISSÃO:", error);
+    }
+}
+
+async function pagarNivel(db, firebase, idIndicador, idDepositor, nomeDepositor, valorDeposito, nivel, depositoId) {
+    try {
+        const percentuais = { 1: 0.20, 2: 0.05, 3: 0.03 };
+        const comissao = valorDeposito * percentuais[nivel];
+
+        const indicadorDoc = await db.collection("users").doc(idIndicador).get();
+        if (!indicadorDoc.exists) return;
+
+        const indicador = indicadorDoc.data();
+        const saldoAtual = indicador.saldo || 0;
+        const comissaoTotalAtual = indicador.comissaoTotal || 0;
+
+        // Atualizar saldo
+        await db.collection("users").doc(idIndicador).update({
+            saldo: saldoAtual + comissao,
+            comissaoTotal: comissaoTotalAtual + comissao
+        });
+
+        // Registrar histórico
+        await db.collection("historico_comissoes").add({
+            idIndicador: idIndicador,
+            nomeIndicador: indicador.nome,
+            idDepositor: idDepositor,
+            nomeDepositor: nomeDepositor,
+            depositoId: depositoId,
+            nivel: nivel,
+            valorDeposito: valorDeposito,
+            comissao: comissao,
+            tipo: "comissao_indicacao",
+            data: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log(`   ✅ Nível ${nivel}: R$ ${comissao.toFixed(2)} para ${indicador.nome}`);
+
+    } catch(error) {
+        console.error(`❌ Erro nível ${nivel}:`, error);
+    }
+}
+
+// =============================
+// ATUALIZAR SALDO AUTOMATICAMENTE
+// =============================
+
+// Função para pagar comissão multinível
+async function pagarComissaoIndicacao(usuarioId, valorDeposito) {
+    try {
+        console.log(`💰 Processando comissão para depósito de R$ ${valorDeposito} do usuário ${usuarioId}`);
+
+        const db = window.SistemaAuth.db;
+        const firebase = window.SistemaAuth.firebase;
+
+        // 1️⃣ Buscar usuário que fez o depósito
+        const usuarioDoc = await db.collection("users").doc(usuarioId).get();
+
+        if (!usuarioDoc.exists) {
+            console.log("⚠️ Usuário não encontrado");
+            return;
+        }
+
+        const usuario = usuarioDoc.data();
+        console.log("👤 Dados do usuário:", usuario);
+        const indicadoPor = usuario.indicadoPor; // Quem indicou este usuário
+
+        if (!indicadoPor) {
+            console.log("ℹ️ Usuário não foi indicado por ninguém");
+            return;
+        }
+
+        console.log(`🔗 Usuário foi indicado por: ${indicadoPor}`);
+
+        // 2️⃣ Buscar usuário indicador DIRETAMENTE (código = UID)
+        console.log(`🔍 Buscando indicador: ${indicadoPor}`);
+        const indicadorDoc = await db.collection("users").doc(indicadoPor).get();
+
+        if (!indicadorDoc.exists) {
+            console.log("❌ Indicador não encontrado");
+            return;
+        }
+
+        const indicador = indicadorDoc.data();
+        const idIndicador = indicadoPor;
+
+        console.log(`✅ Indicador encontrado: ${indicador.nome} (ID: ${idIndicador})`);
+
+        // ✅ COMISSÃO NÍVEL 1: 20%
+        const comissaoNivel1 = valorDeposito * 0.20;
+        console.log(`� Comissão Nível 1 calculada: R$ ${comissaoNivel1.toFixed(2)}`);
+
+        // 3️⃣ Atualizar saldo do indicador Nível 1
+        console.log(`🔄 Atualizando saldo do indicador ${idIndicador}...`);
+        await db.collection("users").doc(idIndicador).update({
+            saldo: firebase.firestore.FieldValue.increment(comissaoNivel1),
+            comissaoTotal: firebase.firestore.FieldValue.increment(comissaoNivel1)
+        });
+        console.log(`✅ Saldo atualizado com sucesso!`);
+
+        // 4️⃣ Registrar na coleção de indicações
+        console.log(`📝 Registrando indicação...`);
+        await db.collection("indicacoes").add({
+            idIndicador: idIndicador,
+            idIndicado: usuarioId,
+            codigoIndicacao: indicadoPor,
+            nomeIndicado: usuario.nome,
+            valorDeposito: valorDeposito,
+            valorComissao: comissaoNivel1,
+            nivel: 1,
+            status: "pago",
+            data: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`✅ Indicação registrada!`);
+
+        console.log(`🎉 Comissão Nível 1 paga: R$ ${comissaoNivel1.toFixed(2)} para ${indicador.nome}`);
+
+        // ✅ COMISSÃO NÍVEL 2: 5% (opcional - apenas se o indicador também foi indicado)
+        if (indicador.indicadoPor) {
+            const indicadorNivel2Query = await db.collection("users")
+                .where("codigoIndicacao", "==", indicador.indicadoPor)
+                .limit(1)
+                .get();
+
+            if (!indicadorNivel2Query.empty) {
+                const indicadorNivel2Doc = indicadorNivel2Query.docs[0];
+                const idIndicadorNivel2 = indicadorNivel2Doc.id;
+                const indicadorNivel2 = indicadorNivel2Doc.data();
+
+                const comissaoNivel2 = valorDeposito * 0.05;
+
+                await db.collection("users").doc(idIndicadorNivel2).update({
+                    saldo: firebase.firestore.FieldValue.increment(comissaoNivel2),
+                    comissaoTotal: firebase.firestore.FieldValue.increment(comissaoNivel2)
+                });
+
+                await db.collection("indicacoes").add({
+                    idIndicador: idIndicadorNivel2,
+                    idIndicado: usuarioId,
+                    codigoIndicacao: indicador.indicadoPor,
+                    nomeIndicado: usuario.nome,
+                    valorDeposito: valorDeposito,
+                    valorComissao: comissaoNivel2,
+                    nivel: 2,
+                    status: "pago",
+                    data: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                console.log(`✅ Comissão Nível 2 paga: R$ ${comissaoNivel2.toFixed(2)} para ${indicadorNivel2.nome}`);
+
+                // ✅ COMISSÃO NÍVEL 3: 3% (opcional - apenas se o indicador de nível 2 também foi indicado)
+                if (indicadorNivel2.indicadoPor) {
+                    const indicadorNivel3Query = await db.collection("users")
+                        .where("codigoIndicacao", "==", indicadorNivel2.indicadoPor)
+                        .limit(1)
+                        .get();
+
+                    if (!indicadorNivel3Query.empty) {
+                        const indicadorNivel3Doc = indicadorNivel3Query.docs[0];
+                        const idIndicadorNivel3 = indicadorNivel3Doc.id;
+                        const indicadorNivel3 = indicadorNivel3Doc.data();
+
+                        const comissaoNivel3 = valorDeposito * 0.03;
+
+                        await db.collection("users").doc(idIndicadorNivel3).update({
+                            saldo: firebase.firestore.FieldValue.increment(comissaoNivel3),
+                            comissaoTotal: firebase.firestore.FieldValue.increment(comissaoNivel3)
+                        });
+
+                        await db.collection("indicacoes").add({
+                            idIndicador: idIndicadorNivel3,
+                            idIndicado: usuarioId,
+                            codigoIndicacao: indicadorNivel2.indicadoPor,
+                            nomeIndicado: usuario.nome,
+                            valorDeposito: valorDeposito,
+                            valorComissao: comissaoNivel3,
+                            nivel: 3,
+                            status: "pago",
+                            data: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                        console.log(`✅ Comissão Nível 3 paga: R$ ${comissaoNivel3.toFixed(2)} para ${indicadorNivel3.nome}`);
+                    }
+                }
+            }
+        }
+
+    } catch(erro) {
+        console.error("❌ Erro ao processar comissão:", erro);
+    }
+}
+
+function escutarDepositosAprovados(){
+
+    window.SistemaAuth.db.collection("depositos")
+    .where("uid","==",uid)
+    .where("status","==","aprovado")
+    .onSnapshot(snapshot=>{
+
+        snapshot.docChanges().forEach(async change=>{
+
+            if(change.type === "added"){
+
+                const deposito = change.doc.data();
+                const depositoRef = change.doc.ref;
+
+                // Verificar se já foi creditado
+                if(deposito.creditado === true){
+                    return; // Já foi processado
+                }
+
+                const userRef = window.SistemaAuth.db
+                .collection("users")
+                .doc(uid);
+
+                try{
+
+                    await window.SistemaAuth.db.runTransaction(async t=>{
+
+                        const userDoc = await t.get(userRef);
+
+                        const saldoAtual =
+                        userDoc.data().saldo || 0;
+
+                        const novoSaldo =
+                        saldoAtual + deposito.valor;
+
+                        t.update(userRef,{
+                            saldo: novoSaldo
+                        });
+
+                        // MARCA COMO CREDITADO
+                        t.update(depositoRef,{
+                            creditado: true
+                        });
+
+                    });
+
+                    console.log("Saldo atualizado automaticamente");
+
+                    // ✅ PAGAR COMISSÃO APÓS CRÉDITO
+                    const depositoId = change.doc.id;
+                    console.log(`🎯 Processando comissão do depósito ${depositoId}`);
+                    await processarComissaoAutomatica(uid, deposito.valor, depositoId);
+
+                }
+
+                catch(error){
+
+                    console.error(
+                    "Erro ao atualizar saldo:",
+                    error
+                    );
+
+                }
+
+            }
+
+        });
+
+    });
+
+}
+
+// Inicia escuta após login
+
+// Removido - agora usa sistema centralizado
+
+// =============================
+// CONFIRMAR DEPÓSITO
+
+async function confirmar(){
+
+// Verificar valor no input OU na variável global
+const valorInput = document.getElementById("valor").value;
+const valorParaConfirmar = valorInput ? Number(valorInput) : valorAtual;
+
+if(valorParaConfirmar <= 0){
+alert("Selecione um valor primeiro");
+return;
+}
+
+// Atualizar valorAtual se necessário
+valorAtual = valorParaConfirmar;
+
+// BLOQUEAR DUPLICADO
+
+const existente = await window.SistemaAuth.db
+.collection("depositos")
+.where("uid","==",uid)
+.where("status","==","pendente")
+.get();
+
+if(!existente.empty){
+alert("Você já possui um depósito pendente");
+return;
+}
+
+await window.SistemaAuth.db.collection("depositos").add({
+
+uid: uid,
+
+valor: valorAtual,
+
+status: "pendente",
+
+data: window.SistemaAuth.firebase.firestore
+.FieldValue
+.serverTimestamp()
+
+});
+
+alert("Depósito registrado com sucesso");
+
+location.reload();
+
+}
+
+}
+
+</script>
+
+
+
+</body>
+</html>
