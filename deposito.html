@@ -301,7 +301,7 @@ async function gerarComissaoIndicacao(deposito, depositoId) {
         const nivel3 = nivel2 ? await buscarIndicador(nivel2) : null;
 
         const valorDeposito = Number(deposito.valor) || 0;
-        const comissaoNivel1 = valorDeposito * 0.12;
+        const comissaoNivel1 = valorDeposito * 0.20;
         const comissaoNivel2 = valorDeposito * 0.05;
         const comissaoNivel3 = valorDeposito * 0.03;
 
