@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>📦 Produtos Magaxia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- Sistema de Autenticação Centralizado -->
+<script src="sistema-auth.js"></script>
+
+<style>
+/* RESET E BASE */
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+  color: #333;
+}
+
+/* CABEÇALHO */
+h1{
+  text-align: center;
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+#saldo{
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.95);
+  padding: 15px 25px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+
+/* BOTÃO VOLTAR */
+.back-button{
+  position:fixed;
+  top:20px;
+  left:20px;
+  width:50px;
+  height:50px;
+  background:linear-gradient(135deg, #39c6ff, #b84cff);
+  border:none;
+  border-radius:50%;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:24px;
+  transition:all 0.3s ease;
+  box-shadow:0 8px 25px rgba(57,198,255,0.3);
+  z-index:100;
+}
+
+.back-button:hover{
+  transform:translateY(-4px);
+  box-shadow:0 12px 35px rgba(57,198,255,0.4);
+}
+
+/* PAINEL ADMIN */
+.admin-panel{
+  background: rgba(255,255,255,0.95);
+  padding: 25px;
+  border-radius: 15px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  backdrop-filter: blur(10px);
+  display: none; /* Inicialmente oculto */
+}
+
+.admin-panel h3{
+  color: #667eea;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+.admin-form{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.admin-form input{
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 200px;
+  transition: border-color 0.3s;
+}
+
+.admin-form input:focus{
+  outline: none;
+  border-color: #667eea;
+}
+
+.btn-admin{
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.btn-admin:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76,175,80,0.4);
+}
+
+/* PRODUTOS GRID */
+.produtos{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
+}
+
+/* CARDS DE PRODUTO */
+.card{
+  background: rgba(255,255,255,0.95);
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  position: relative;
+}
+
+.card:hover{
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.produto-img{
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-bottom: 3px solid #667eea;
+}
+
+.chip{
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+}
+
+.valor{
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin: 15px 0;
+  color: #4CAF50;
+}
+
+.info{
+  padding: 0 20px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.destaque{
+  color: #667eea;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* BOTÃO COMPRAR */
+button{
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 0 0 15px 15px;
+  font-size: 1rem;
+  font-weight:600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position:relative;
+  overflow:hidden;
+}
+
+button:hover{
+  transform:translateY(-2px);
+  box-shadow:0 5px 15px rgba(102,126,234,0.4);
+}
+
+button:active{
+  transform:translateY(0);
+}
+
+/* LISTA ADMIN DE PRODUTOS */
+.admin-lista{
+  margin-top: 30px;
+}
+
+.produto-admin{
+  background: rgba(255,255,255,0.95);
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+}
+
+.produto-admin b{
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.status-badge{
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+.status-ativo{
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-inativo{
+  background: #ffebee;
+  color: #c62828;
+}
+
+.admin-info{
+  margin: 8px 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.admin-actions{
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-editar{
+  background: linear-gradient(135deg, #1976d2, #115293);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-editar:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(25,118,210,0.3);
+}
+
+.btn-desativar{
+  background: linear-gradient(135deg, #ff9800, #e68900);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-desativar:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(255,152,0,0.3);
+}
+
+.btn-excluir{
+  background: linear-gradient(135deg, #ff5252, #ff1744);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-excluir:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(255,82,82,0.3);
+}
+
+/* MENSAGENS */
+.sucesso{
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: none;
+  font-weight: bold;
+}
+
+.erro{
+  background: #ffebee;
+  color: #c62828;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: none;
+  font-weight: bold;
+}
+
+/* RESPONSIVO */
+@media (max-width: 768px){
+  .admin-form{
+    flex-direction: column;
+  }
+
+  .admin-form input{
+    min-width: 100%;
+  }
+
+  .produtos{
+    grid-template-columns: 1fr;
+  }
+
+  h1{
+    font-size: 2rem;
+  }
+
+  #saldo{
+    position: static;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .back-button{
+    top: 80px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<button class="back-button" onclick="window.location.href='painel.html'">←</button>
+
+<!-- Botão de logout -->
+<button style="position:absolute; top:20px; right:100px; background:#ff4757; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:12px;" onclick="logout()">🚪 Sair</button>
+
+<h1>📦 Produtos Magaxia</h1>
+
+<div id="saldo">Saldo: Carregando...</div>
+
+<!-- PAINEL ADMIN (VISÍVEL APENAS PARA ADMINS) -->
+<div class="admin-panel" id="adminPanel">
+  <h3>🎛️ Painel Administrativo</h3>
+
+  <div class="admin-form">
+    <input id="nome" placeholder="Nome do Produto" type="text">
+    <input id="preco" placeholder="Preço (R$)" type="number" min="0" step="0.01">
+    <input id="renda" placeholder="Renda Diária (R$)" type="number" min="0" step="0.01">
+    <input id="ciclo" placeholder="Ciclo (dias)" type="number" min="1" step="1">
+    <input id="imagem" placeholder="URL da Imagem (opcional)" type="url">
+    <button class="btn-admin" onclick="adicionarProduto()">➕ Adicionar Produto</button>
+  </div>
+
+  <div class="sucesso" id="mensagemSucesso"></div>
+  <div class="erro" id="mensagemErro"></div>
+
+  <h3>📋 Gerenciar Produtos</h3>
+  <div class="admin-lista" id="adminLista"></div>
+</div>
+
+<!-- CATÁLOGO DE PRODUTOS PARA USUÁRIOS -->
+<div class="produtos" id="produtosContainer"></div>
+
+<script>
+// 🔐 CONFIGURAÇÃO DE ADMINISTRADORES
+const ADMINS = ["admin@magaxia.com", "adm@magaxia.com"]; // Adicione emails de admin aqui
+
+// 🔐 VARIÁVEIS GLOBAIS
+let uid = null;
+let saldoAtual = 0;
+let usuarioAtual = null;
+let isAdmin = false;
+
+// 🔐 VERIFICAÇÃO DE AUTENTICAÇÃO E PERMISSÕES
+document.addEventListener('DOMContentLoaded', function() {
+  // console.log('🔐 Verificando autenticação nos produtos...');
+
+  // Usar sistema centralizado para verificar login
+  window.SistemaAuth.verificarLogin((autenticado, dadosUsuario) => {
+    if (!autenticado) {
+      // console.log('❌ Usuário não autenticado, redirecionando para login...');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    // console.log('✅ Usuário autenticado, carregando interface...');
+
+    // Inicializar variáveis globais
+    uid = dadosUsuario.uid;
+    saldoAtual = dadosUsuario.saldo || 0;
+    usuarioAtual = dadosUsuario;
+
+    // Verificar se é admin
+    isAdmin = ADMINS.includes(dadosUsuario.email?.toLowerCase());
+    // console.log('👤 Usuário:', dadosUsuario.email, 'Admin:', isAdmin);
+
+    // Mostrar/ocultar painel admin
+    if (isAdmin) {
+      document.getElementById('adminPanel').style.display = 'block';
+      carregarListaAdmin(); // Carregar lista de gerenciamento
+    }
+
+    // Carregar saldo e produtos
+    window.SistemaAuth.carregarSaldo('saldo');
+    carregarProdutos();
+  });
+});
+
+// 💰 COMPRAR PRODUTO
+async function comprarProduto(id, nome, preco, renda, ciclo){
+  try {
+    // Primeiro, buscar o saldo ATUAL do banco de dados
+    const userRef = window.SistemaAuth.db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+    const saldoAtualBD = userDoc.data().saldo || 0;
+
+    // Verificar saldo com o valor real do banco
+    if(preco > saldoAtualBD){
+      alert("Saldo insuficiente para comprar este produto!");
+      return;
+    }
+
+    if(!confirm(`Deseja comprar "${nome}" por R$ ${preco.toFixed(2)}?`)){
+      return;
+    }
+
+    await window.SistemaAuth.db.runTransaction(async t => {
+      const userDocTransacao = await t.get(userRef);
+      const saldoBanco = userDocTransacao.data().saldo || 0;
+
+      if(preco > saldoBanco) throw new Error("Saldo insuficiente");
+
+      const novoSaldo = saldoBanco - preco;
+
+      t.update(userRef, { saldo: novoSaldo });
+
+      t.set(window.SistemaAuth.db.collection("compras").doc(), {
+        uid: uid,
+        produtoId: id,
+        produto: nome,
+        valor: preco,
+        rendaDiaria: renda,
+        ciclo: ciclo,
+        status: "ativo",
+        inicio: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      saldoAtual = novoSaldo;
+    });
+
+    alert(`✅ Produto "${nome}" comprado com sucesso!`);
+    // Recarregar saldo após compra
+    window.SistemaAuth.carregarSaldo('saldo');
+  } catch(e) {
+    alert("❌ Erro ao comprar produto: " + e.message);
+    console.error("Erro na compra:", e);
+  }
+}
+
+// 📦 CARREGAR PRODUTOS PARA USUÁRIOS
+function carregarProdutos(){
+  const container = document.getElementById('produtosContainer');
+
+  window.SistemaAuth.db.collection("produtos")
+    .where("ativo", "==", true)
+    .onSnapshot((snapshot) => {
+      container.innerHTML = "";
+
+      if(snapshot.empty) {
+        container.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Nenhum produto disponível no momento</div>";
+        return;
+      }
+
+      // Ordenar produtos por data de criação (mais recentes primeiro) no frontend
+      const produtos = [];
+      snapshot.forEach((doc) => {
+        produtos.push({ id: doc.id, data: doc.data() });
+      });
+      produtos.sort((a, b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
+
+      produtos.forEach(({ id, data: p }) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+          <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+          <div class="chip">${p.nome}</div>
+          <div class="valor">R$ ${p.preco.toFixed(2)}</div>
+          <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
+          <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
+          <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
+          <button onclick="comprarProduto('${id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
+            🛒 Comprar Agora
+          </button>
+        `;
+
+        container.appendChild(card);
+      });
+    }, (error) => {
+      console.error("Erro ao carregar produtos:", error);
+      container.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
+    });
+}
+
+// 🎛️ ADICIONAR PRODUTO (ADMIN)
+async function adicionarProduto(){
+  const nome = document.getElementById("nome").value.trim();
+  const preco = Number(document.getElementById("preco").value);
+  const renda = Number(document.getElementById("renda").value);
+  const ciclo = Number(document.getElementById("ciclo").value);
+  const imagem = document.getElementById("imagem").value.trim();
+
+  // Limpar mensagens
+  document.getElementById("mensagemSucesso").style.display = "none";
+  document.getElementById("mensagemErro").style.display = "none";
+
+  if(!nome || !preco || !renda || !ciclo){
+    mostrarErro("Preencha todos os campos obrigatórios");
+    return;
+  }
+
+  if(preco <= 0 || renda < 0 || ciclo <= 0){
+    mostrarErro("Os valores devem ser maiores que zero");
+    return;
+  }
+
+  try {
+    await window.SistemaAuth.db.collection("produtos").add({
+      nome: nome,
+      preco: preco,
+      rendaDiaria: renda,
+      ciclo: ciclo,
+      imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
+      ativo: true,
+      criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Limpa os campos
+    document.getElementById("nome").value = "";
+    document.getElementById("preco").value = "";
+    document.getElementById("renda").value = "";
+    document.getElementById("ciclo").value = "";
+    document.getElementById("imagem").value = "";
+
+    mostrarSucesso("✅ Produto adicionado com sucesso!");
+    carregarListaAdmin(); // Recarregar lista
+
+  } catch(e) {
+    mostrarErro("❌ Erro ao adicionar produto: " + e.message);
+    console.error("Erro:", e);
+  }
+}
+
+// 📋 CARREGAR LISTA ADMIN
+function carregarListaAdmin(){
+  const div = document.getElementById("adminLista");
+
+  window.SistemaAuth.db.collection("produtos")
+    .orderBy("criadoEm", "desc")
+    .onSnapshot((snapshot) => {
+      div.innerHTML = "";
+
+      if(snapshot.empty) {
+        div.innerHTML = "<div style='text-align: center; color: #666; padding: 40px;'>Nenhum produto cadastrado</div>";
+        return;
+      }
+
+      snapshot.forEach((doc) => {
+        const p = doc.data();
+        const linha = document.createElement("div");
+        linha.className = "produto-admin";
+
+        const statusClass = p.ativo ? "status-ativo" : "status-inativo";
+        const statusText = p.ativo ? "✓ Ativo" : "✗ Inativo";
+
+        linha.innerHTML = `
+          <div>
+            <b>${p.nome}</b>
+            <span class="status-badge ${statusClass}">${statusText}</span>
+          </div>
+          <div class="admin-info">
+            <strong>Preço:</strong> R$ ${p.preco.toFixed(2)}
+          </div>
+          <div class="admin-info">
+            <strong>Renda diária:</strong> R$ ${p.rendaDiaria.toFixed(2)}
+          </div>
+          <div class="admin-info">
+            <strong>Ciclo:</strong> ${p.ciclo} dias
+          </div>
+          <div class="admin-actions">
+            <button class="btn-editar" onclick="editarProduto('${doc.id}')">✏️ Editar</button>
+            ${p.ativo ?
+              `<button class="btn-desativar" onclick="desativarProduto('${doc.id}')">🚫 Desativar</button>` :
+              `<button class="btn-desativar" onclick="ativarProduto('${doc.id}')">✅ Ativar</button>`
+            }
+            <button class="btn-excluir" onclick="excluirProduto('${doc.id}')">🗑️ Excluir</button>
+          </div>
+        `;
+
+        div.appendChild(linha);
+      });
+    }, (error) => {
+      console.error("Erro ao carregar lista admin:", error);
+      div.innerHTML = "<div style='text-align: center; color: #c62828; padding: 40px;'>Erro ao carregar produtos</div>";
+    });
+}
+
+// ✏️ EDITAR PRODUTO (ADMIN)
+async function editarProduto(id){
+  try {
+    const docRef = window.SistemaAuth.db.collection("produtos").doc(id);
+    const docSnap = await docRef.get();
+    if(!docSnap.exists){
+      mostrarErro("Produto não encontrado.");
+      return;
+    }
+
+    const produto = docSnap.data();
+    const novoNome = prompt("Nome do Produto:", produto.nome);
+    if(novoNome === null) return;
+
+    const novoPreco = prompt("Preço:", produto.preco);
+    if(novoPreco === null) return;
+
+    const novaRenda = prompt("Renda diária:", produto.rendaDiaria);
+    if(novaRenda === null) return;
+
+    const novoCiclo = prompt("Ciclo (dias):", produto.ciclo);
+    if(novoCiclo === null) return;
+
+    const novaImagem = prompt("URL da imagem:", produto.imagem || "");
+    if(novaImagem === null) return;
+
+    if(!novoNome.trim() || Number(novoPreco) <= 0 || Number(novaRenda) < 0 || Number(novoCiclo) <= 0){
+      mostrarErro("Dados inválidos. Nome obrigatório e valores numéricos válidos são necessários.");
+      return;
+    }
+
+    await docRef.update({
+      nome: novoNome.trim(),
+      preco: Number(novoPreco),
+      rendaDiaria: Number(novaRenda),
+      ciclo: Number(novoCiclo),
+      imagem: novaImagem.trim() || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto"
+    });
+
+    mostrarSucesso("✅ Produto atualizado com sucesso!");
+  } catch(e) {
+    mostrarErro("❌ Erro ao editar produto: " + e.message);
+    console.error(e);
+  }
+}
+
+// 🚫 DESATIVAR PRODUTO (ADMIN)
+async function desativarProduto(id){
+  if(confirm("Tem certeza que deseja desativar este produto?")) {
+    try {
+      await window.SistemaAuth.db.collection("produtos").doc(id).update({ ativo: false });
+      mostrarSucesso("✅ Produto desativado!");
+    } catch(e) {
+      mostrarErro("❌ Erro: " + e.message);
+    }
+  }
+}
+
+// ✅ ATIVAR PRODUTO (ADMIN)
+async function ativarProduto(id){
+  try {
+    await window.SistemaAuth.db.collection("produtos").doc(id).update({ ativo: true });
+    mostrarSucesso("✅ Produto ativado!");
+  } catch(e) {
+    mostrarErro("❌ Erro: " + e.message);
+  }
+}
+
+// 🗑️ EXCLUIR PRODUTO (ADMIN)
+async function excluirProduto(id){
+  if(confirm("Tem certeza que deseja EXCLUIR este produto? Esta ação não pode ser desfeita!")) {
+    try {
+      await window.SistemaAuth.db.collection("produtos").doc(id).delete();
+      mostrarSucesso("✅ Produto excluído!");
+    } catch(e) {
+      mostrarErro("❌ Erro: " + e.message);
+    }
+  }
+}
+
+// 📢 FUNÇÕES DE MENSAGENS
+function mostrarSucesso(mensagem){
+  const msg = document.getElementById("mensagemSucesso");
+  msg.innerText = mensagem;
+  msg.style.display = "block";
+  document.getElementById("mensagemErro").style.display = "none";
+  setTimeout(() => { msg.style.display = "none"; }, 5000);
+}
+
+function mostrarErro(mensagem){
+  const msg = document.getElementById("mensagemErro");
+  msg.innerText = mensagem;
+  msg.style.display = "block";
+  document.getElementById("mensagemSucesso").style.display = "none";
+  setTimeout(() => { msg.style.display = "none"; }, 5000);
+}
+
+function logout() {
+  window.SistemaAuth.fazerLogout();
+}
+</script>
+
+</body>
+</html>

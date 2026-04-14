@@ -171,6 +171,9 @@
 
     <a href="painel.html" class="back-btn">←</a>
 
+    <!-- Botão de logout -->
+    <button style="position:absolute; top:20px; right:20px; background:#ff4757; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:12px;" onclick="logout()">🚪 Sair</button>
+
     <div class="container">
         <h1>📊 Ativos</h1>
 
@@ -256,6 +259,10 @@
                     console.error("Erro ao carregar ativos:", error);
                     listDiv.innerHTML = '<p class="mensagem" style="color: red;">Erro ao carregar ativos.</p>';
                 });
+        }
+
+        function logout() {
+          window.SistemaAuth.fazerLogout();
         }
     </script>
 
