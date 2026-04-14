@@ -406,14 +406,36 @@ function copiar(){
   alert('Link copiado!');
 }
 
+function verificarSeUsuarioLogado() {
+  // Caso o app já tenha userUID no sessionStorage, usa direto
+  const sessionUid = sessionStorage.getItem('userUID');
+  if (sessionUid) {
+    console.log('✅ Usuário encontrado em sessionStorage:', sessionUid);
+    carregarDadosUsuario(sessionUid);
+    return;
+  }
+
+  // Verificar via Firebase Auth
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      console.log('✅ Usuário autenticado via Firebase Auth:', user.uid);
+      sessionStorage.setItem('userUID', user.uid);
+      carregarDadosUsuario(user.uid);
+    } else {
+      console.log('⚠️ Usuário não autenticado. Redirecionando para login...');
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 300);
+    }
+  });
+}
+
 async function carregarDadosUsuario(uid) {
   try {
-    console.log('🔍 Procurando usuário no banco:', uid);
     const ref = db.collection('users').doc(uid);
     const snap = await ref.get();
 
     if(!snap.exists){
-      console.error('❌ Usuário não encontrado no banco:', uid);
       document.getElementById('codigo').innerText = 'Usuário não encontrado';
       document.getElementById('link').value = '';
       document.getElementById('meuSaldo').innerText = 'R$ 0,00';
@@ -421,37 +443,34 @@ async function carregarDadosUsuario(uid) {
       document.getElementById('nivel1').innerHTML = '<div class="empty">Usuário não encontrado no banco de dados.</div>';
       document.getElementById('nivel2').innerHTML = '<div class="empty">Usuário não encontrado no banco de dados.</div>';
       document.getElementById('nivel3').innerHTML = '<div class="empty">Usuário não encontrado no banco de dados.</div>';
+      console.warn('✅ Usuário auth encontrado, mas sem cadastro em users: ' + uid);
       return;
     }
-    console.log('📊 Dados carregados:', data);
 
+    const data = snap.data();
     const codigo = uid;
 
     document.getElementById('codigo').innerText = codigo;
     document.getElementById('link').value = `https://magaxia.github.io/magaxia/?ref=${codigo}`;
-
+    
     // Mostrar saldo e comissão
     const saldo = data.saldo || 0;
     const comissao = data.comissaoTotal || 0;
     document.getElementById('meuSaldo').innerText = `R$ ${saldo.toFixed(2).replace('.', ',')}`;
     document.getElementById('minhaComissao').innerText = `R$ ${comissao.toFixed(2).replace('.', ',')}`;
-
+    
     // Calcular comissões por nível
     await calcularComissoesPorNivel(uid);
-
+    
     // Escutar atualizações em tempo real
     ref.onSnapshot(doc => {
-      if (doc.exists) {
-        const dadosAtualizados = doc.data();
-        const saldoAtual = dadosAtualizados?.saldo || 0;
-        const comissaoAtual = dadosAtualizados?.comissaoTotal || 0;
-        document.getElementById('meuSaldo').innerText = `R$ ${saldoAtual.toFixed(2).replace('.', ',')}`;
-        document.getElementById('minhaComissao').innerText = `R$ ${comissaoAtual.toFixed(2).replace('.', ',')}`;
-        // Recalcular comissões por nível em tempo real
-        calcularComissoesPorNivel(uid);
-      } else {
-        console.warn('Documento não existe no listener em tempo real');
-      }
+      const dadosAtualizados = doc.data();
+      const saldoAtual = dadosAtualizados.saldo || 0;
+      const comissaoAtual = dadosAtualizados.comissaoTotal || 0;
+      document.getElementById('meuSaldo').innerText = `R$ ${saldoAtual.toFixed(2).replace('.', ',')}`;
+      document.getElementById('minhaComissao').innerText = `R$ ${comissaoAtual.toFixed(2).replace('.', ',')}`;
+      // Recalcular comissões por nível em tempo real
+      calcularComissoesPorNivel(uid);
     });
 
     // Carregar níveis da equipe
@@ -463,24 +482,8 @@ async function carregarDadosUsuario(uid) {
   }
 }
 
-// 🔐 Proteção de acesso e dados da equipe
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🔐 Verificando autenticação na equipe...');
-
-  // Usar sistema centralizado para verificar login (igual ao perfil.html)
-  window.SistemaAuth.verificarLogin((autenticado, dadosUsuario) => {
-    if (!autenticado) {
-      console.log('❌ Usuário não autenticado, redirecionando para login...');
-      window.location.href = 'login.html';
-      return;
-    }
-
-    console.log('✅ Usuário autenticado, carregando dados da equipe...');
-
-    // Usar dados já carregados pelo sistema de auth (igual ao perfil.html)
-    carregarDadosUsuario(dadosUsuario.uid);
-  });
-});
+// Inicia verificação ao carregar página
+window.addEventListener('DOMContentLoaded', verificarSeUsuarioLogado);
 
 async function calcularComissoesPorNivel(uid) {
   try {
