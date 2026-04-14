@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarMensagem(`✅ Bem-vindo, ${userData.nome}! Redirecionando...`, 'success');
         // Redirecionar para página de usuários ou dashboard
         setTimeout(() => {
-          window.location.href = 'usuarios.html';
+          window.location.href = 'painel.html';
         }, 1500);
       } else {
         mostrarMensagem(err || 'Erro no login', 'error');
