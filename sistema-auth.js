@@ -1,306 +1,156 @@
-/**
- * SISTEMA DE AUTENTICAÇÃO CENTRALIZADO
- * Gerencia login, logout e verificação de status de conta
- */
+// sistema-auth.js - Sistema de Autenticação Centralizado
+// Versão: 1.0.0
+// Data: 14/04/2026
 
-window.SistemaAuth = {
-    // ============================================
-    // CONFIGURAÇÃO FIREBASE
-    // ============================================
-    
-    firebaseConfig: {
-        apiKey: "AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
-        authDomain: "vastbitloud-2872a.firebaseapp.com",
-        projectId: "vastbitloud-2872a",
-        storageBucket: "vastbitloud-2872a.firebasestorage.app",
-        messagingSenderId: "952931184412",
-        appId: "1:952931184412:web:ee2a0e38826c30dd0cd4d9",
-        measurementId: "G-KWVQ0CFHW2"
-    },
+(function() {
+  'use strict';
 
-    db: null,
-    auth: null,
-    usuarioLogado: null,
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAcVPgUHbL4N9U1-H68klmGKWQF-YGleyc",
+  authDomain: "vastbitloud-2872a.firebaseapp.com",
+  projectId: "vastbitloud-2872a",
+  storageBucket: "vastbitloud-2872a.firebasestorage.app",
+  messagingSenderId: "952931184412",
+  appId: "1:952931184412:web:ee2a0e38826c30dd0cd4d9",
+  measurementId: "G-KWVQ0CFHW2"
+  };
 
-    // ============================================
-    // INICIALIZAÇÃO
-    // ============================================
-    
+  // Inicializar Firebase se não estiver inicializado
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Sistema de Autenticação
+  window.SistemaAuth = {
+    db: db,
+    firebase: firebase,
+    // Inicializar o sistema
     inicializar: function() {
-        try {
-            if (firebase.apps.length === 0) {
-                const app = firebase.initializeApp(this.firebaseConfig);
-                this.db = firebase.firestore();
-                this.auth = firebase.auth();
-            } else {
-                this.db = firebase.firestore();
-                this.auth = firebase.auth();
-            }
-            console.log("✅ Sistema de Autenticação inicializado");
-        } catch (error) {
-            console.error("❌ Erro ao inicializar autenticação:", error);
-        }
+      console.log('🚀 Inicializando Sistema de Autenticação');
+      // Configurações adicionais se necessário
+      this._configurarAuth();
+      console.log('✅ Sistema de Autenticação inicializado');
     },
 
-    // ============================================
-    // FAZER LOGIN
-    // ============================================
-    
-    fazerLogin: async function(credencial, senha, callback) {
-        try {
-            if (!this.db || !this.auth) {
-                callback(false, "Firestore ou Auth não inicializados");
-                return;
-            }
-
-            console.log("🔐 Tentando login com credencial:", credencial);
-
-            // Procurar usuário por email, UID ou telefone
-            let usuario = null;
-            let uid = null;
-
-            // Tentar como UID direto
-            const userSnap = await this.db.collection("users").doc(credencial).get();
-            if (userSnap.exists) {
-                usuario = userSnap.data();
-                uid = credencial;
-                console.log("✅ Usuário encontrado por UID");
-            }
-
-            // Se não encontrou por UID, procurar por telefone
-            if (!usuario) {
-                const telefonesSnapshot = await this.db.collection("users")
-                    .where("telefone", "==", credencial)
-                    .limit(1)
-                    .get();
-                
-                if (!telefonesSnapshot.empty) {
-                    uid = telefonesSnapshot.docs[0].id;
-                    usuario = telefonesSnapshot.docs[0].data();
-                    console.log("✅ Usuário encontrado por telefone");
-                }
-            }
-
-            // Se não encontrou, tentar por email
-            if (!usuario) {
-                const emailsSnapshot = await this.db.collection("users")
-                    .where("email", "==", credencial)
-                    .limit(1)
-                    .get();
-                
-                if (!emailsSnapshot.empty) {
-                    uid = emailsSnapshot.docs[0].id;
-                    usuario = emailsSnapshot.docs[0].data();
-                    console.log("✅ Usuário encontrado por email");
-                }
-            }
-
-            // Validar se usuário foi encontrado
-            if (!usuario || !uid) {
-                callback(false, "Usuário não encontrado");
-                return;
-            }
-
-            console.log("📋 Dados do usuário:", { nome: usuario.nome, status: usuario.status });
-
-            // Validar senha
-            if (usuario.senha !== senha) {
-                callback(false, "Senha incorreta");
-                return;
-            }
-
-            // ============================================
-            // VERIFICAR STATUS DA CONTA
-            // ============================================
-            
-            const status = usuario.status || "ativo";
-            console.log("🔍 Status da conta:", status);
-
-            // Verificar se está suspenso
-            if (status === "suspenso" || usuario.suspenso === true) {
-                console.warn("⏸️ Conta suspensa detectada");
-                
-                // Calcular dias restantes de suspensão
-                if (usuario.dataSuspensao && usuario.diasSuspensao) {
-                    const dataSuspensao = usuario.dataSuspensao.toDate ? usuario.dataSuspensao.toDate() : new Date(usuario.dataSuspensao);
-                    const dataTermino = new Date(dataSuspensao.getTime() + usuario.diasSuspensao * 24 * 60 * 60 * 1000);
-                    const agora = new Date();
-
-                    if (agora >= dataTermino) {
-                        // Prazo terminou, remover suspensão
-                        console.log("✅ Removendo suspensão expirada");
-                        await this.db.collection("users").doc(uid).update({
-                            status: "ativo",
-                            suspenso: false,
-                            updatedAt: new Date()
-                        });
-                    } else {
-                        // Ainda está suspenso
-                        callback(false, "Sua conta está suspensa. Entre em contato com o suporte.");
-                        return;
-                    }
-                } else {
-                    callback(false, "Sua conta está suspensa. Entre em contato com o suporte.");
-                    return;
-                }
-            }
-
-            // Verificar se está bloqueado
-            if (status === "bloqueado" || usuario.bloqueado === true) {
-                console.warn("🚫 Conta bloqueada detectada");
-                callback(false, "Sua conta foi bloqueada.");
-                return;
-            }
-
-            // Verificar blacklist
-            if (usuario.blacklist === true) {
-                console.warn("🚫 Usuário na blacklist");
-                callback(false, "Sua conta está na lista negra. Acesso negado.");
-                return;
-            }
-
-            // Verificar bloqueio por fraude
-            if (usuario.bloqueadoPorFraude === true) {
-                // Verificar se o bloqueio ainda está ativo
-                if (usuario.dataBloqueioFraude && usuario.diasBloqueioFraude) {
-                    const dataBloqueio = usuario.dataBloqueioFraude.toDate ? usuario.dataBloqueioFraude.toDate() : new Date(usuario.dataBloqueioFraude);
-                    const dataTermino = new Date(dataBloqueio.getTime() + usuario.diasBloqueioFraude * 24 * 60 * 60 * 1000);
-                    const agora = new Date();
-
-                    if (agora >= dataTermino) {
-                        // Bloqueio expirou
-                        console.log("✅ Removendo bloqueio por fraude expirado");
-                        await this.db.collection("users").doc(uid).update({
-                            bloqueadoPorFraude: false,
-                            updatedAt: new Date()
-                        });
-                    } else {
-                        // Ainda está bloqueado por fraude
-                        const tempoRestante = this.calcularTempoRestante(dataBloqueio, usuario.diasBloqueioFraude);
-                        callback(false, `Sua conta foi bloqueada por atividade suspeita. Tempo restante: ${tempoRestante}. Entre em contato com o suporte.`);
-                        return;
-                    }
-                } else {
-                    callback(false, "Sua conta foi bloqueada por atividade suspeita. Entre em contato com o suporte.");
-                    return;
-                }
-            }
-
-            // ============================================
-            // LOGIN BEM-SUCEDIDO
-            // ============================================
-            
-            console.log("✅ Login bem-sucedido:", usuario.nome);
-            this.usuarioLogado = {
-                uid: uid,
-                nome: usuario.nome,
-                email: usuario.email,
-                telefone: usuario.telefone,
-                status: usuario.status,
-                ...usuario
-            };
-
-            // Salvar dados no localStorage para sessão
-            localStorage.setItem("usuarioLogado", JSON.stringify(this.usuarioLogado));
-            localStorage.setItem("uid", uid);
-
-            callback(true, null, this.usuarioLogado);
-        } catch (error) {
-            console.error("❌ Erro ao fazer login:", error);
-            callback(false, "Erro ao fazer login: " + error.message);
+    // Configurar listeners de autenticação
+    _configurarAuth: function() {
+      auth.onAuthStateChanged((user) => {
+        if (user) {
+          console.log('🔄 Estado de autenticação alterado:', user.email || user.phoneNumber);
         }
+      });
     },
 
-    // ============================================
-    // FAZER LOGOUT
-    // ============================================
-    
-    fazerLogout: function() {
-        try {
-            console.log("🚪 Fazendo logout...");
-            localStorage.removeItem("usuarioLogado");
-            localStorage.removeItem("uid");
-            this.usuarioLogado = null;
-            console.log("✅ Logout realizado");
-        } catch (error) {
-            console.error("❌ Erro ao fazer logout:", error);
-        }
-    },
-
-    // ============================================
-    // VERIFICAR LOGIN (RECUPERAR SESSÃO)
-    // ============================================
-    
+    // Verificar se usuário está logado
     verificarLogin: function(callback) {
-        try {
-            const usuarioArmazenado = localStorage.getItem("usuarioLogado");
-            if (usuarioArmazenado) {
-                this.usuarioLogado = JSON.parse(usuarioArmazenado);
-                console.log("✅ Sessão recuperada:", this.usuarioLogado.nome);
-                if (callback) callback(true, this.usuarioLogado);
-                return true;
-            } else {
-                console.log("⚠️ Nenhuma sessão ativa");
-                if (callback) callback(false, null);
-                return false;
-            }
-        } catch (error) {
-            console.error("❌ Erro ao verificar login:", error);
-            if (callback) callback(false, null);
-            return false;
+      const user = auth.currentUser;
+      if (user) {
+        // Usuário logado, buscar dados adicionais
+        this._buscarDadosUsuario(user, (dados) => {
+          callback(true, dados);
+        });
+      } else {
+        callback(false, null);
+      }
+    },
+
+    // Buscar dados do usuário no Firestore
+    _buscarDadosUsuario: function(user, callback) {
+      db.collection('usuarios').doc(user.uid).get()
+        .then((doc) => {
+          if (doc.exists) {
+            const dados = doc.data();
+            dados.uid = user.uid;
+            dados.email = user.email;
+            dados.telefone = user.phoneNumber;
+            console.log('✅ Sessão recuperada:', dados.nome || user.email);
+            callback(dados);
+          } else {
+            // Usuário não tem dados no Firestore, criar básico
+            const dadosBasicos = {
+              uid: user.uid,
+              email: user.email,
+              telefone: user.phoneNumber,
+              nome: user.displayName || 'Usuário',
+              saldo: 0,
+              criadoEm: new Date()
+            };
+            callback(dadosBasicos);
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Erro ao buscar dados do usuário:', error);
+          callback(null);
+        });
+    },
+
+    // Fazer login
+    fazerLogin: function(credencial, senha, callback) {
+      // Determinar tipo de credencial
+      let promise;
+      if (credencial.includes('@')) {
+        // Email
+        promise = auth.signInWithEmailAndPassword(credencial, senha);
+      } else if (credencial.match(/^\+?\d+$/)) {
+        // Telefone (simplificado, na prática precisa de reCAPTCHA)
+        console.warn('Login por telefone não implementado completamente');
+        callback(false, 'Login por telefone não disponível');
+        return;
+      } else {
+        // UID - não suportado diretamente, tentar como email
+        promise = auth.signInWithEmailAndPassword(credencial + '@temp.com', senha);
+      }
+
+      promise
+        .then((result) => {
+          this._buscarDadosUsuario(result.user, (dados) => {
+            callback(true, null, dados);
+          });
+        })
+        .catch((error) => {
+          let mensagemErro = 'Erro no login';
+          switch (error.code) {
+            case 'auth/user-not-found':
+              mensagemErro = 'Usuário não encontrado';
+              break;
+            case 'auth/wrong-password':
+              mensagemErro = 'Senha incorreta';
+              break;
+            case 'auth/invalid-email':
+              mensagemErro = 'Email inválido';
+              break;
+          }
+          callback(false, mensagemErro);
+        });
+    },
+
+    // Fazer logout
+    fazerLogout: function() {
+      auth.signOut()
+        .then(() => {
+          console.log('✅ Logout realizado');
+          window.location.href = 'login.html';
+        })
+        .catch((error) => {
+          console.error('❌ Erro no logout:', error);
+        });
+    },
+
+    // Carregar saldo (opcional)
+    carregarSaldo: function(elementoId) {
+      this.verificarLogin((autenticado, dados) => {
+        if (autenticado && dados) {
+          const elemento = document.getElementById(elementoId);
+          if (elemento) {
+            elemento.textContent = `R$ ${dados.saldo || 0}`;
+          }
         }
-    },
-
-    // ============================================
-    // OBTER USUÁRIO LOGADO
-    // ============================================
-    
-    obterUsuarioLogado: function() {
-        return this.usuarioLogado;
-    },
-
-    // ============================================
-    // REDIRECIONAR APÓS LOGIN
-    // ============================================
-    
-    redirecionarAposLogin: function() {
-        // Redirecionar para a página principal
-        setTimeout(() => {
-            window.location.href = "dashboard.html"; // ou a página desejada
-        }, 1500);
-    },
-
-    // ============================================
-    // CALCULAR TEMPO RESTANTE
-    // ============================================
-    
-    calcularTempoRestante: function(dataBloqueio, diasBloqueio) {
-        try {
-            const dataTermino = new Date(dataBloqueio.getTime() + diasBloqueio * 24 * 60 * 60 * 1000);
-            const agora = new Date();
-            const diferenca = dataTermino - agora;
-            const dias = Math.ceil(diferenca / (1000 * 60 * 60 * 24));
-            const horas = Math.floor((diferenca % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutos = Math.floor((diferenca % (1000 * 60 * 60)) / (1000 * 60));
-            
-            if (dias > 0) {
-                return `${dias}d ${horas}h`;
-            } else if (horas > 0) {
-                return `${horas}h ${minutos}m`;
-            } else {
-                return `${minutos}m`;
-            }
-        } catch (error) {
-            console.error("❌ Erro ao calcular tempo restante:", error);
-            return "Tempo desconhecido";
-        }
+      });
     }
-};
+  };
 
-// Inicializar quando a página carregar
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("🚀 Inicializando Sistema de Autenticação");
-    if (window.SistemaAuth) {
-        window.SistemaAuth.inicializar();
-    }
-});
+})();
