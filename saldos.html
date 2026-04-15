@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saldos do Usuário</title>
+    <!-- Firebase em modo compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <!-- Sistema de Autenticação Centralizado -->
+    <script src="sistema-auth.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .saldo-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: auto;
+        }
+        .saldo-item {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .saldo-value {
+            font-weight: bold;
+            color: #28a745;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .historico {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .historico-item {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+    </style>
+    <script>
+        // Usando sistema-auth.js: auth e db já configurados (compat Firebase)
+        
+        let uid = null;
+        let saldoSaque = 0;
+        let saldoDeposito = 0;
+
+        const formatador = new Intl.NumberFormat(
+            "pt-BR",
+            {
+                style: "currency",
+                currency: "BRL"
+            }
+        );
+
+        // =============================
+        // ESCUTAR SALDO EM TEMPO REAL
+        // =============================
+
+        function escutarSaldoTempoReal() {
+            // Listener em tempo real do saldo do usuário
+            window.SistemaAuth.db.collection("users").doc(uid)
+                .onSnapshot(doc => {
+                    if (doc.exists) {
+                        const novoSaldoSaque = doc.data().saldo || 0;
+                        const novoSaldoDeposito = doc.data().saldoDeposito || 0;
+
+                        if (novoSaldoSaque !== saldoSaque) {
+                            saldoSaque = novoSaldoSaque;
+                            document.getElementById("saldoSaque").innerText = formatador.format(saldoSaque);
+                            console.log("✅ Saldo de saque atualizado em tempo real: R$ " + formatador.format(saldoSaque));
+                        }
+
+                        if (novoSaldoDeposito !== saldoDeposito) {
+                            saldoDeposito = novoSaldoDeposito;
+                            document.getElementById("saldoDeposito").innerText = formatador.format(saldoDeposito);
+                            console.log("✅ Saldo de depósito atualizado em tempo real: R$ " + formatador.format(saldoDeposito));
+                        }
+                    }
+                }, error => {
+                    console.error("❌ Erro ao escutar saldo:", error);
+                });
+        }
+
+        function escutarSaldoDeposito() {
+            const db = window.SistemaAuth.db;
+            db.collection("depositos")
+              .where("status", "==", "aprovado")
+              .onSnapshot(snapshot => {
+                let totalDepositos = 0;
+
+                snapshot.forEach(doc => {
+                  const deposito = doc.data();
+                  const usuarioDoDeposito = deposito.usuarioId || deposito.uid;
+                  if (usuarioDoDeposito === uid) {
+                    totalDepositos += Number(deposito.valor) || 0;
+                  }
+                });
+
+                if (totalDepositos !== saldoDeposito) {
+                  saldoDeposito = totalDepositos;
+                  document.getElementById("saldoDeposito").innerText = formatador.format(saldoDeposito);
+                  console.log("✅ Saldo de depósito atualizado dos depósitos aprovados: R$ " + formatador.format(saldoDeposito));
+                }
+              }, error => {
+                console.error("❌ Erro ao escutar depósito aprovado:", error);
+              });
+        }
+
+        // 🔐 Proteção de acesso e dados
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🔐 Verificando autenticação...');
+
+            // Usar sistema centralizado para verificar login
+            window.SistemaAuth.verificarLogin((autenticado, dadosUsuario) => {
+                if (!autenticado) {
+                    console.log('❌ Usuário não autenticado, redirecionando para login...');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log('✅ Usuário autenticado, carregando saldo...');
+
+                // Inicializar variáveis globais
+                uid = dadosUsuario.uid;
+
+                // Buscar saldo correto do Firestore
+                window.SistemaAuth.buscarUsuarioFirestore(uid, dadosUsuario.email, dadosUsuario.telefone)
+                    .then(doc => {
+                        if (doc) {
+                            saldoSaque = doc.data().saldo || 0;
+                            saldoDeposito = doc.data().saldoDeposito || 0;
+                            document.getElementById("saldoSaque").innerText = formatador.format(saldoSaque);
+                            document.getElementById("saldoDeposito").innerText = formatador.format(saldoDeposito);
+                            console.log("✅ Saldo de saque carregado: R$ " + formatador.format(saldoSaque));
+                            console.log("✅ Saldo de depósito carregado: R$ " + formatador.format(saldoDeposito));
+                        } else {
+                            console.warn("Usuário não encontrado para saldo");
+                            saldoSaque = 0;
+                            saldoDeposito = 0;
+                            document.getElementById("saldoSaque").innerText = formatador.format(0);
+                            document.getElementById("saldoDeposito").innerText = formatador.format(0);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("❌ Erro ao carregar saldo:", error);
+                        saldoSaque = 0;
+                        saldoDeposito = 0;
+                        document.getElementById("saldoSaque").innerText = formatador.format(0);
+                        document.getElementById("saldoDeposito").innerText = formatador.format(0);
+                    });
+
+                // Escutar mudanças no saldo em tempo real
+                escutarSaldoTempoReal();
+                escutarSaldoDeposito();
+            });
+        });
+
+        // Função de logout
+        function logout() {
+            localStorage.removeItem('usuarioLogado');
+            localStorage.removeItem('uid');
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body>
+    <div class="saldo-container">
+        <h2>💰 Meus Saldos</h2>
+        <div class="saldo-item">
+            Saldo de saque: <span id="saldoSaque" class="saldo-value">R$ 0,00</span>
+        </div>
+        <div class="saldo-item">
+            Saldo de depósito: <span id="saldoDeposito" class="saldo-value">R$ 0,00</span>
+        </div>
+        <button onclick="logout()" style="background-color: #dc3545; margin-top: 20px;">Sair</button>
+    </div>
+</body>
+</html>

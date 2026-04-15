@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Depósito • Magaxia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- Sistema de Autenticação Centralizado -->
+<script src="sistema-auth.js"></script>
+
+<!-- QRCode -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+body{
+    font-family: Arial, Helvetica, sans-serif;
+    background: linear-gradient(135deg,#667eea,#764ba2,#f093fb);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    visibility:hidden;
+}
+
+.container{
+    max-width:500px;
+    width:100%;
+    text-align:center;
+    padding:30px;
+}
+
+.card{
+    background:rgba(255,255,255,0.1);
+    padding:30px;
+    border-radius:20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.valores{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+}
+
+.valor-btn{
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    background:#ffffff22;
+    color:white;
+    font-weight:bold;
+}
+
+input{
+    width:100%;
+    padding:14px;
+    margin-top:15px;
+    border-radius:12px;
+    border:none;
+    text-align:center;
+}
+
+button{
+    width:100%;
+    padding:14px;
+    margin-top:12px;
+    border:none;
+    border-radius:12px;
+    background:#39c6ff;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+#qrcode{
+    margin-top:20px;
+    display:flex;
+    justify-content:center;
+}
+
+.info{
+    margin-top:15px;
+    font-size:14px;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    margin: 15px 0;
+}
+
+p {
+    margin: 0;
+    line-height: 1.6;
+    font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>💎 DEPÓSITO</h1>
+<p>Escolha um valor e pague via Pix</p>
+
+<!-- Botão de logout -->
+<button style="position:absolute; top:20px; right:20px; background:#ff4757; color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:12px;" onclick="logout()">🚪 Sair</button>
+
+<div class="card">
+
+<div class="valores">
+<button class="valor-btn" onclick="setValor(10)">R$ 10</button>
+<button class="valor-btn" onclick="setValor(20)">R$ 20</button>
+<button class="valor-btn" onclick="setValor(30)">R$ 30</button>
+<button class="valor-btn" onclick="setValor(65)">R$ 65</button>
+<button class="valor-btn" onclick="setValor(85)">R$ 85</button>
+<button class="valor-btn" onclick="setValor(100)">R$ 100</button>
+</div>
+
+<input type="number" id="valor" placeholder="Digite o valor" min="1">
+
+<button onclick="gerarPix()">
+📲 Gerar QR Code Pix
+</button>
+
+<div id="qrcode"></div>
+
+<div id="pix-area" style="display:none;">
+<textarea id="pixCode" readonly></textarea>
+<button onclick="copyPixCode()">📋 Copiar código Pix</button>
+</div>
+
+<button onclick="confirmar()">
+✅ Já fiz o Pix
+</button>
+
+<div class="info">
+⏱️ O saldo será creditado após aprovação do administrador
+</div>
+
+</div>
+
+<!-- 💰 COMISSÕES E GANHOS (oculto, permanece funcional) -->
+<div class="card hidden">
+  <p style="font-weight:bold;margin-bottom:15px;">💰 Seus Ganhos</p>
+  <p style="font-size:14px;margin-bottom:15px;">
+    Saldo: <strong id="meuSaldo">R$ 0,00</strong><br>
+    Comissão Total: <strong id="minhaComissao">R$ 0,00</strong>
+  </p>
+
+  <p style="font-weight:bold;margin-top:16px;">🔗 Comissões por Nível</p>
+  <p style="font-size:14px;">
+    🥇 Nível 1: <strong id="comissaoNivel1">R$ 0,00</strong><br>
+    🥈 Nível 2: <strong id="comissaoNivel2">R$ 0,00</strong><br>
+    🥉 Nível 3: <strong id="comissaoNivel3">R$ 0,00</strong>
+  </p>
+
+  <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.2); margin: 15px 0;">
+  <p style="font-weight:bold;">Taxas de Comissão</p>
+  <p style="font-size:14px;">
+    🥇 Nível 1: <strong>20%</strong><br>
+    🥈 Nível 2: <strong>5%</strong><br>
+    🥉 Nível 3: <strong>3%</strong>
+  </p>
+</div>
+
+</div>
+
+<script>
+
+// Usando firebase-helper.js: auth e db já configurados
+
+let uid = null;
+let valorAtual = 0;
+
+// 🔐 Proteção de acesso e dados do depósito
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔐 Verificando autenticação no depósito...');
+
+  // Usar sistema centralizado para verificar login
+  window.SistemaAuth.verificarLogin((autenticado, dadosUsuario) => {
+    if (!autenticado) {
+      console.log('❌ Usuário não autenticado, redirecionando para login...');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    console.log('✅ Usuário autenticado, carregando dados do depósito...');
+
+    // Inicializar variáveis globais
+    uid = dadosUsuario.uid;
+
+    // RECUPERAR VALOR SALVO (se voltou de redirecionamento)
+    const valorSalvo = sessionStorage.getItem('depositoValor');
+    if (valorSalvo) {
+      valorAtual = parseFloat(valorSalvo);
+      document.getElementById("valor").value = valorAtual;
+      sessionStorage.removeItem('depositoValor'); // Limpar após usar
+      console.log('✅ Valor recuperado:', valorAtual);
+    }
+
+    // Tornar body visível
+    document.body.style.visibility = "visible";
+
+    // Carregar dados de saldo e comissão
+    carregarDadosFinanceiros(uid, dadosUsuario.email, dadosUsuario.telefone);
+
+    // Escutar depósitos aprovados
+    escutarDepositosAprovados();
+  });
+});
+
+// DEFINIR VALOR
+
+function setValor(v){
+
+valorAtual = v;
+
+document.getElementById("valor").value = v;
+
+}
+
+// GERAR PIX
+
+function gerarPix(){
+
+const inp = document.getElementById("valor");
+
+const parsed = Number(inp.value);
+
+if(!parsed || parsed <= 0){
+alert("Selecione um valor");
+return;
+}
+
+valorAtual = parsed;
+
+const valoresAceitos = [10,20,30,65,85,100];
+
+if(!valoresAceitos.includes(valorAtual)){
+alert("Valor inválido");
+return;
+}
+
+// SALVAR VALOR PARA RECUPERAR APÓS REDIRECIONAMENTO
+sessionStorage.setItem('depositoValor', valorAtual.toString());
+
+// REDIRECIONAMENTO
+
+const urls = {
+10: "https://pixgo.org/recurrence/checkout.php?id=392",
+20: "https://pixgo.org/recurrence/checkout.php?id=431",
+30: "https://pixgo.org/recurrence/checkout.php?id=432",
+65: "https://pixgo.org/recurrence/checkout.php?id=433",
+85: "https://pixgo.org/recurrence/checkout.php?id=434",
+100: "https://pixgo.org/recurrence/checkout.php?id=435"
+};
+
+if(urls[valorAtual]){
+window.location.href = urls[valorAtual];
+return;
+}
+
+// QR LOCAL
+
+const payloadPix = `PIX|VALOR:${valorAtual}|UID:${uid}`;
+
+const pixArea = document.getElementById("pix-area");
+
+pixArea.style.display = "block";
+
+document.getElementById("pixCode").value = payloadPix;
+
+const qrDiv = document.getElementById("qrcode");
+
+qrDiv.innerHTML = "";
+
+new QRCode(qrDiv,{
+text: payloadPix,
+width: 200,
+height: 200
+});
+
+}
+
+// COPIAR PIX
+
+function copyPixCode(){
+
+const text = document.getElementById("pixCode").value;
+
+navigator.clipboard.writeText(text);
+
+alert("Código Pix copiado");
+
+}
+
+// =============================
+// SISTEMA DE COMISSÃO AUTOMÁTICA (3 NÍVEIS)
+// =============================
+
+function buscarUsuarioFirestore(uid, email, telefone) {
+  const db = window.SistemaAuth.db;
+  return db.collection('users').doc(uid).get().then(doc => {
+    if (doc.exists) {
+      return doc;
+    }
+
+    const queries = [];
+    if (email) {
+      queries.push(db.collection('users').where('email', '==', email).limit(1).get());
+    }
+    if (telefone) {
+      queries.push(db.collection('users').where('telefone', '==', telefone).limit(1).get());
+    }
+
+    return Promise.all(queries).then(results => {
+      for (const snapshot of results) {
+        if (snapshot && !snapshot.empty) {
+          console.warn('⚠️ UID não encontrado por ID; usando fallback por email/telefone');
+          return snapshot.docs[0];
+        }
+      }
+      return null;
+    });
+  });
+}
+
+async function carregarDadosFinanceiros(uid, email, telefone) {
+  try {
+    console.log('🔍 Procurando usuário no banco para dados financeiros:', uid);
+    let ref = window.SistemaAuth.db.collection('users').doc(uid);
+    let snap = await ref.get();
+    let data;
+    let finalUid = uid;
+
+    if (!snap.exists) {
+      console.warn('⚠️ Documento de usuário por UID não encontrado:', uid);
+      const fallback = await buscarUsuarioFirestore(uid, email, telefone);
+      if (!fallback) {
+        console.error('❌ Usuário não encontrado no banco:', uid);
+        document.getElementById('meuSaldo').innerText = 'R$ 0,00';
+        document.getElementById('minhaComissao').innerText = 'R$ 0,00';
+        document.getElementById('comissaoNivel1').innerText = 'R$ 0,00';
+        document.getElementById('comissaoNivel2').innerText = 'R$ 0,00';
+        document.getElementById('comissaoNivel3').innerText = 'R$ 0,00';
+        return;
+      }
+      console.log('🔎 Usuário encontrado por fallback:', fallback.id);
+      finalUid = fallback.id;
+      data = fallback.data();
+      ref = window.SistemaAuth.db.collection('users').doc(finalUid);
+      snap = await ref.get();
+    } else {
+      data = snap.data();
+    }
+
+    const saldo = data.saldo || 0;
+    const comissao = data.comissaoTotal || 0;
+    document.getElementById('meuSaldo').innerText = `R$ ${saldo.toFixed(2).replace('.', ',')}`;
+    document.getElementById('minhaComissao').innerText = `R$ ${comissao.toFixed(2).replace('.', ',')}`;
+    
+    // Calcular comissões por nível
+    await calcularComissoesPorNivel(finalUid);
+    
+    // Escutar atualizações em tempo real
+    ref.onSnapshot(doc => {
+      const dadosAtualizados = doc.data();
+      const saldoAtual = dadosAtualizados.saldo || 0;
+      const comissaoAtual = dadosAtualizados.comissaoTotal || 0;
+      document.getElementById('meuSaldo').innerText = `R$ ${saldoAtual.toFixed(2).replace('.', ',')}`;
+      document.getElementById('minhaComissao').innerText = `R$ ${comissaoAtual.toFixed(2).replace('.', ',')}`;
+      // Recalcular comissões por nível em tempo real
+      calcularComissoesPorNivel(finalUid);
+    });
+  } catch(error) {
+    console.error('Erro ao carregar dados financeiros:', error);
+  }
+}
+
+async function calcularComissoesPorNivel(uid) {
+  try {
+    const db = window.SistemaAuth.db;
+    const comissoesRef = db.collection("comissoes").where("usuarioId", "==", uid);
+    const snapshot = await comissoesRef.get();
+    
+    let totalNivel1 = 0;
+    let totalNivel2 = 0;
+    let totalNivel3 = 0;
+    
+    snapshot.forEach(doc => {
+      const comissao = doc.data();
+      const valor = comissao.valorComissao || 0;
+      const nivel = comissao.nivel;
+      
+      if (nivel === 1) totalNivel1 += valor;
+      else if (nivel === 2) totalNivel2 += valor;
+      else if (nivel === 3) totalNivel3 += valor;
+    });
+    
+    document.getElementById('comissaoNivel1').innerText = `R$ ${totalNivel1.toFixed(2).replace('.', ',')}`;
+    document.getElementById('comissaoNivel2').innerText = `R$ ${totalNivel2.toFixed(2).replace('.', ',')}`;
+    document.getElementById('comissaoNivel3').innerText = `R$ ${totalNivel3.toFixed(2).replace('.', ',')}`;
+  } catch (error) {
+    console.error('Erro ao calcular comissões por nível:', error);
+  }
+}
+
+async function gerarComissaoIndicacao(deposito, depositoId) {
+    try {
+        const db = window.SistemaAuth.db;
+        const firebase = window.SistemaAuth.firebase;
+
+        if (!deposito || deposito.status !== "aprovado") {
+            console.log("⏭️ Depósito não aprovado ou inválido:", depositoId);
+            return;
+        }
+
+        if (deposito.comissaoGerada === true) {
+            console.log("⏭️ Comissão já gerada para o depósito:", depositoId);
+            return;
+        }
+
+        const usuarioId = deposito.usuarioId || deposito.uid;
+        if (!usuarioId) {
+            console.error("❌ Depósito sem usuário válido:", depositoId);
+            return;
+        }
+
+        console.log("Depósito aprovado:", depositoId);
+        console.log("Usuário que depositou:", usuarioId);
+
+        // Buscar na coleção "indicacoes" quem indicou este usuário
+        const indicacaoLevel1 = await db.collection("indicacoes").where("idIndicado", "==", usuarioId).get();
+        const nivel1 = !indicacaoLevel1.empty ? indicacaoLevel1.docs[0].data().idIndicador : null;
+        console.log("Indicador encontrado (nível 1):", nivel1);
+
+        const nivel2 = nivel1 ? await buscarIndicadorNivel(nivel1) : null;
+        const nivel3 = nivel2 ? await buscarIndicadorNivel(nivel2) : null;
+
+        const usuarioDoc = await db.collection("users").doc(usuarioId).get();
+        const usuario = usuarioDoc.exists ? usuarioDoc.data() : {};
+
+        const valorDeposito = Number(deposito.valor) || 0;
+        // TAXA CORRETA: 20% nível 1, 5% nível 2, 3% nível 3
+        const comissaoNivel1 = valorDeposito * 0.20; // 20%
+        const comissaoNivel2 = valorDeposito * 0.05; // 5%
+        const comissaoNivel3 = valorDeposito * 0.03; // 3%
+
+        console.log("===== CALCULANDO COMISSÕES =====");
+        console.log(`Valor do depósito: R$ ${valorDeposito}`);
+        console.log(`Nível 1 (20% de R$ ${valorDeposito}): R$ ${comissaoNivel1.toFixed(2)}`);
+        console.log(`Nível 2 (5% de R$ ${valorDeposito}): R$ ${comissaoNivel2.toFixed(2)}`);
+        console.log(`Nível 3 (3% de R$ ${valorDeposito}): R$ ${comissaoNivel3.toFixed(2)}`);
+
+        if (nivel1) {
+            console.log("Gerando comissão nível 1");
+            await adicionarSaldo(nivel1, comissaoNivel1, 1, usuarioId, usuario, depositoId);
+        }
+
+        if (nivel2) {
+            console.log("Gerando comissão nível 2");
+            await adicionarSaldo(nivel2, comissaoNivel2, 2, usuarioId, usuario, depositoId);
+        }
+
+        if (nivel3) {
+            console.log("Gerando comissão nível 3");
+            await adicionarSaldo(nivel3, comissaoNivel3, 3, usuarioId, usuario, depositoId);
+        }
+
+        await db.collection("depositos").doc(depositoId).update({
+            comissaoGerada: true
+        });
+
+        console.log("Comissão gerada para:", usuarioId);
+    } catch (erro) {
+        console.error("Erro ao gerar comissão:", erro);
+    }
+}
+
+async function buscarIndicadorNivel(usuarioId) {
+    const db = window.SistemaAuth.db;
+    const indicacao = await db.collection("indicacoes").where("idIndicado", "==", usuarioId).get();
+    if (indicacao.empty) return null;
+    return indicacao.docs[0].data().idIndicador || null;
+}
+
+async function adicionarSaldo(usuarioId, valorComissao, nivel, usuarioOrigemId, usuarioOrigemDados, depositoId) {
+    try {
+        console.log(`[COMISSÃO NÍVEL ${nivel}] Iniciando...`);
+        console.log(`  usuarioId: ${usuarioId}`);
+        console.log(`  valorComissao: R$ ${valorComissao}`);
+        console.log(`  depositoId: ${depositoId}`);
+
+        if (!valorComissao || valorComissao <= 0) {
+            console.log(`[COMISSÃO NÍVEL ${nivel}] ❌ Valor inválido, abortando`);
+            return;
+        }
+
+        const db = window.SistemaAuth.db;
+        const firebase = window.SistemaAuth.firebase;
+        const indicadorRef = db.collection("users").doc(usuarioId);
+        const indicadorDoc = await indicadorRef.get();
+        if (!indicadorDoc.exists) {
+            console.log(`⚠️ Indicador nível ${nivel} não encontrado:`, usuarioId);
+            return;
+        }
+
+        const indicador = indicadorDoc.data();
+        const saldoAtual = indicador.saldo || 0;
+        const comissaoTotalAtual = indicador.comissaoTotal || 0;
+        const saldoComissaoAtual = indicador.saldoComissao || 0;
+        const totalIndicadosAtual = indicador.totalIndicados || 0;
+
+        console.log(`  Saldo anterior: R$ ${saldoAtual}`);
+        console.log(`  Comissão total anterior: R$ ${comissaoTotalAtual}`);
+
+        // Atualizar saldo e comissões
+        await indicadorRef.update({
+            saldo: saldoAtual + valorComissao,
+            comissaoTotal: comissaoTotalAtual + valorComissao,
+            saldoComissao: saldoComissaoAtual + valorComissao,
+            totalIndicados: totalIndicadosAtual + (nivel === 1 ? 1 : 0)
+        });
+
+        console.log(`  Novo saldo: R$ ${saldoAtual + valorComissao}`);
+        console.log(`  Nova comissão total: R$ ${comissaoTotalAtual + valorComissao}`);
+
+        // Salvar na coleção "comissoes" com campos obrigatórios
+        await db.collection("comissoes").add({
+            usuarioId: usuarioId, // Quem recebeu a comissão
+            origemUsuarioId: usuarioOrigemId, // Quem fez o depósito
+            depositoId: depositoId,
+            nivel: nivel,
+            valorDeposito: Number(depositoId ? (await db.collection("depositos").doc(depositoId).get()).data().valor : 0),
+            valorComissao: valorComissao,
+            data: firebase.firestore.FieldValue.serverTimestamp(),
+            status: "pago"
+        });
+
+        console.log(`✅ Comissão Nível ${nivel} paga: R$ ${valorComissao.toFixed(2)} para ${indicador.nome}`);
+    } catch (error) {
+        console.error(`❌ Erro ao adicionar saldo nível ${nivel}:`, error);
+    }
+}
+
+// =============================
+// ATUALIZAR SALDO AUTOMATICAMENTE
+// =============================
+
+
+
+function escutarDepositosAprovados() {
+    const db = window.SistemaAuth.db;
+
+    // Escutar TODOS os depósitos aprovados para verificar se somos indicadores
+    db.collection("depositos")
+        .where("status", "==", "aprovado")
+        .onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(async change => {
+                if (change.type !== "added") return;
+
+                const deposito = change.doc.data();
+                const depositoId = change.doc.id;
+                const depositoRef = change.doc.ref;
+
+                if (deposito.comissaoGerada === true) {
+                    console.log("⏭️ Comissão já gerada para o depósito:", depositoId);
+                    return;
+                }
+
+                console.log("Depósito aprovado detectado:", depositoId, deposito);
+
+                try {
+                    // Primeiro, creditar o saldo do usuário que fez o depósito (se for o próprio usuário)
+                    if (deposito.usuarioId === uid || deposito.uid === uid) {
+                        await db.runTransaction(async t => {
+                            const userRef = db.collection("users").doc(uid);
+                            const userDoc = await t.get(userRef);
+
+                            if (!userDoc.exists) {
+                                throw new Error("Usuário não encontrado durante o crédito do depósito");
+                            }
+
+                            const saldoAtual = userDoc.data().saldo || 0;
+                            const valorDeposito = Number(deposito.valor) || 0;
+                            const novoSaldo = saldoAtual + valorDeposito;
+
+                            if (deposito.creditado !== true) {
+                                t.update(userRef, {
+                                    saldo: novoSaldo
+                                });
+                                t.update(depositoRef, {
+                                    creditado: true
+                                });
+                                console.log("Saldo atualizado automaticamente:", novoSaldo);
+                            } else {
+                                console.log("Depósito já creditado, mantendo crédito existente");
+                            }
+                        });
+                    }
+
+                    // Agora, gerar comissão se somos um indicador
+                    await gerarComissaoIndicacao(deposito, depositoId);
+                } catch (error) {
+                    console.error("Erro ao processar depósito aprovado:", error);
+                }
+            });
+        });
+}
+
+// Inicia escuta após login
+
+// Removido - agora usa sistema centralizado
+
+// =============================
+// CONFIRMAR DEPÓSITO
+
+async function confirmar(){
+
+// Verificar valor no input OU na variável global
+const valorInput = document.getElementById("valor").value;
+const valorParaConfirmar = valorInput ? Number(valorInput) : valorAtual;
+
+if(valorParaConfirmar <= 0){
+alert("Selecione um valor primeiro");
+return;
+}
+
+// Atualizar valorAtual se necessário
+valorAtual = valorParaConfirmar;
+
+// BLOQUEAR DUPLICADO
+
+const existente = await window.SistemaAuth.db
+.collection("depositos")
+.where("uid","==",uid)
+.where("status","==","pendente")
+.get();
+
+if(!existente.empty){
+alert("Você já possui um depósito pendente");
+return;
+}
+
+await window.SistemaAuth.db.collection("depositos").add({
+
+uid: uid,
+usuarioId: uid,
+
+valor: valorAtual,
+
+status: "pendente",
+
+data: window.SistemaAuth.firebase.firestore
+.FieldValue
+.serverTimestamp()
+
+});
+
+alert("Depósito registrado com sucesso");
+
+location.reload();
+
+}
+
+// =============================
+// TESTE DE COMISSÃO (REMOVER APÓS TESTE)
+// =============================
+
+async function testarComissao() {
+    console.log("🧪 TESTANDO SISTEMA DE COMISSÃO...");
+    
+    // Simular um depósito aprovado
+    const depositoTeste = {
+        usuarioId: uid,
+        valor: 100,
+        status: "aprovado",
+        comissaoGerada: false
+    };
+    
+    const depositoId = "teste-" + Date.now();
+    
+    console.log("📝 Criando depósito de teste...");
+    await window.SistemaAuth.db.collection("depositos").doc(depositoId).set(depositoTeste);
+    
+    console.log("✅ Depósito criado, aguardando processamento...");
+    
+    // O listener deve detectar automaticamente
+    setTimeout(() => {
+        console.log("🔍 Verificando se comissão foi gerada...");
+        window.SistemaAuth.db.collection("depositos").doc(depositoId).get().then(doc => {
+            if (doc.exists && doc.data().comissaoGerada) {
+                console.log("✅ Comissão gerada com sucesso!");
+            } else {
+                console.log("❌ Comissão NÃO foi gerada");
+            }
+        });
+    }, 3000);
+}
+
+// Adicionar botão de teste (remover após funcionar)
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        const container = document.querySelector('.container');
+        const btnTeste = document.createElement('button');
+        btnTeste.innerHTML = '🧪 Testar Comissão';
+        btnTeste.style.background = '#ff6b6b';
+        btnTeste.style.color = 'white';
+        btnTeste.style.border = 'none';
+        btnTeste.style.padding = '12px';
+        btnTeste.style.borderRadius = '12px';
+        btnTeste.style.cursor = 'pointer';
+        btnTeste.style.marginTop = '10px';
+        btnTeste.classList.add('hidden');
+        btnTeste.onclick = testarComissao;
+        container.appendChild(btnTeste);
+    }, 2000);
+});
+
+function logout() {
+  window.SistemaAuth.fazerLogout();
+}
+
+</script>
+
+
+
+</body>
+</html>
