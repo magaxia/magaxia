@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Teste Saldos - Debug</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="sistema-auth.js"></script>
+<style>
+body { font-family: Arial; padding: 20px; }
+.result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+.success { background: #d4edda; color: #155724; }
+.error { background: #f8d7da; color: #721c24; }
+</style>
+</head>
+<body>
+<h1>🔍 Teste de Saldos - Debug</h1>
+<div id="status">Carregando...</div>
+<div id="resultado"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  console.log('🔍 Iniciando teste de debug de saldos...');
+
+  try {
+    // Aguardar autenticação
+    firebase.auth().onAuthStateChanged(async user => {
+      if (!user) {
+        document.getElementById('status').innerHTML = '<div class="error">❌ Usuário não autenticado</div>';
+        return;
+      }
+
+      document.getElementById('status').innerHTML = '<div class="success">✅ Usuário autenticado: ' + user.email + '</div>';
+
+      try {
+        // Buscar documento do usuário
+        const docRef = window.SistemaAuth.db.collection('users').doc(user.uid);
+        const docSnap = await docRef.get();
+
+        if (!docSnap.exists) {
+          document.getElementById('resultado').innerHTML = '<div class="error">❌ Documento do usuário não existe</div>';
+          return;
+        }
+
+        const data = docSnap.data();
+        console.log('📄 Dados completos do usuário:', data);
+
+        // Verificar campos CORRETOS
+        const saldoSaque = data.saldoSaque || 0;
+        const saldoDeposito = data.saldoDeposito || 0;
+        const total = saldoSaque + saldoDeposito;
+
+        console.log('✅ CÁLCULO FINAL:');
+        console.log('   saldoSaque:', saldoSaque, '(tipo:', typeof saldoSaque + ')');
+        console.log('   saldoDeposito:', saldoDeposito, '(tipo:', typeof saldoDeposito + ')');
+        console.log('   TOTAL:', total, '(tipo:', typeof total + ')');
+
+        // Exibir resultado detalhado
+        document.getElementById('resultado').innerHTML = `
+          <div class="result success">
+            <h3>✅ RESULTADO DO TESTE:</h3>
+            <p><strong>Saldo Saque (saldoSaque):</strong> R$ ${saldoSaque.toFixed(2).replace('.', ',')}</p>
+            <p><strong>Saldo Depósito (saldoDeposito):</strong> R$ ${saldoDeposito.toFixed(2).replace('.', ',')}</p>
+            <p><strong>🔢 TOTAL CALCULADO:</strong> R$ ${total.toFixed(2).replace('.', ',')}</p>
+          </div>
+
+          <div class="result">
+            <h3>📋 Campos no documento:</h3>
+            <ul>
+              <li><strong>saldoSaque:</strong> ${data.hasOwnProperty('saldoSaque') ? '✅ Existe (' + data.saldoSaque + ')' : '❌ Não existe'}</li>
+              <li><strong>saldoDeposito:</strong> ${data.hasOwnProperty('saldoDeposito') ? '✅ Existe (' + data.saldoDeposito + ')' : '❌ Não existe'}</li>
+              <li><strong>saldo (antigo):</strong> ${data.hasOwnProperty('saldo') ? '⚠️ Existe (' + data.saldo + ') - Campo antigo!' : '✅ Não existe (correto)'}</li>
+            </ul>
+          </div>
+
+          <div class="result">
+            <h3>🔧 Dados brutos do documento:</h3>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          </div>
+        `;
+
+        // Verificar se está funcionando
+        if (total > 0) {
+          document.getElementById('resultado').innerHTML += '<div class="result success"><h3>🎉 TESTE APROVADO! Saldos estão sendo somados corretamente.</h3></div>';
+        } else {
+          document.getElementById('resultado').innerHTML += '<div class="result"><h3>ℹ️ Saldos são zero - teste válido, mas sem valores para somar.</h3></div>';
+        }
+
+      } catch (error) {
+        console.error('❌ Erro no teste:', error);
+        document.getElementById('resultado').innerHTML = '<div class="error">❌ Erro: ' + error.message + '</div>';
+      }
+    });
+  } catch (error) {
+    document.getElementById('status').innerHTML = '<div class="error">❌ Erro geral: ' + error.message + '</div>';
+  }
+});
+</script>
+</body>
+</html>

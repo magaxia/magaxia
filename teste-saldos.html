@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Teste de Saldos</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="sistema-auth.js"></script>
+</head>
+<body>
+<h1>Teste de Saldos</h1>
+<div id="resultado"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+  console.log('🔍 Iniciando teste de saldos...');
+
+  // Aguardar autenticação
+  firebase.auth().onAuthStateChanged(async user => {
+    if (!user) {
+      document.getElementById('resultado').innerHTML = '❌ Usuário não autenticado';
+      return;
+    }
+
+    console.log('✅ Usuário autenticado:', user.email);
+
+    try {
+      // Buscar documento do usuário
+      const docRef = window.SistemaAuth.db.collection('users').doc(user.uid);
+      const docSnap = await docRef.get();
+
+      if (!docSnap.exists) {
+        document.getElementById('resultado').innerHTML = '❌ Documento do usuário não existe';
+        return;
+      }
+
+      const data = docSnap.data();
+      console.log('📄 Dados completos do usuário:', data);
+
+      // Verificar campos - CORREÇÃO: campos corretos
+      const saldoSaque = data.saldoSaque || 0;
+      const saldoDeposito = data.saldoDeposito || 0;
+      const total = saldoSaque + saldoDeposito;
+
+      console.log('💰 Valores encontrados:');
+      console.log('   - Campo "saldoSaque" existe:', data.hasOwnProperty('saldoSaque'), 'Valor:', data.saldoSaque);
+      console.log('   - Campo "saldoDeposito" existe:', data.hasOwnProperty('saldoDeposito'), 'Valor:', data.saldoDeposito);
+      console.log('   - Saldo Saque:', saldoSaque);
+      console.log('   - Saldo Depósito:', saldoDeposito);
+      console.log('   - TOTAL CALCULADO:', total);
+
+      // Exibir resultado
+      document.getElementById('resultado').innerHTML = `
+        <h2>Resultado do Teste:</h2>
+        <p><strong>Saldo Saque (saldoSaque):</strong> R$ ${saldoSaque.toFixed(2).replace('.', ',')}</p>
+        <p><strong>Saldo Depósito (saldoDeposito):</strong> R$ ${saldoDeposito.toFixed(2).replace('.', ',')}</p>
+        <p><strong>TOTAL:</strong> R$ ${total.toFixed(2).replace('.', ',')}</p>
+        <hr>
+        <p><strong>Campos no documento:</strong></p>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+
+    } catch (error) {
+      console.error('❌ Erro no teste:', error);
+      document.getElementById('resultado').innerHTML = '❌ Erro: ' + error.message;
+    }
+  });
+});
+</script>
+</body>
+</html>
