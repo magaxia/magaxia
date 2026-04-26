@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel VIP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style-vip.css" />
+</head>
+<body>
+  <header class="vip-header">
+    <img src="assets/images/vip-logo.png" alt="Logo VIP" class="vip-logo" />
+    <nav class="vip-menu">
+      <a href="index.html" class="vip-link">🏠 Dashboard</a>
+      <a href="vip-status.html" class="vip-link">📊 Status VIP</a>
+      <a href="beneficios.html" class="vip-link">💎 Benefícios</a>
+      <a href="regras.html" class="vip-link">📝 Regras</a>
+    </nav>
+  </header>
+  <div class="page-shell">
+    <header class="page-header">
+      <div class="brand">
+        <span class="brand-icon">
+          <img src="assets/icons/vip-logo.png" alt="VIP" />
+        </span>
+        <div class="brand-title">
+          <strong class="vip-destaque">Painel VIP</strong>
+          <span>⭐ Central VIP ⭐</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="page-intro">
+      <h1>🔥 Bem-vindo à sua Área VIP 🔥</h1>
+      <p>Um ambiente exclusivo criado para oferecer a melhor experiência VIP. 🚀</p>
+    </section>
+
+    <section class="grid-columns">
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <p class="card-subtitle">Acesso rápido</p>
+            <h2 class="card-title">Visualização de status</h2>
+          </div>
+          <span class="status-badge">VIP Real</span>
+        </div>
+        <p>Status VIP em tempo real Meu Nível VIP
+Acompanhe seu nível VIP com atualização automática e dados sempre confiáveis.</p>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <p class="card-subtitle">Informação claras</p>
+            <h2 class="card-title">Benefícios VIP</h2>
+          </div>
+          <span class="status-badge">Detalhes exclusivos</span>
+        </div>
+        <p>Conheça todas as vantagens de cada nível VIP de forma simples e organizada.</p>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <p class="card-subtitle">Confiança e transparência</p>
+            <h2 class="card-title">Regras VIP</h2>
+          </div>
+          <span class="status-badge">Critérios de evolução</span>
+        </div>
+        <p>Entenda como avançar entre os níveis VIP com clareza e segurança.</p>
+      </article>
+    </section>
+    </div>
+  </div>
+
+  <script>
+    const links = document.querySelectorAll('.vip-link');
+    const paginaAtual = window.location.pathname;
+    links.forEach(link => {
+      if (paginaAtual.includes(link.getAttribute('href'))) {
+        link.classList.add('ativo');
+      }
+    });
+  </script>
+</body>
+</html>
