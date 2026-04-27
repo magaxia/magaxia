@@ -273,13 +273,6 @@
       color: var(--accent);
     }
 
-    #connectionStatus,
-    #userInfo,
-    #logoutBtn,
-    #loginBtn {
-      display: none !important;
-    }
-
     .error {
       color: #ff8b8b;
       font-weight: 600;
@@ -301,7 +294,7 @@
         <p>Conecte ao Firestore, acompanhe o progresso em tempo real e calcule o nível VIP automaticamente com base em depósitos, compras e meta.</p>
       </div>
       <div class="hero__meta">
-        <p class="hint"><strong>Importante:</strong> O progresso VIP é calculado automaticamente com base no total de depósitos ou quantidade de compras realizada</p>
+        <p class="hint"><strong>Importante:</strong> adicione sua configuração do Firebase abaixo, ative o Firestore e use o login Firebase para carregar o usuário existente. Depósitos são lidos da coleção <code>depositos</code> e compras da coleção <code>compras</code>.</p>
       </div>
     </header>
 
@@ -309,8 +302,12 @@
       <section class="panel">
         <div class="row row-2">
           <div class="input-group">
+            <p style="color: var(--muted); margin: 0;">Use o login do Firebase para carregar o usuário existente. Apenas dados de `users/{uid}` são lidos.</p>
+          </div>
+          <div class="input-group" style="align-self: end;">
             <div style="display:inline-flex; gap: 12px; flex-wrap: wrap;">
-              <button id="loginBtn" type="button"></button>
+              <button id="loginBtn" type="button">Login com Google</button>
+              <button id="logoutBtn" type="button" style="display:none; background: linear-gradient(135deg, #ff5e7a, #ff9476); color:#fff;">Sair</button>
             </div>
           </div>
         </div>
@@ -366,7 +363,7 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
-    import { getFirestore, doc, collection, query, where, onSnapshot, updateDoc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
+    import { getFirestore, doc, collection, query, where, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
     import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
     const firebaseConfig = {
@@ -402,13 +399,13 @@
       depositos: 0,
       compras: 0,
       metaVip: 100,
-      vipNivel: 0,
+      vipNivel: 1,
       userDocExists: false
     };
 
     function refreshUi(userDocRef) {
       const progress = calcularProgresso(state.depositos, state.compras, state.metaVip);
-      const computedLevel = getVipNivel(state.depositos, state.compras);
+      const computedLevel = getVipNivel(progress);
 
       updateUi({
         depositos: state.depositos,
@@ -431,11 +428,10 @@
       return Math.min(100, Math.round((valor / meta) * 100));
     }
 
-    function getVipNivel(depositos, compras) {
-      if (depositos >= 150 || compras >= 14) return 3;
-      if (depositos >= 80 || compras >= 7) return 2;
-      if (depositos >= 50 || compras >= 4) return 1;
-      return 0;
+    function getVipNivel(progress) {
+      if (progress >= 67) return 3;
+      if (progress >= 34) return 2;
+      return 1;
     }
 
     function formatCurrency(value) {
@@ -450,10 +446,10 @@
       const depositos = Number(data.depositos || 0);
       const compras = Number(data.compras || 0);
       const metaVip = Number(data.metaVip || 100);
-      const vipNivel = Number(data.vipNivel || 0);
+      const vipNivel = Number(data.vipNivel || 1);
 
       const progress = calcularProgresso(depositos, compras, metaVip);
-      const computedLevel = getVipNivel(depositos, compras);
+      const computedLevel = getVipNivel(progress);
 
       progressFill.style.width = `${progress}%`;
       progressLabel.textContent = `${progress}%`;
@@ -462,7 +458,7 @@
       depositosValue.textContent = formatCurrency(depositos);
       comprasValue.textContent = compras;
       metaVipValue.textContent = metaVip;
-      vipNivelValue.textContent = computedLevel;
+      vipNivelValue.textContent = vipNivel;
 
       connectionStatus.innerHTML = `Conectado ao Firestore. Progresso calculado em tempo real.`;
 
@@ -511,6 +507,7 @@
       const userDocRef = doc(db, 'users', userId);
       const depositosQuery = query(collection(db, 'depositos'), where('uid', '==', userId));
       const comprasQuery = query(collection(db, 'compras'), where('uid', '==', userId));
+      const comprasSubCollection = collection(db, 'users', userId, 'compras');
       connectionStatus.textContent = 'Aguardando dados do Firestore...';
 
       const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
@@ -530,51 +527,60 @@
         setConnectionStatus(`Erro no Firestore (users): ${error.message}`, true);
       });
 
-      const unsubscribeDepositos = onSnapshot(depositosQuery, async (querySnapshot) => {
-        if (querySnapshot.size > 0) {
-          let total = 0;
-          querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            total += Number(data.depositos ?? data.valor ?? data.total ?? 0);
-          });
-          state.depositos = total;
-        } else {
-          const depDoc = await getDoc(doc(db, 'depositos', userId));
-          if (depDoc.exists()) {
-            const data = depDoc.data();
-            state.depositos = Number(data.depositos ?? data.valor ?? data.total ?? 0);
-          } else {
-            state.depositos = 0;
-          }
-        }
+      const unsubscribeDepositos = onSnapshot(depositosQuery, (querySnapshot) => {
+        let total = 0;
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          total += Number(data.depositos ?? data.valor ?? data.total ?? 0);
+        });
+        state.depositos = total;
         refreshUi(userDocRef);
       }, (error) => {
         console.error(error);
         setConnectionStatus(`Erro no Firestore (depositos): ${error.message}`, true);
       });
 
-      const unsubscribeCompras = onSnapshot(comprasQuery, async (querySnapshot) => {
-        if (querySnapshot.size > 0) {
-          state.compras = querySnapshot.size;
-        } else {
-          const compraDoc = await getDoc(doc(db, 'compras', userId));
-          if (compraDoc.exists()) {
-            const data = compraDoc.data();
-            state.compras = Number(data.compras ?? data.quantidade ?? data.total ?? 0) || 0;
-          } else {
-            state.compras = 0;
-          }
-        }
+      let comprasTop = 0;
+      let comprasSub = 0;
+
+      const calculateCompras = () => {
+        state.compras = comprasTop + comprasSub;
         refreshUi(userDocRef);
+      };
+
+      const unsubscribeComprasTop = onSnapshot(comprasQuery, (querySnapshot) => {
+        let total = 0;
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const value = Number(data.compras ?? data.quantidade ?? data.total ?? data.valor ?? data.amount ?? 0);
+          total += Number.isFinite(value) ? value : 0;
+        });
+        comprasTop = total > 0 ? total : querySnapshot.size;
+        calculateCompras();
       }, (error) => {
         console.error(error);
-        setConnectionStatus(`Erro no Firestore (compras): ${error.message}`, true);
+        setConnectionStatus(`Erro no Firestore (compras top-level): ${error.message}`, true);
+      });
+
+      const unsubscribeComprasSub = onSnapshot(comprasSubCollection, (querySnapshot) => {
+        let total = 0;
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const value = Number(data.compras ?? data.quantidade ?? data.total ?? data.valor ?? data.amount ?? 0);
+          total += Number.isFinite(value) ? value : 0;
+        });
+        comprasSub = total > 0 ? total : querySnapshot.size;
+        calculateCompras();
+      }, (error) => {
+        console.error(error);
+        setConnectionStatus(`Erro no Firestore (compras subcollection): ${error.message}`, true);
       });
 
       return () => {
         unsubscribeUser();
         unsubscribeDepositos();
-        unsubscribeCompras();
+        unsubscribeComprasTop();
+        unsubscribeComprasSub();
       };
     }
 
