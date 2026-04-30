@@ -48,6 +48,7 @@ body, *{
 }
 
 .container{
+  position:relative;
   width:100%;
   max-width:440px;
   background:linear-gradient(135deg,
@@ -127,6 +128,38 @@ h1{
   box-shadow:0 12px 30px rgba(138,75,255,.3);
 }
 
+.btn-options{
+  position:absolute;
+  top:22px;
+  right:22px;
+  min-width:92px;
+  padding:10px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(255,255,255,0.08);
+  color:#f7f8ff;
+  font-size:.95rem;
+  font-weight:600;
+  letter-spacing:.01em;
+  backdrop-filter:blur(12px);
+  transition:transform .24s ease, background .24s ease, box-shadow .24s ease;
+  box-shadow:0 0 0 rgba(0,0,0,0);
+}
+
+.btn-options:hover{
+  transform:translateY(-1px);
+  background:rgba(255,255,255,0.13);
+  box-shadow:0 12px 32px rgba(7,9,26,0.16);
+}
+
+@media(max-width:520px){
+  .btn-options{
+    position:static;
+    margin:0 auto 18px;
+    display:inline-flex;
+  }
+}
+
 .slogan{
   margin-top:24px;
   font-size:.95rem;
@@ -197,6 +230,38 @@ footer{
   background: rgba(138, 75, 255, 0.15);
   color: #fff;
 }
+
+.nav-vip-turbo {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #1a1a1a !important;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-vip-turbo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.nav-vip-turbo:hover::before {
+  left: 100%;
+}
+
+.nav-vip-turbo:hover {
+  background: linear-gradient(135deg, #ffed4e, #ffd700);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 215, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
 </style>
 </head>
 
@@ -204,6 +269,7 @@ footer{
 
 <div class="container">
   <div class="logo"><img src="magaxia.png" alt="Magaxia" onerror="this.style.display='none'"></div>
+  <button class="btn btn-options" type="button">Opções</button>
   <h1>MAGAXIA</h1>
 
   <div class="buttons">
@@ -223,7 +289,7 @@ footer{
   <a href="equipe.html">👥<span>Equipe</span></a>
   <a href="ativo.html">📊<span>Ativos</span></a>
   <a href="perfil.html">🧑<span>Perfil</span></a>
-  <a href="metodovipturbo.html">🧑<span>vip turbo</span></a>
+  <a href="metodovipturbo.html" class="nav-vip-turbo">⚡<span>VIP Turbo</span></a>
 </nav>
 
 <!-- Painel flutuante: Entrar no grupo Magaxia (azul-escuro, moderno) -->
