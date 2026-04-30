@@ -134,7 +134,6 @@
 
     <div class="button-group">
       <button id="payButton" class="btn-primary">Enviar pagamento</button>
-      <button id="loginButton" class="btn-secondary">Login com Google</button>
     </div>
 
     <div id="statusMessage" class="message">Aguardando autenticação...</div>
@@ -168,7 +167,6 @@
     const provider = new GoogleAuthProvider();
 
     const payButton = document.getElementById('payButton');
-    const loginButton = document.getElementById('loginButton');
     const statusMessage = document.getElementById('statusMessage');
     const titularInput = document.getElementById('titularInput');
     const paymentsList = document.getElementById('paymentsList');
@@ -187,8 +185,7 @@
     function setUiForUser(user) {
       currentUser = user;
       if (!user) {
-        setStatus('Faça login com Google para continuar.');
-        loginButton.disabled = false;
+        setStatus('Faça login em outra página ou aguarde a autenticação automática.');
         payButton.disabled = true;
         paymentsList.innerHTML = '<div>Faça login para ver seus pagamentos.</div>';
         if (unsubscribePayments) {
@@ -280,14 +277,6 @@
         paymentsList.innerHTML = `<div style="color: var(--danger);">Erro ao carregar pagamentos: ${error.message}</div>`;
       });
     }
-
-    loginButton.addEventListener('click', async () => {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (error) {
-        setStatus(`Erro no login: ${error.message}`, true);
-      }
-    });
 
     payButton.addEventListener('click', async () => {
       if (!currentUser) {
