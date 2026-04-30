@@ -123,13 +123,13 @@
   <div class="card">
     <div class="status-badge">Painel VIP Turbo</div>
     <h1>Pagar VIP Turbo</h1>
-    <p>Insira o valor do pagamento e envie sua solicitação VIP Turbo. O valor padrão é R$11, mas você pode ajustar caso necessário.</p>
+    <p>Informe o nome do titular e envie sua solicitação VIP Turbo. O valor fixo opcional é R$11 e será registrado automaticamente.</p>
 
-    <div class="price">Valor fixo sugerido: R$11</div>
+    <div class="price">Valor fixo opcional: R$11</div>
 
     <div class="input-group" style="margin-bottom: 18px;">
-      <label for="valorInput" style="color: var(--muted); font-size: 0.95rem;">Valor do pagamento</label>
-      <input id="valorInput" type="number" min="1" value="11" style="width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text);" />
+      <label for="titularInput" style="color: var(--muted); font-size: 0.95rem;">Nome do titular</label>
+      <input id="titularInput" type="text" placeholder="Nome completo do titular" style="width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text);" />
     </div>
 
     <div class="button-group">
@@ -170,9 +170,10 @@
     const payButton = document.getElementById('payButton');
     const loginButton = document.getElementById('loginButton');
     const statusMessage = document.getElementById('statusMessage');
-    const valorInput = document.getElementById('valorInput');
+    const titularInput = document.getElementById('titularInput');
     const paymentsList = document.getElementById('paymentsList');
     const checkoutUrl = 'https://pixgo.org/recurrence/checkout.php?id=1159';
+    const fixedValue = 11;
 
     let currentUser = null;
     let unsubscribeVip = null;
@@ -258,15 +259,19 @@
 
           const statusLabel = payment.status === 'aprovado' ? 'Aprovado' : payment.status === 'rejeitado' ? 'Rejeitado' : 'Pendente';
           const statusColor = payment.status === 'aprovado' ? '#28a745' : payment.status === 'rejeitado' ? '#dc3545' : '#f0ad4e';
+          const titular = payment.titular ? payment.titular : 'Titular não informado';
 
           return `
             <div style="padding: 14px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);">
-              <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <div>
-                  <strong>R$ ${Number(payment.valor).toFixed(2).replace('.', ',')}</strong>
-                  <div style="font-size: 0.90rem; color: var(--muted);">${formattedDate}</div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <div>
+                    <strong>R$ ${Number(payment.valor).toFixed(2).replace('.', ',')}</strong>
+                    <div style="font-size: 0.90rem; color: var(--muted);">${formattedDate}</div>
+                  </div>
+                  <span style="padding: 6px 12px; border-radius: 999px; background: ${statusColor}22; color: ${statusColor}; font-size: 0.85rem; font-weight: 700;">${statusLabel}</span>
                 </div>
-                <span style="padding: 6px 12px; border-radius: 999px; background: ${statusColor}22; color: ${statusColor}; font-size: 0.85rem; font-weight: 700;">${statusLabel}</span>
+                <div style="color: var(--text);">Titular: ${titular}</div>
               </div>
             </div>
           `;
@@ -290,16 +295,17 @@
         return;
       }
 
-      const valor = Number(valorInput.value || 0);
-      if (!valor || valor <= 0) {
-        setStatus('Informe um valor válido para o pagamento.', true);
+      const titular = String(titularInput.value || '').trim();
+      if (!titular) {
+        setStatus('Informe o nome do titular para continuar.', true);
         return;
       }
 
       try {
         await addDoc(collection(db, 'pagamentos_vipturbo'), {
           userId: currentUser.uid,
-          valor: valor,
+          titular: titular,
+          valor: fixedValue,
           status: 'pendente',
           tipo: 'vip_turbo',
           data: serverTimestamp()
