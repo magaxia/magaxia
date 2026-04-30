@@ -196,7 +196,6 @@
       }
 
       setStatus(`Logado como ${user.displayName || user.email || user.uid}. Aguardando status VIP Turbo...`);
-      loginButton.disabled = true;
       payButton.disabled = false;
       watchVipStatus(user.uid);
       watchPayments(user.uid);
