@@ -290,6 +290,15 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
         return;
       }
 
+      const checkoutWindow = window.open(checkoutUrl, '_blank');
+      if (!checkoutWindow) {
+        setStatus('Não foi possível abrir o checkout. Verifique o bloqueador de pop-up e tente novamente.', true);
+        return;
+      }
+
+      setStatus('Checkout aberto primeiro. Agora registrando o pagamento pendente...', false);
+      payButton.disabled = true;
+
       try {
         await addDoc(collection(db, 'pagamentos_vipturbo'), {
           userId: currentUser.uid,
@@ -300,10 +309,11 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
           data: serverTimestamp()
         });
 
-        setStatus('Pagamento registrado. Redirecionando para o checkout PIX...', false);
-        window.location.href = checkoutUrl;
+        setStatus('Pagamento registrado com sucesso. Complete o PIX no checkout aberto.', false);
       } catch (error) {
         setStatus(`Erro ao salvar pagamento: ${error.message}`, true);
+        payButton.disabled = false;
+        checkoutWindow.close();
       }
     });
 
