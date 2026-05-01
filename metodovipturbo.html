@@ -338,7 +338,7 @@
 <body>
   <div id="vipAccessOverlay" class="vip-access-overlay">
     <div class="vip-access-overlay__content">
-      <h2>Aguardando aprovação do administrador</h2>
+      <h2 style="display:none;">Aguardando aprovação do administrador</h2>
       <p>O acesso ao conteúdo VIP Turbo está bloqueado até que o administrador habilite o VIP Turbo no seu usuário.</p>
     </div>
   </div>
@@ -369,11 +369,11 @@
         </div>
         <p id="connectionStatus" class="progress-stats hide-visually">Status: aguardando login...</p>
         <p id="userInfo" class="progress-stats hide-visually">Usuário: nenhum</p>
-        <div class="input-group" style="margin-top: 16px;">
+        <div class="input-group" style="margin-top: 16px; display:none;">
           <label for="vipTurboInput" class="sr-only">Valor do pagamento VIP Turbo</label>
           <input id="vipTurboInput" type="number" min="1" placeholder="" aria-label="Valor do pagamento VIP Turbo" />
         </div>
-        <button id="vipTurboSubmit" type="button" style="margin-top: 12px;" title="Enviar pagamento VIP Turbo" aria-label="Enviar pagamento VIP Turbo">Enviar</button>
+        <button id="vipTurboSubmit" type="button" style="margin-top: 12px; display:none;" title="Enviar pagamento VIP Turbo" aria-label="Enviar pagamento VIP Turbo"></button>
         <p id="vipTurboMessage" class="progress-stats" style="margin-top: 10px;"></p>
       </section>
 
