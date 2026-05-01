@@ -176,6 +176,7 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
     const urlParams = new URLSearchParams(window.location.search);
     const retornoPix = urlParams.get('retorno') === 'pix';
     const PENDING_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12 horas
+    const LOCAL_STORAGE_TITULAR_KEY = 'vipTurboTitular';
 
     let currentUser = null;
     let unsubscribeVip = null;
@@ -185,6 +186,31 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
     function setStatus(text, isError = false) {
       statusMessage.textContent = text;
       statusMessage.classList.toggle('error', isError);
+    }
+
+    function saveTitular(titular) {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_TITULAR_KEY, titular);
+      } catch (error) {
+        console.warn('Não foi possível salvar o titular no storage:', error);
+      }
+    }
+
+    function getSavedTitular() {
+      try {
+        return localStorage.getItem(LOCAL_STORAGE_TITULAR_KEY) || '';
+      } catch (error) {
+        console.warn('Não foi possível ler o titular do storage:', error);
+        return '';
+      }
+    }
+
+    function clearSavedTitular() {
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_TITULAR_KEY);
+      } catch (error) {
+        console.warn('Não foi possível limpar o titular no storage:', error);
+      }
     }
 
     function setUiForUser(user) {
@@ -329,7 +355,11 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
       }
       pixReturnProcessed = true;
 
-      const titular = String(titularInput.value || '').trim();
+      let titular = String(titularInput.value || '').trim();
+      if (!titular) {
+        titular = String(getSavedTitular() || '').trim();
+      }
+
       if (!titular) {
         setStatus('Retorno PIX detectado. Informe o nome do titular para registrar o pagamento.', true);
         return;
@@ -348,6 +378,7 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
             tipo: 'vip_turbo',
             data: serverTimestamp()
           });
+          clearSavedTitular();
           setStatus('Solicitação registrada com sucesso. Aguarde aprovação.', false);
         }
       } catch (error) {
@@ -369,6 +400,7 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
         return;
       }
 
+      saveTitular(titular);
       setStatus('Redirecionando para o checkout PIX...', false);
       window.location.href = checkoutUrl;
     });
