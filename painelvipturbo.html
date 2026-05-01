@@ -117,45 +117,6 @@
       color: var(--accent-2);
       margin-bottom: 20px;
     }
-
-    .payment-item {
-      padding: 18px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      display: grid;
-      gap: 8px;
-    }
-
-    .payment-item strong {
-      display: block;
-      font-size: 1.1rem;
-      color: #ffffff;
-    }
-
-    .payment-item .payment-meta {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
-    .payment-item .payment-status {
-      display: inline-flex;
-      align-items: center;
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 700;
-    }
-
-    .payment-item .payment-detail {
-      color: var(--text);
-      font-size: 0.95rem;
-    }
   </style>
 </head>
 <body>
@@ -298,13 +259,17 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
           const titular = payment.titular ? payment.titular : 'Titular não informado';
 
           return `
-            <div class="payment-item">
-              <div class="payment-meta">
-                <strong>R$ ${Number(payment.valor).toFixed(2).replace('.', ',')}</strong>
-                <span class="payment-status" style="background: ${statusColor}22; color: ${statusColor};">${statusLabel}</span>
+            <div style="padding: 14px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);">
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                  <div>
+                    <strong>R$ ${Number(payment.valor).toFixed(2).replace('.', ',')}</strong>
+                    <div style="font-size: 0.90rem; color: var(--muted);">${formattedDate}</div>
+                  </div>
+                  <span style="padding: 6px 12px; border-radius: 999px; background: ${statusColor}22; color: ${statusColor}; font-size: 0.85rem; font-weight: 700;">${statusLabel}</span>
+                </div>
+                <div style="color: var(--text);">Titular: ${titular}</div>
               </div>
-              <div class="payment-detail">${formattedDate}</div>
-              <div class="payment-detail">Titular: ${titular}</div>
             </div>
           `;
         }).join('');
@@ -325,15 +290,6 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
         return;
       }
 
-      const checkoutWindow = window.open(checkoutUrl, '_blank');
-      if (!checkoutWindow) {
-        setStatus('Não foi possível abrir o checkout. Verifique o bloqueador de pop-up e tente novamente.', true);
-        return;
-      }
-
-      setStatus('Checkout aberto primeiro. Agora registrando o pagamento pendente...', false);
-      payButton.disabled = true;
-
       try {
         await addDoc(collection(db, 'pagamentos_vipturbo'), {
           userId: currentUser.uid,
@@ -344,11 +300,10 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
           data: serverTimestamp()
         });
 
-        setStatus('Pagamento registrado com sucesso. Complete o PIX no checkout aberto.', false);
+        setStatus('Pagamento registrado. Redirecionando para o checkout PIX...', false);
+        window.location.href = checkoutUrl;
       } catch (error) {
         setStatus(`Erro ao salvar pagamento: ${error.message}`, true);
-        payButton.disabled = false;
-        checkoutWindow.close();
       }
     });
 
