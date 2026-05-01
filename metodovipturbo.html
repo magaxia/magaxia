@@ -81,6 +81,18 @@
       display: none !important;
     }
 
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     .status-badge {
       display: inline-flex;
       align-items: center;
@@ -358,10 +370,10 @@
         <p id="connectionStatus" class="progress-stats hide-visually">Status: aguardando login...</p>
         <p id="userInfo" class="progress-stats hide-visually">Usuário: nenhum</p>
         <div class="input-group" style="margin-top: 16px;">
-          <label for="vipTurboInput">Valor do pagamento VIP Turbo</label>
-          <input id="vipTurboInput" type="number" min="1" placeholder="Digite o valor em reais" />
+          <label for="vipTurboInput" class="sr-only">Valor do pagamento VIP Turbo</label>
+          <input id="vipTurboInput" type="number" min="1" placeholder="" aria-label="Valor do pagamento VIP Turbo" />
         </div>
-        <button id="vipTurboSubmit" type="button" style="margin-top: 12px;">Enviar pagamento VIP Turbo</button>
+        <button id="vipTurboSubmit" type="button" style="margin-top: 12px;" title="Enviar pagamento VIP Turbo" aria-label="Enviar pagamento VIP Turbo">Enviar</button>
         <p id="vipTurboMessage" class="progress-stats" style="margin-top: 10px;"></p>
       </section>
 
