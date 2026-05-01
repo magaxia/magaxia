@@ -149,7 +149,7 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
-    import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp, doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
+    import { getFirestore, collection, addDoc, serverTimestamp, doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
     import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
     const firebaseConfig = {
@@ -173,66 +173,20 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
     const paymentsList = document.getElementById('paymentsList');
     const checkoutUrl = 'https://pixgo.org/recurrence/checkout.php?id=1159';
     const fixedValue = 11;
-    const urlParams = new URLSearchParams(window.location.search);
-    const retornoPix = String(urlParams.get('retorno') || '').toLowerCase() === 'pix';
-    const retornoTitular = String(urlParams.get('titular') || '').trim();
-    const PENDING_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12 horas
-    const LOCAL_STORAGE_TITULAR_KEY = 'vipTurboTitular';
 
     let currentUser = null;
     let unsubscribeVip = null;
     let unsubscribePayments = null;
-    let pixReturnProcessed = false;
 
     function setStatus(text, isError = false) {
       statusMessage.textContent = text;
       statusMessage.classList.toggle('error', isError);
     }
 
-    function saveTitular(titular) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_TITULAR_KEY, titular);
-      } catch (error) {
-        console.warn('Não foi possível salvar o titular no localStorage:', error);
-      }
-
-      try {
-        sessionStorage.setItem(LOCAL_STORAGE_TITULAR_KEY, titular);
-      } catch (error) {
-        console.warn('Não foi possível salvar o titular no sessionStorage:', error);
-      }
-    }
-
-    function getSavedTitular() {
-      try {
-        return localStorage.getItem(LOCAL_STORAGE_TITULAR_KEY) || sessionStorage.getItem(LOCAL_STORAGE_TITULAR_KEY) || '';
-      } catch (error) {
-        console.warn('Não foi possível ler o titular do storage:', error);
-        return '';
-      }
-    }
-
-    function clearSavedTitular() {
-      try {
-        localStorage.removeItem(LOCAL_STORAGE_TITULAR_KEY);
-      } catch (error) {
-        console.warn('Não foi possível limpar o titular no localStorage:', error);
-      }
-
-      try {
-        sessionStorage.removeItem(LOCAL_STORAGE_TITULAR_KEY);
-      } catch (error) {
-        console.warn('Não foi possível limpar o titular no sessionStorage:', error);
-      }
-    }
-
     function setUiForUser(user) {
       currentUser = user;
       if (!user) {
         setStatus('Faça login em outra página ou aguarde a autenticação automática.');
-        if (retornoPix) {
-          setStatus('Retorno PIX detectado. Faça login para registrar o pagamento.', true);
-        }
         payButton.disabled = true;
         paymentsList.innerHTML = '<div>Faça login para ver seus pagamentos.</div>';
         if (unsubscribePayments) {
@@ -244,14 +198,8 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
 
       setStatus(`Logado como ${user.displayName || user.email || user.uid}. Aguardando status VIP Turbo...`);
       payButton.disabled = false;
-      const savedTitular = getSavedTitular().trim();
-      const initialTitular = retornoTitular || savedTitular;
-      if (retornoPix && initialTitular && !titularInput.value.trim()) {
-        titularInput.value = initialTitular;
-      }
       watchVipStatus(user.uid);
       watchPayments(user.uid);
-      handlePixReturn(user.uid);
     }
 
     function watchVipStatus(uid) {
@@ -330,89 +278,6 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
       });
     }
 
-    function removeReturnParam() {
-      if (!retornoPix) return;
-      const cleanUrl = new URL(window.location.href);
-      cleanUrl.searchParams.delete('retorno');
-      window.history.replaceState({}, '', cleanUrl.pathname + cleanUrl.search);
-    }
-
-    async function findRecentPendingPayment(uid) {
-      const pagamentosQuery = query(collection(db, 'pagamentos_vipturbo'), where('userId', '==', uid));
-      const snapshot = await getDocs(pagamentosQuery);
-      let mostRecent = null;
-      snapshot.docs.forEach((docSnap) => {
-        const payment = docSnap.data();
-        if (payment.status !== 'pendente') return;
-        if (!mostRecent) {
-          mostRecent = payment;
-          return;
-        }
-
-        const currentCreated = payment.data && typeof payment.data.toMillis === 'function' ? payment.data.toMillis() : 0;
-        const mostRecentCreated = mostRecent.data && typeof mostRecent.data.toMillis === 'function' ? mostRecent.data.toMillis() : 0;
-        if (currentCreated > mostRecentCreated) {
-          mostRecent = payment;
-        }
-      });
-
-      if (!mostRecent) {
-        return false;
-      }
-
-      if (!mostRecent.data || typeof mostRecent.data.toMillis !== 'function') {
-        return true;
-      }
-
-      return (Date.now() - mostRecent.data.toMillis()) < PENDING_THRESHOLD_MS;
-    }
-
-    async function handlePixReturn(uid) {
-      if (!retornoPix || pixReturnProcessed) {
-        return;
-      }
-      pixReturnProcessed = true;
-
-      setStatus('Retorno PIX detectado. Verificando usuário e registrando pagamento...', false);
-
-      let titular = String(titularInput.value || '').trim();
-      if (!titular) {
-        titular = String(retornoTitular || getSavedTitular() || '').trim();
-      }
-
-      if (!titular) {
-        setStatus('Retorno PIX detectado. Informe o nome do titular para registrar o pagamento.', true);
-        return;
-      }
-
-      try {
-        const hasPending = await findRecentPendingPayment(uid);
-        if (hasPending) {
-          setStatus('Já existe uma solicitação pendente recente. Aguarde aprovação.', true);
-        } else {
-          await addDoc(collection(db, 'pagamentos_vipturbo'), {
-            userId: uid,
-            titular: titular,
-            valor: fixedValue,
-            status: 'pendente',
-            tipo: 'vip_turbo',
-            data: serverTimestamp()
-          });
-          clearSavedTitular();
-          setStatus('Solicitação registrada com sucesso. Aguarde aprovação.', false);
-        }
-      } catch (error) {
-        setStatus(`Erro ao registrar pagamento PIX: ${error.message}`, true);
-        console.error('Erro addDoc PIX retorno:', error);
-      } finally {
-        removeReturnParam();
-      }
-    }
-
-    function getCheckoutUrlWithTitular(titular) {
-      return `${checkoutUrl}&titular=${encodeURIComponent(titular)}`;
-    }
-
     payButton.addEventListener('click', async () => {
       if (!currentUser) {
         setStatus('Faça login antes de pagar.', true);
@@ -425,9 +290,21 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
         return;
       }
 
-      saveTitular(titular);
-      setStatus('Redirecionando para o checkout PIX...', false);
-      window.location.href = getCheckoutUrlWithTitular(titular);
+      try {
+        await addDoc(collection(db, 'pagamentos_vipturbo'), {
+          userId: currentUser.uid,
+          titular: titular,
+          valor: fixedValue,
+          status: 'pendente',
+          tipo: 'vip_turbo',
+          data: serverTimestamp()
+        });
+
+        setStatus('Pagamento registrado. Redirecionando para o checkout PIX...', false);
+        window.location.href = checkoutUrl;
+      } catch (error) {
+        setStatus(`Erro ao salvar pagamento: ${error.message}`, true);
+      }
     });
 
     onAuthStateChanged(auth, (user) => {
