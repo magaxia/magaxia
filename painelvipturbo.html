@@ -175,6 +175,7 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
     const fixedValue = 11;
     const urlParams = new URLSearchParams(window.location.search);
     const retornoPix = String(urlParams.get('retorno') || '').toLowerCase() === 'pix';
+    const retornoTitular = String(urlParams.get('titular') || '').trim();
     const PENDING_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12 horas
     const LOCAL_STORAGE_TITULAR_KEY = 'vipTurboTitular';
 
@@ -244,8 +245,9 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
       setStatus(`Logado como ${user.displayName || user.email || user.uid}. Aguardando status VIP Turbo...`);
       payButton.disabled = false;
       const savedTitular = getSavedTitular().trim();
-      if (retornoPix && savedTitular && !titularInput.value.trim()) {
-        titularInput.value = savedTitular;
+      const initialTitular = retornoTitular || savedTitular;
+      if (retornoPix && initialTitular && !titularInput.value.trim()) {
+        titularInput.value = initialTitular;
       }
       watchVipStatus(user.uid);
       watchPayments(user.uid);
@@ -371,9 +373,11 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
       }
       pixReturnProcessed = true;
 
+      setStatus('Retorno PIX detectado. Verificando usuário e registrando pagamento...', false);
+
       let titular = String(titularInput.value || '').trim();
       if (!titular) {
-        titular = String(getSavedTitular() || '').trim();
+        titular = String(retornoTitular || getSavedTitular() || '').trim();
       }
 
       if (!titular) {
@@ -399,9 +403,14 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
         }
       } catch (error) {
         setStatus(`Erro ao registrar pagamento PIX: ${error.message}`, true);
+        console.error('Erro addDoc PIX retorno:', error);
       } finally {
         removeReturnParam();
       }
+    }
+
+    function getCheckoutUrlWithTitular(titular) {
+      return `${checkoutUrl}&titular=${encodeURIComponent(titular)}`;
     }
 
     payButton.addEventListener('click', async () => {
@@ -418,7 +427,7 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
 
       saveTitular(titular);
       setStatus('Redirecionando para o checkout PIX...', false);
-      window.location.href = checkoutUrl;
+      window.location.href = getCheckoutUrlWithTitular(titular);
     });
 
     onAuthStateChanged(auth, (user) => {
