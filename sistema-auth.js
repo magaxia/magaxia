@@ -92,7 +92,7 @@ window.SistemaAuth = {
             });
     },
 
-    _validarELogin: function(uid, usuario, senha, callback) {
+    _validarELogin: async function(uid, usuario, senha, callback) {
         if (!usuario.senha || usuario.senha !== senha) {
             callback(false, "Senha incorreta");
             return;
@@ -112,12 +112,42 @@ window.SistemaAuth = {
             return;
         }
 
+        const userRef = this.db.collection("users").doc(uid);
+        const authEmail = usuario.email && typeof usuario.email === 'string' ? usuario.email.trim() : null;
+        const totalLogins = Number.isFinite(Number(usuario.totalLogins)) ? Number(usuario.totalLogins) + 1 : 1;
+        const updates = {
+            ultimoLogin: firebase.firestore.FieldValue.serverTimestamp(),
+            online: true,
+            ultimaAtualizacaoPresenca: firebase.firestore.FieldValue.serverTimestamp(),
+            ultimaPresenca: firebase.firestore.FieldValue.serverTimestamp(),
+            totalLogins: firebase.firestore.FieldValue.increment(1)
+        };
+
+        try {
+            await userRef.set(updates, { merge: true });
+        } catch (error) {
+            console.warn("⚠️ Falha ao atualizar estado de login no Firestore:", error);
+        }
+
+        if (authEmail && this.auth && typeof this.auth.signInWithEmailAndPassword === 'function') {
+            try {
+                if (this.auth.currentUser && this.auth.currentUser.email !== authEmail) {
+                    await this.auth.signOut().catch(() => {});
+                }
+                await this.auth.signInWithEmailAndPassword(authEmail, senha);
+            } catch (error) {
+                console.warn("⚠️ Falha ao autenticar no Firebase Auth (fallback para Firestore apenas):", error);
+            }
+        }
+
         this.usuarioLogado = {
             uid: uid,
             nome: usuario.nome || "Usuário",
             email: usuario.email,
             telefone: usuario.telefone,
             saldo: usuario.saldo || 0,
+            totalLogins,
+            ultimoLogin: new Date().toISOString(),
             ...usuario
         };
 

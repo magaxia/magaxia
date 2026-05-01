@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <!-- Sistema de autenticação centralizado -->
-<script src="sistema-auth.js"></script>
+<script src="Nova pasta/sistema-auth.js"></script>
 
 <style>
 body { margin:0; font-family:'Inter',sans-serif; background: linear-gradient(135deg,#0f172a,#1e293b); color:#fff; display:flex; align-items:center; justify-content:center; min-height:100vh; }
@@ -73,26 +73,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.SistemaAuth.fazerLogin(credencial, senha, function(success, err, userData) {
       if (success) {
-        mostrarMensagem(`✅ Bem-vindo, ${userData.nome}! Autenticando sessão...`, 'success');
-
-        if (window.SistemaAuth.auth && typeof window.SistemaAuth.auth.signInWithEmailAndPassword === 'function') {
-          window.SistemaAuth.auth.signInWithEmailAndPassword(userData.email, senha)
-            .then(() => {
-              mostrarMensagem(`✅ Sessão iniciada. Redirecionando...`, 'success');
-              setTimeout(() => {
-                window.location.href = 'painel.html';
-              }, 1000);
-            })
-            .catch(signInError => {
-              console.warn('⚠️ Falha ao iniciar sessão Firebase:', signInError);
-              mostrarMensagem('❌ Erro ao iniciar sessão. Recarregue a página.', 'error');
-              btn.disabled = false;
-            });
-        } else {
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 1500);
-        }
+        const displayName = (userData && (userData.nome || userData.email || userData.uid)) || 'usuário';
+        mostrarMensagem(`✅ Bem-vindo, ${displayName}! Abrindo painel...`, 'success');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1000);
       } else {
         mostrarMensagem(err || 'Erro no login', 'error');
         btn.disabled = false;
