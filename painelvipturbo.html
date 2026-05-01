@@ -174,7 +174,7 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
     const checkoutUrl = 'https://pixgo.org/recurrence/checkout.php?id=1159';
     const fixedValue = 11;
     const urlParams = new URLSearchParams(window.location.search);
-    const retornoPix = urlParams.get('retorno') === 'pix';
+    const retornoPix = String(urlParams.get('retorno') || '').toLowerCase() === 'pix';
     const PENDING_THRESHOLD_MS = 12 * 60 * 60 * 1000; // 12 horas
     const LOCAL_STORAGE_TITULAR_KEY = 'vipTurboTitular';
 
@@ -192,13 +192,19 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
       try {
         localStorage.setItem(LOCAL_STORAGE_TITULAR_KEY, titular);
       } catch (error) {
-        console.warn('Não foi possível salvar o titular no storage:', error);
+        console.warn('Não foi possível salvar o titular no localStorage:', error);
+      }
+
+      try {
+        sessionStorage.setItem(LOCAL_STORAGE_TITULAR_KEY, titular);
+      } catch (error) {
+        console.warn('Não foi possível salvar o titular no sessionStorage:', error);
       }
     }
 
     function getSavedTitular() {
       try {
-        return localStorage.getItem(LOCAL_STORAGE_TITULAR_KEY) || '';
+        return localStorage.getItem(LOCAL_STORAGE_TITULAR_KEY) || sessionStorage.getItem(LOCAL_STORAGE_TITULAR_KEY) || '';
       } catch (error) {
         console.warn('Não foi possível ler o titular do storage:', error);
         return '';
@@ -209,7 +215,13 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
       try {
         localStorage.removeItem(LOCAL_STORAGE_TITULAR_KEY);
       } catch (error) {
-        console.warn('Não foi possível limpar o titular no storage:', error);
+        console.warn('Não foi possível limpar o titular no localStorage:', error);
+      }
+
+      try {
+        sessionStorage.removeItem(LOCAL_STORAGE_TITULAR_KEY);
+      } catch (error) {
+        console.warn('Não foi possível limpar o titular no sessionStorage:', error);
       }
     }
 
@@ -231,6 +243,10 @@ Informe o nome do titular do deposito e envie sua solicitação para análise. A
 
       setStatus(`Logado como ${user.displayName || user.email || user.uid}. Aguardando status VIP Turbo...`);
       payButton.disabled = false;
+      const savedTitular = getSavedTitular().trim();
+      if (retornoPix && savedTitular && !titularInput.value.trim()) {
+        titularInput.value = savedTitular;
+      }
       watchVipStatus(user.uid);
       watchPayments(user.uid);
       handlePixReturn(user.uid);
