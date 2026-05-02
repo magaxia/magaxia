@@ -177,7 +177,7 @@ window.SistemaAuth = {
             const mesmoDispositivo = ultimoDispositivo && dispositivoAtual && ultimoDispositivo === dispositivoAtual;
 
             if (ultimoLoginMs && agoraMs - ultimoLoginMs < 30000) {
-                helper.criarNotificacaoSuspeita({
+                await helper.criarNotificacaoSuspeita({
                     uidUsuario: uid,
                     subtipo: 'login_curto_intervalo',
                     titulo: 'Login em curto intervalo',
@@ -188,7 +188,7 @@ window.SistemaAuth = {
             }
 
             if (ultimoLoginMs && agoraMs - ultimoLoginMs <= 5 * 60 * 1000 && totalLogins > 2) {
-                helper.criarNotificacaoSuspeita({
+                await helper.criarNotificacaoSuspeita({
                     uidUsuario: uid,
                     subtipo: 'excesso_logins_5min',
                     titulo: 'Excesso de logins em 5 minutos',
@@ -199,7 +199,7 @@ window.SistemaAuth = {
             }
 
             if (ultimoDispositivo && dispositivoAtual && ultimoDispositivo !== dispositivoAtual) {
-                helper.criarNotificacaoSuspeita({
+                await helper.criarNotificacaoSuspeita({
                     uidUsuario: uid,
                     subtipo: 'login_dispositivo_diferente',
                     titulo: 'Login de dispositivo diferente',

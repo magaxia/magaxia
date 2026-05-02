@@ -202,18 +202,23 @@ window.FirebaseHelper.notificacaoDuplicadaExiste = async function(tipo, uidUsuar
     const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - janelaMs);
     const snapshot = await db.collection('notificacoes')
       .where('uidUsuario', '==', uidUsuario)
-      .orderBy('data', 'desc')
       .limit(50)
       .get();
 
-    return snapshot.docs.some(doc => {
-      const data = doc.data();
-      if (!data) return false;
+    const notificacoes = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => {
+        const aTime = a.data && a.data.toMillis ? a.data.toMillis() : 0;
+        const bTime = b.data && b.data.toMillis ? b.data.toMillis() : 0;
+        return bTime - aTime;
+      });
+
+    return notificacoes.some(data => {
+      if ((data.tipo || '') !== tipo) return false;
       const mesmaSubtipo = (data.subtipo || '') === subtipo;
       const mesmaMensagem = (data.mensagem || '') === mensagem;
-      const mesmaPrioridade = (data.tipo || '') === tipo;
       const recente = data.data && data.data.toMillis && data.data.toMillis() >= corte.toMillis();
-      return mesmaPrioridade && mesmaSubtipo && mesmaMensagem && recente;
+      return mesmaSubtipo && mesmaMensagem && recente;
     });
   } catch (error) {
     console.warn('Falha ao verificar notificação duplicada:', error);

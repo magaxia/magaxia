@@ -825,7 +825,7 @@ alert(mensagem);
           ? 'Saque alto detectado'
           : 'Saque pendente';
 
-      window.FirebaseHelper.criarNotificacaoSuspeita({
+      await window.FirebaseHelper.criarNotificacaoSuspeita({
         uidUsuario: uid,
         subtipo,
         titulo,

@@ -736,7 +736,7 @@ data: window.SistemaAuth.firebase.firestore
 });
 
 if (window.FirebaseHelper && typeof window.FirebaseHelper.criarNotificacaoSuspeita === 'function') {
-    window.FirebaseHelper.criarNotificacaoSuspeita({
+    await window.FirebaseHelper.criarNotificacaoSuspeita({
         uidUsuario: uid,
         subtipo: valorAtual >= 1000 ? 'deposito_alto_valor' : 'deposito_pendente',
         titulo: valorAtual >= 1000 ? 'Depósito alto detectado' : 'Depósito pendente',

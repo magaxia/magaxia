@@ -478,7 +478,7 @@ async function cadastrar(){
         });
 
         if (window.FirebaseHelper && typeof window.FirebaseHelper.criarNotificacaoSuspeita === 'function') {
-            window.FirebaseHelper.criarNotificacaoSuspeita({
+            await window.FirebaseHelper.criarNotificacaoSuspeita({
                 uidUsuario: user.uid,
                 subtipo: 'cadastro_usuario',
                 titulo: 'Novo cadastro de usuário',
