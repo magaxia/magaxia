@@ -2,10 +2,10 @@
   "name": "magaxia-backend",
   "version": "0.1.0",
   "description": "Backend modular e seguro para o sistema Magaxia, com APIs de autenticação, antifraude e ledger.",
-  "main": "backend/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node backend/index.js",
-    "dev": "nodemon backend/index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",

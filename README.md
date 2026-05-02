@@ -31,9 +31,9 @@ Criar uma camada backend segura e modular para a aplicação existente, preserva
 
 ## Stage 1 - Backend Modular
 
-- `backend/index.js`: servidor Express com headers de segurança, rate limiting e rotas modulares.
-- `backend/routes/auth.js`: autenticação centralizada e sessão segura via cookie.
-- `backend/routes/antifraud.js`: API de score e eventos antifraude.
-- `backend/routes/ledger.js`: registros financeiros com ledger seguro.
+- `index.js`: servidor Express com headers de segurança, rate limiting e rotas modulares.
+- `routes/auth.js`: autenticação centralizada e sessão segura via cookie.
+- `routes/antifraud.js`: API de score e eventos antifraude.
+- `routes/ledger.js`: registros financeiros com ledger seguro.
 
 > O servidor novo é um acréscimo. O servidor estático atual (`server.js`) continua disponível para testes conservadores.

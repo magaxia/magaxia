@@ -148,11 +148,14 @@ window.FirebaseHelper.getScorePorSubtipo = function(subtipo) {
     case 'login_dispositivo_diferente': return 25;
     case 'login_pais_diferente': return 5;
     case 'mudanca_regiao_rapida': return 10;
-    case 'novo_dispositivo': return 20;
-    case 'novo_fingerprint': return 20;
-    case 'proxy_vpn_detectado': return 2;
-    case 'login_curto_intervalo': return 15;
+    case 'novo_dispositivo': return 15;
+    case 'novo_fingerprint': return 15;
+    case 'mudanca_dispositivo': return 15;
+    case 'proxy_vpn_detectado': return 8;
+    case 'login_curto_intervalo': return 8;
     case 'excesso_logins_5min': return 20;
+    case 'dois_dispositivos_simultaneos': return 15;
+    case 'login_dispositivo_diferente': return 15;
     case 'multiplas_contas_mesmo_ip': return 30;
     case 'varias_contas_mesmo_aparelho': return 30;
     case 'contas_mesmo_email': return 30;
@@ -173,6 +176,27 @@ window.FirebaseHelper.getShortIp = function(ip) {
   if (ip.includes('.')) return ip.split('.').slice(0, 3).join('.') + '.*';
   if (ip.includes(':')) return ip.split(':').slice(0, 3).join(':') + ':*';
   return ip;
+};
+
+window.FirebaseHelper.isLocalIp = function(ip) {
+  if (!ip || typeof ip !== 'string') return false;
+  const normalized = ip.toString().trim().toLowerCase();
+  if (['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(normalized)) return true;
+  return /^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[0-1])\.|^fc00:|^fe80:/.test(normalized);
+};
+
+window.FirebaseHelper.isUnknownGeo = function(value) {
+  if (value === undefined || value === null) return true;
+  const normalized = value.toString().trim().toLowerCase();
+  return normalized === '' || ['desconhecido', 'unknown', 'null', 'undefined', '-', 'n/a'].includes(normalized);
+};
+
+window.FirebaseHelper.isModoTeste = function() {
+  if (typeof window === 'undefined') return false;
+  const hostname = (window.location.hostname || '').toString().trim().toLowerCase();
+  if (['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(hostname)) return true;
+  if (window.location.protocol === 'file:') return true;
+  return this.isLocalIp(hostname);
 };
 
 window.FirebaseHelper.isUsuarioCompleto = function(usuario) {
@@ -207,9 +231,9 @@ window.FirebaseHelper.isVPNorProxyIp = function(geo) {
   if (!geo || typeof geo !== 'object') return false;
   const provider = (geo.provider || '').toString().toLowerCase();
   const ip = (geo.ip || '').toString();
+  if (this.isLocalIp(ip)) return false;
   const vpnTokens = ['vpn', 'proxy', 'amazon', 'google', 'cloudflare', 'digitalocean', 'ovh', 'akamai', 'microsoft', 'linode', 'fastly'];
   if (vpnTokens.some(token => provider.includes(token))) return true;
-  if (/^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[0-1])\.|^(::1|fc00:|fe80:)/.test(ip)) return true;
   return false;
 };
 
@@ -223,11 +247,11 @@ window.FirebaseHelper.verificarNovoDispositivoOuFingerprint = async function(uid
   if (possivelNovoDevice || possivelNovoFingerprint) {
     await this.criarNotificacaoSuspeita({
       uidUsuario,
-      subtipo: possivelNovoFingerprint ? 'novo_fingerprint' : 'novo_dispositivo',
-      titulo: 'Novo dispositivo ou fingerprint detectado',
+      subtipo: 'mudanca_dispositivo',
+      titulo: 'Mudança de dispositivo detectada',
       mensagem: 'Login realizado em dispositivo ou fingerprint diferente do histórico.',
-      prioridade: 'alta',
-      score: this.getScorePorSubtipo(possivelNovoFingerprint ? 'novo_fingerprint' : 'novo_dispositivo'),
+      prioridade: 'média',
+      score: this.getScorePorSubtipo('mudanca_dispositivo'),
       deviceId,
       contexto: `Anterior: ${deviceIdAntigo || 'desconhecido'} / Fingerprint anterior: ${fingerprintAntigo ? '[oculto]' : 'nenhum'}`
     });
@@ -237,6 +261,23 @@ window.FirebaseHelper.verificarNovoDispositivoOuFingerprint = async function(uid
 };
 
 window.FirebaseHelper.verificarMudancaRegiaoRapida = async function(uidUsuario, paisAnterior, paisAtual, geo) {
+  if (!uidUsuario || !paisAnterior || !paisAtual) return false;
+  if (this.isUnknownGeo(paisAnterior) || this.isUnknownGeo(paisAtual)) return false;
+  if (this.isLocalIp(geo?.ip)) return false;
+  if (paisAnterior.toString().trim().toLowerCase() === paisAtual.toString().trim().toLowerCase()) return false;
+  await this.criarNotificacaoSuspeita({
+    uidUsuario,
+    subtipo: 'mudanca_regiao_rapida',
+    titulo: 'Mudança de região rápida detectada',
+    mensagem: `Login de país/região diferente detectado: ${paisAtual}. Acesso permitido, alerta apenas informativo.`,
+    prioridade: 'baixa',
+    score: this.getScorePorSubtipo('mudanca_regiao_rapida'),
+    pais: paisAtual,
+    ip: geo.ip,
+    contexto: `País anterior: ${paisAnterior}`
+  });
+  return true;
+};
   if (!uidUsuario || !paisAnterior || !paisAtual) return false;
   if (paisAnterior.toString().trim().toLowerCase() === paisAtual.toString().trim().toLowerCase()) return false;
   await this.criarNotificacaoSuspeita({
@@ -383,6 +424,7 @@ window.FirebaseHelper.verificarMultiplasContasMesmoIp = async function(ip, uidUs
   const db = this.getDB();
   if (!db || !ip || !uidUsuario) return 0;
   if (typeof ip === 'string' && ip.toLowerCase().includes('desconhecido')) return 0;
+  if (this.isLocalIp(ip)) return 0;
   try {
     const snapshot = await db.collection('users').where('ip', '==', ip).get();
     const outros = snapshot.docs.filter(doc => doc.id !== uidUsuario);
@@ -646,18 +688,18 @@ window.FirebaseHelper.getGeoData = async function() {
   return fallback;
 };
 
-window.FirebaseHelper.notificacaoDuplicadaExiste = async function(tipo, uidUsuario, subtipo = '', mensagem = '', janelaMs = 30000) {
+window.FirebaseHelper.notificacaoDuplicadaExiste = async function(tipo, uidUsuario, subtipo = '', mensagem = '', janelaMs = 600000) {
   const db = this.getDB();
   if (!db || !tipo || !uidUsuario) return false;
   try {
     const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - janelaMs);
     const snapshot = await db.collection('notificacoes')
       .where('uidUsuario', '==', uidUsuario)
-      .limit(50)
       .get();
 
     const notificacoes = snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(data => (data.subtipo || '') === subtipo)
       .sort((a, b) => {
         const aTime = a.data && a.data.toMillis ? a.data.toMillis() : 0;
         const bTime = b.data && b.data.toMillis ? b.data.toMillis() : 0;
@@ -666,10 +708,8 @@ window.FirebaseHelper.notificacaoDuplicadaExiste = async function(tipo, uidUsuar
 
     return notificacoes.some(data => {
       if ((data.tipo || '') !== tipo) return false;
-      const mesmaSubtipo = (data.subtipo || '') === subtipo;
-      const mesmaMensagem = (data.mensagem || '') === mensagem;
       const recente = data.data && data.data.toMillis && data.data.toMillis() >= corte.toMillis();
-      return mesmaSubtipo && mesmaMensagem && recente;
+      return recente;
     });
   } catch (error) {
     console.warn('Falha ao verificar notificação duplicada:', error);
@@ -699,11 +739,12 @@ window.FirebaseHelper.criarNotificacaoSuspeita = async function(options = {}) {
     pais = '',
     contexto = '',
     extra = {},
-    antiSpamWindowMs = 30000
+    antiSpamWindowMs = 600000
   } = options;
 
   const geo = await this.getGeoData();
   const agora = new Date();
+  const scoreFinal = this.isModoTeste() ? Math.max(0, Math.round(score * 0.5)) : score;
   const expiresEm = new Date(agora.getTime() + ((prioridade === 'crítica' || score >= 50) ? 90 : 30) * 24 * 60 * 60 * 1000);
   const payload = {
     tipo,
@@ -712,7 +753,7 @@ window.FirebaseHelper.criarNotificacaoSuspeita = async function(options = {}) {
     mensagem,
     uidUsuario,
     prioridade,
-    score,
+    score: scoreFinal,
     destinatario,
     valor: Number(valor) || 0,
     dispositivo: dispositivo || this.detectarTipoDispositivo(),

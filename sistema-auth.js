@@ -280,8 +280,11 @@ window.SistemaAuth = {
             const deviceAlterado = ultimoDeviceId && deviceId && ultimoDeviceId !== deviceId;
             const fingerprintAlterado = ultimoFingerprint && deviceFingerprint && ultimoFingerprint !== deviceFingerprint;
             const paisAtual = (geo.country_name || geo.country || '').toString().trim();
-            const paisAlterado = ultimoPais && paisAtual && ultimoPais.toString().trim().toLowerCase() !== paisAtual.toLowerCase();
-            const vpnDetectado = typeof firebaseHelper.isVPNorProxyIp === 'function' && firebaseHelper.isVPNorProxyIp(geo);
+            const paisDesconhecido = firebaseHelper.isUnknownGeo ? firebaseHelper.isUnknownGeo(paisAtual) : false;
+            const paisAlterado = !paisDesconhecido && ultimoPais && paisAtual && ultimoPais.toString().trim().toLowerCase() !== paisAtual.toLowerCase();
+            const ipLocal = typeof firebaseHelper.isLocalIp === 'function' && firebaseHelper.isLocalIp(geo.ip);
+            const vpnDetectado = typeof firebaseHelper.isVPNorProxyIp === 'function' && !ipLocal && firebaseHelper.isVPNorProxyIp(geo);
+            const isModoTeste = typeof firebaseHelper.isModoTeste === 'function' && firebaseHelper.isModoTeste();
 
             if (ultimoLoginMs && agoraMs - ultimoLoginMs < 30000) {
                 await firebaseHelper.criarNotificacaoSuspeita({
@@ -313,33 +316,19 @@ window.SistemaAuth = {
                 });
             }
 
-            if (fingerprintAlterado) {
+            if (fingerprintAlterado || dispositivoAlterado || deviceAlterado) {
                 await firebaseHelper.criarNotificacaoSuspeita({
                     uidUsuario: uid,
-                    subtipo: 'login_dispositivo_diferente',
-                    titulo: 'Fingerprint de dispositivo diferente',
-                    mensagem: 'Fingerprint de dispositivo mudou desde o último login.',
+                    subtipo: 'mudanca_dispositivo',
+                    titulo: 'Mudança de dispositivo detectada',
+                    mensagem: 'Login realizado em dispositivo ou fingerprint diferente do histórico.',
                     dispositivo: dispositivoAtual,
                     deviceId,
                     ip: geo.ip,
                     pais: paisAtual,
-                    score: firebaseHelper.getScorePorSubtipo('login_dispositivo_diferente'),
-                    contexto: `Fingerprint anterior registrado`
-                });
-            }
-
-            if (dispositivoAlterado || deviceAlterado) {
-                await firebaseHelper.criarNotificacaoSuspeita({
-                    uidUsuario: uid,
-                    subtipo: 'dois_dispositivos_simultaneos',
-                    titulo: 'Dispositivo diferente detectado',
-                    mensagem: `Login detectado em dispositivo diferente ou sessão simultânea.`,
-                    dispositivo: dispositivoAtual,
-                    deviceId,
-                    ip: geo.ip,
-                    pais: paisAtual,
-                    score: firebaseHelper.getScorePorSubtipo('dois_dispositivos_simultaneos'),
-                    contexto: `Anterior: ${ultimoDispositivo} / ${ultimoDeviceId}`
+                    prioridade: 'média',
+                    score: firebaseHelper.getScorePorSubtipo('mudanca_dispositivo'),
+                    contexto: `Anterior: ${ultimoDispositivo || 'desconhecido'} / DeviceId anterior: ${ultimoDeviceId || 'desconhecido'}`
                 });
             }
 
@@ -375,27 +364,8 @@ window.SistemaAuth = {
                 });
             }
 
-            if (vpnDetectado && (deviceAlterado || fingerprintAlterado || paisAlterado)) {
-                await firebaseHelper.criarNotificacaoSuspeita({
-                    uidUsuario: uid,
-                    subtipo: 'vpn_comportamento_suspeito',
-                    titulo: 'VPN com comportamento suspeito',
-                    mensagem: 'VPN/Proxy detectado junto com mudança de dispositivo, fingerprint ou país.',
-                    dispositivo: dispositivoAtual,
-                    deviceId,
-                    ip: geo.ip,
-                    pais: paisAtual,
-                    prioridade: 'alta',
-                    score: firebaseHelper.getScorePorSubtipo('vpn_comportamento_suspeito'),
-                    contexto: `Mudança de ambiente detectada`
-                });
-            }
-
             if (typeof firebaseHelper.verificarMudancaRegiaoRapida === 'function') {
                 await firebaseHelper.verificarMudancaRegiaoRapida(uid, ultimoPais, paisAtual, geo);
-            }
-            if (typeof firebaseHelper.verificarNovoDispositivoOuFingerprint === 'function') {
-                await firebaseHelper.verificarNovoDispositivoOuFingerprint(uid, deviceId, deviceFingerprint, usuario);
             }
             if (typeof firebaseHelper.verificarMultiplasContasMesmoIp === 'function') {
                 await firebaseHelper.verificarMultiplasContasMesmoIp(geo.ip, uid, deviceId, deviceFingerprint);
@@ -411,7 +381,7 @@ window.SistemaAuth = {
                 ultimaAnaliseAntifraude: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            if (score >= 90) {
+            if (score >= 90 && !isModoTeste) {
                 await firebaseHelper.marcarBloqueioAutomatico(uid, `Score alto: ${score}`, score, {
                     dispositivoAtual,
                     deviceId,
@@ -422,7 +392,7 @@ window.SistemaAuth = {
                 callback(false, "Sua conta foi bloqueada por atividade suspeita");
                 return;
             }
-            if (score >= 75) {
+            if (score >= 75 && !isModoTeste) {
                 await firebaseHelper.marcarContaMonitorada(uid, `Score elevado: ${score}`, score, {
                     dispositivoAtual,
                     deviceId,
