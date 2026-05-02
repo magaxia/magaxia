@@ -36,6 +36,20 @@ window.SistemaAuth = {
         }
     },
 
+    parseTimestampToMs: function(value) {
+        if (!value) return 0;
+        if (typeof value.toMillis === 'function') {
+            return value.toMillis();
+        }
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? 0 : date.getTime();
+    },
+
+    detectarTipoDispositivo: function() {
+        if (typeof navigator === 'undefined' || !navigator.userAgent) return 'desktop';
+        return /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+    },
+
     fazerLogin: function(credencial, senha, callback) {
         if (!this.db) {
             callback(false, "Firestore não inicializado");
@@ -112,15 +126,21 @@ window.SistemaAuth = {
             return;
         }
 
-        const userRef = this.db.collection("users").doc(uid);
+        const dispositivoAtual = typeof window.FirebaseHelper?.detectarTipoDispositivo === 'function'
+            ? window.FirebaseHelper.detectarTipoDispositivo()
+            : this.detectarTipoDispositivo();
+        const ultimoDispositivo = usuario.dispositivoAtual || "";
+        const ultimoLoginMs = this.parseTimestampToMs(usuario.ultimoLogin);
         const authEmail = usuario.email && typeof usuario.email === 'string' ? usuario.email.trim() : null;
         const totalLogins = Number.isFinite(Number(usuario.totalLogins)) ? Number(usuario.totalLogins) + 1 : 1;
+        const userRef = this.db.collection("users").doc(uid);
         const updates = {
             ultimoLogin: firebase.firestore.FieldValue.serverTimestamp(),
             online: true,
             ultimaAtualizacaoPresenca: firebase.firestore.FieldValue.serverTimestamp(),
             ultimaPresenca: firebase.firestore.FieldValue.serverTimestamp(),
-            totalLogins: firebase.firestore.FieldValue.increment(1)
+            totalLogins: firebase.firestore.FieldValue.increment(1),
+            dispositivoAtual: dispositivoAtual
         };
 
         try {
@@ -150,6 +170,45 @@ window.SistemaAuth = {
             ultimoLogin: new Date().toISOString(),
             ...usuario
         };
+
+        const helper = window.FirebaseHelper;
+        if (helper && typeof helper.criarNotificacaoSuspeita === 'function') {
+            const agoraMs = Date.now();
+            const mesmoDispositivo = ultimoDispositivo && dispositivoAtual && ultimoDispositivo === dispositivoAtual;
+
+            if (ultimoLoginMs && agoraMs - ultimoLoginMs < 30000) {
+                helper.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'login_curto_intervalo',
+                    titulo: 'Login em curto intervalo',
+                    mensagem: `Usuário ${uid} realizou login em menos de 30 segundos.`,
+                    dispositivo: dispositivoAtual,
+                    contexto: `Último login: ${new Date(ultimoLoginMs).toLocaleTimeString('pt-BR')}`
+                });
+            }
+
+            if (ultimoLoginMs && agoraMs - ultimoLoginMs <= 5 * 60 * 1000 && totalLogins > 2) {
+                helper.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'excesso_logins_5min',
+                    titulo: 'Excesso de logins em 5 minutos',
+                    mensagem: `Usuário ${uid} efetuou múltiplos logins em menos de 5 minutos.`,
+                    dispositivo: dispositivoAtual,
+                    contexto: `Total de logins: ${totalLogins}`
+                });
+            }
+
+            if (ultimoDispositivo && dispositivoAtual && ultimoDispositivo !== dispositivoAtual) {
+                helper.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'login_dispositivo_diferente',
+                    titulo: 'Login de dispositivo diferente',
+                    mensagem: `Login detectado em dispositivo diferente: ${dispositivoAtual}.`,
+                    dispositivo: dispositivoAtual,
+                    contexto: `Dispositivo anterior: ${ultimoDispositivo}`
+                });
+            }
+        }
 
         localStorage.setItem("usuarioLogado", JSON.stringify(this.usuarioLogado));
         localStorage.setItem("uid", uid);

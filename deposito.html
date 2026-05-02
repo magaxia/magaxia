@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-helper.js"></script>
 
 <!-- Sistema de Autenticação Centralizado -->
 <script src="sistema-auth.js"></script>
@@ -733,6 +734,18 @@ data: window.SistemaAuth.firebase.firestore
 .serverTimestamp()
 
 });
+
+if (window.FirebaseHelper && typeof window.FirebaseHelper.criarNotificacaoSuspeita === 'function') {
+    window.FirebaseHelper.criarNotificacaoSuspeita({
+        uidUsuario: uid,
+        subtipo: valorAtual >= 1000 ? 'deposito_alto_valor' : 'deposito_pendente',
+        titulo: valorAtual >= 1000 ? 'Depósito alto detectado' : 'Depósito pendente',
+        mensagem: `Depósito de R$ ${formatador.format(valorAtual)} registrado para ${uid}`,
+        prioridade: valorAtual >= 1000 ? 'alta' : 'média',
+        valor: valorAtual,
+        contexto: `Status: pendente`
+    });
+}
 
 alert("Depósito registrado com sucesso");
 

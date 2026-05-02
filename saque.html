@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="firebase-helper.js"></script>
 
 <!-- Sistema de Autenticação Centralizado -->
 <script src="sistema-auth.js"></script>
@@ -815,6 +816,26 @@ alert(mensagem);
       status: "pendente",
       dataSaque: new Date()
     });
+
+    if (window.FirebaseHelper && typeof window.FirebaseHelper.criarNotificacaoSuspeita === 'function') {
+      const subtipo = window.FirebaseHelper.isPixKeySuspeita(tipo, chave) ? 'pix_chave_suspeita' : (valorSolicitado >= 1000 ? 'saque_alto_valor' : 'saque_pendente');
+      const titulo = subtipo === 'pix_chave_suspeita'
+        ? 'Chave Pix suspeita'
+        : subtipo === 'saque_alto_valor'
+          ? 'Saque alto detectado'
+          : 'Saque pendente';
+
+      window.FirebaseHelper.criarNotificacaoSuspeita({
+        uidUsuario: uid,
+        subtipo,
+        titulo,
+        mensagem: `Solicitação de saque R$ ${formatador.format(valorSolicitado)} para ${uid}`,
+        prioridade: subtipo === 'pix_chave_suspeita' || subtipo === 'saque_alto_valor' ? 'alta' : 'média',
+        valor: valorSolicitado,
+        dispositivo: tipo,
+        contexto: `Chave: ${chave}`
+      });
+    }
     
     // Atualizar saldo do usuário (deduzir valor solicitado completo)
     const novoSaldo = saldoAtual - valorSolicitado;

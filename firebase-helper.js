@@ -140,6 +140,11 @@ window.FirebaseHelper.getScorePorSubtipo = function(subtipo) {
     case 'multiplas_contas_mesmo_ip': return 30;
     case 'varias_contas_mesmo_aparelho': return 25;
     case 'excesso_logins_5min': return 20;
+    case 'login_curto_intervalo': return 18;
+    case 'login_dispositivo_diferente': return 18;
+    case 'deposito_alto_valor': return 20;
+    case 'saque_alto_valor': return 20;
+    case 'pix_chave_suspeita': return 20;
     case 'spam_recarga': return 20;
     case 'troca_pix_suspeita': return 15;
     case 'login_pais_diferente': return 10;
