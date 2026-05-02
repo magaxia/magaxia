@@ -745,6 +745,22 @@ if (window.FirebaseHelper && typeof window.FirebaseHelper.criarNotificacaoSuspei
         valor: valorAtual,
         contexto: `Status: pendente`
     });
+
+    try {
+      const usuarioDoc = await window.SistemaAuth.db.collection('users').doc(uid).get();
+      const usuarioData = usuarioDoc.exists ? usuarioDoc.data() : {};
+      if (typeof window.FirebaseHelper.verificarSpamRecarga === 'function') {
+        await window.FirebaseHelper.verificarSpamRecarga(uid, 30, 3);
+      }
+      if (typeof window.FirebaseHelper.verificarContaIncompletaAltoValor === 'function') {
+        await window.FirebaseHelper.verificarContaIncompletaAltoValor(uid, valorAtual, usuarioData);
+      }
+      if (typeof window.FirebaseHelper.verificarComportamentoFinanceiro === 'function') {
+        await window.FirebaseHelper.verificarComportamentoFinanceiro(uid, 72);
+      }
+    } catch (e) {
+      console.warn('Erro na verificação antifraude do depósito:', e);
+    }
 }
 
 alert("Depósito registrado com sucesso");

@@ -135,22 +135,473 @@ window.FirebaseHelper.isEmailFake = function(email, telefone = null) {
 
 window.FirebaseHelper.getScorePorSubtipo = function(subtipo) {
   switch ((subtipo || '').toLowerCase()) {
-    case 'saque_alto_fora_padrao': return 40;
-    case 'dois_dispositivos_simultaneos': return 35;
-    case 'multiplas_contas_mesmo_ip': return 30;
-    case 'varias_contas_mesmo_aparelho': return 25;
+    case 'saque_alto_fora_padrao': return 50;
+    case 'saque_fora_padrao': return 40;
+    case 'saque_alto_valor': return 40;
+    case 'deposito_alto_valor': return 35;
+    case 'deposito_repetido_curto_intervalo': return 35;
+    case 'spam_recarga': return 30;
+    case 'conta_incompleta_alto_valor': return 35;
+    case 'troca_pix_frequente': return 25;
+    case 'pix_chave_suspeita': return 30;
+    case 'dois_dispositivos_simultaneos': return 30;
+    case 'login_dispositivo_diferente': return 25;
+    case 'login_pais_diferente': return 5;
+    case 'mudanca_regiao_rapida': return 10;
+    case 'novo_dispositivo': return 20;
+    case 'novo_fingerprint': return 20;
+    case 'proxy_vpn_detectado': return 2;
+    case 'login_curto_intervalo': return 15;
     case 'excesso_logins_5min': return 20;
-    case 'login_curto_intervalo': return 18;
-    case 'login_dispositivo_diferente': return 18;
-    case 'deposito_alto_valor': return 20;
-    case 'saque_alto_valor': return 20;
-    case 'pix_chave_suspeita': return 20;
-    case 'spam_recarga': return 20;
-    case 'troca_pix_suspeita': return 15;
-    case 'login_pais_diferente': return 10;
-    case 'login_horario_incomum': return 10;
-    case 'conta_incompleta_valor_alto': return 10;
-    default: return 5;
+    case 'multiplas_contas_mesmo_ip': return 30;
+    case 'varias_contas_mesmo_aparelho': return 30;
+    case 'contas_mesmo_email': return 30;
+    case 'contas_mesmo_telefone': return 30;
+    case 'comportamento_financeiro_anormal': return 30;
+    case 'saque_sem_historico': return 35;
+    case 'cadastro_usuario': return 5;
+    case 'email_falso': return 25;
+    case 'saldo_congelado': return 25;
+    case 'bloqueio_temporario': return 45;
+    case 'bloqueio_automatico': return 70;
+    default: return 10;
+  }
+};
+
+window.FirebaseHelper.getShortIp = function(ip) {
+  if (!ip || typeof ip !== 'string') return 'desconhecido';
+  if (ip.includes('.')) return ip.split('.').slice(0, 3).join('.') + '.*';
+  if (ip.includes(':')) return ip.split(':').slice(0, 3).join(':') + ':*';
+  return ip;
+};
+
+window.FirebaseHelper.isUsuarioCompleto = function(usuario) {
+  if (!usuario || typeof usuario !== 'object') return false;
+  const nome = (usuario.nome || '').toString().trim();
+  const documento = (usuario.cpf || usuario.documento || usuario.cnpj || usuario.rg || '').toString().trim();
+  if (nome.length < 6) return false;
+  if (!documento) return false;
+  return true;
+};
+
+window.FirebaseHelper.getDeviceFingerprint = function() {
+  const navigatorInfo = typeof navigator !== 'undefined' ? navigator : {};
+  const screenInfo = typeof screen !== 'undefined' ? screen : {};
+  const fingerprint = [
+    navigatorInfo.userAgent || '',
+    navigatorInfo.platform || '',
+    navigatorInfo.vendor || '',
+    navigatorInfo.language || '',
+    Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+    screenInfo.width || '',
+    screenInfo.height || '',
+    screenInfo.colorDepth || '',
+    navigatorInfo.hardwareConcurrency || '',
+    navigatorInfo.deviceMemory || '',
+    navigatorInfo.languages ? navigatorInfo.languages.join(',') : ''
+  ].filter(Boolean).join('|');
+  return fingerprint || 'desconhecido';
+};
+
+window.FirebaseHelper.isVPNorProxyIp = function(geo) {
+  if (!geo || typeof geo !== 'object') return false;
+  const provider = (geo.provider || '').toString().toLowerCase();
+  const ip = (geo.ip || '').toString();
+  const vpnTokens = ['vpn', 'proxy', 'amazon', 'google', 'cloudflare', 'digitalocean', 'ovh', 'akamai', 'microsoft', 'linode', 'fastly'];
+  if (vpnTokens.some(token => provider.includes(token))) return true;
+  if (/^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[0-1])\.|^(::1|fc00:|fe80:)/.test(ip)) return true;
+  return false;
+};
+
+window.FirebaseHelper.verificarNovoDispositivoOuFingerprint = async function(uidUsuario, deviceId, fingerprint, usuario = {}) {
+  if (!uidUsuario || !deviceId || !fingerprint) return false;
+  const usuarioAnterior = usuario || {};
+  const fingerprintAntigo = usuarioAnterior.fingerprint || '';
+  const deviceIdAntigo = usuarioAnterior.deviceId || '';
+  const possivelNovoDevice = deviceIdAntigo && deviceId && deviceIdAntigo !== deviceId;
+  const possivelNovoFingerprint = fingerprintAntigo && fingerprintAntigo !== fingerprint;
+  if (possivelNovoDevice || possivelNovoFingerprint) {
+    await this.criarNotificacaoSuspeita({
+      uidUsuario,
+      subtipo: possivelNovoFingerprint ? 'novo_fingerprint' : 'novo_dispositivo',
+      titulo: 'Novo dispositivo ou fingerprint detectado',
+      mensagem: 'Login realizado em dispositivo ou fingerprint diferente do histórico.',
+      prioridade: 'alta',
+      score: this.getScorePorSubtipo(possivelNovoFingerprint ? 'novo_fingerprint' : 'novo_dispositivo'),
+      deviceId,
+      contexto: `Anterior: ${deviceIdAntigo || 'desconhecido'} / Fingerprint anterior: ${fingerprintAntigo ? '[oculto]' : 'nenhum'}`
+    });
+    return true;
+  }
+  return false;
+};
+
+window.FirebaseHelper.verificarMudancaRegiaoRapida = async function(uidUsuario, paisAnterior, paisAtual, geo) {
+  if (!uidUsuario || !paisAnterior || !paisAtual) return false;
+  if (paisAnterior.toString().trim().toLowerCase() === paisAtual.toString().trim().toLowerCase()) return false;
+  await this.criarNotificacaoSuspeita({
+    uidUsuario,
+    subtipo: 'mudanca_regiao_rapida',
+    titulo: 'Mudança de região rápida detectada',
+    mensagem: `Login de país/região diferente detectado: ${paisAtual}. Acesso permitido, alerta apenas informativo.`,
+    prioridade: 'baixa',
+    score: this.getScorePorSubtipo('mudanca_regiao_rapida'),
+    pais: paisAtual,
+    ip: geo.ip,
+    contexto: `País anterior: ${paisAnterior}`
+  });
+  return true;
+};
+
+window.FirebaseHelper.verificarComportamentoFinanceiro = async function(uidUsuario, janelaHoras = 72) {
+  if (!uidUsuario) return false;
+  const db = this.getDB();
+  try {
+    const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - janelaHoras * 60 * 60 * 1000);
+    const [depSnap, saqueSnap] = await Promise.all([
+      db.collection('depositos').where('uid', '==', uidUsuario).where('data', '>=', corte).get(),
+      db.collection('saques').where('uid', '==', uidUsuario).where('dataSaque', '>=', corte).get()
+    ]);
+    const depositos = depSnap.docs.map(doc => Number((doc.data() || {}).valor) || 0).filter(v => v > 0);
+    const saques = saqueSnap.docs.map(doc => Number((doc.data() || {}).valorSolicitado) || 0).filter(v => v > 0);
+    if (depositos.length >= 4 && depositos.reduce((a,b)=>a+b,0) >= 1000) {
+      await this.criarNotificacaoSuspeita({
+        uidUsuario,
+        subtipo: 'deposito_repetido_curto_intervalo',
+        titulo: 'Vários depósitos em curto período',
+        mensagem: `Foram registrados ${depositos.length} depósitos em ${janelaHoras}h totalizando R$ ${depositos.reduce((a,b)=>a+b,0).toFixed(2)}.`,
+        prioridade: 'alta',
+        score: this.getScorePorSubtipo('deposito_repetido_curto_intervalo'),
+        valor: depositos.reduce((a,b)=>a+b,0),
+        contexto: `Depósitos: ${depositos.map(v => v.toFixed(2)).join(', ')}`
+      });
+    }
+    if (saques.length >= 2 && saques.reduce((a,b)=>a+b,0) >= 3000) {
+      await this.criarNotificacaoSuspeita({
+        uidUsuario,
+        subtipo: 'comportamento_financeiro_anormal',
+        titulo: 'Padrão financeiro atípico',
+        mensagem: `Foram solicitados ${saques.length} saques em ${janelaHoras}h totalizando R$ ${saques.reduce((a,b)=>a+b,0).toFixed(2)}.`,
+        prioridade: 'alta',
+        score: this.getScorePorSubtipo('comportamento_financeiro_anormal'),
+        valor: saques.reduce((a,b)=>a+b,0),
+        contexto: `Saques: ${saques.map(v => v.toFixed(2)).join(', ')}`
+      });
+    }
+    return true;
+  } catch (error) {
+    console.warn('Erro ao verificar comportamento financeiro:', error);
+    return false;
+  }
+};
+
+window.FirebaseHelper.verificarSaqueSemHistorico = async function(uidUsuario, valorSolicitado) {
+  if (!uidUsuario || !valorSolicitado || valorSolicitado <= 0) return false;
+  const db = this.getDB();
+  try {
+    const snapshot = await db.collection('saques').where('uid', '==', uidUsuario).limit(3).get();
+    if (snapshot.empty && valorSolicitado >= 500) {
+      await this.criarNotificacaoSuspeita({
+        uidUsuario,
+        subtipo: 'saque_sem_historico',
+        titulo: 'Primeiro saque alto detectado',
+        mensagem: `Solicitação de saque R$ ${valorSolicitado.toFixed(2)} em conta com histórico de saques limitado.`,
+        prioridade: 'alta',
+        score: this.getScorePorSubtipo('saque_sem_historico'),
+        valor: valorSolicitado,
+        contexto: `Saques anteriores: ${snapshot.size}`
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.warn('Erro ao verificar saque sem histórico:', error);
+    return false;
+  }
+};
+
+window.FirebaseHelper.registrarAuditoriaAntifraude = async function(uidUsuario, acao, motivo, meta = {}) {
+  const db = this.getDB();
+  if (!db || !uidUsuario || !acao) return null;
+  try {
+    return await db.collection('auditoria_antifraude').add({
+      uidUsuario,
+      acao,
+      motivo,
+      meta,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    console.warn('Erro ao registrar auditoria antifraude:', error);
+    return null;
+  }
+};
+
+window.FirebaseHelper.atualizarStatusAntifraude = async function(uidUsuario, atualizacoes = {}) {
+  const db = this.getDB();
+  if (!db || !uidUsuario || typeof atualizacoes !== 'object') return null;
+  try {
+    await db.collection('users').doc(uidUsuario).set({
+      ...atualizacoes,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (error) {
+    console.error('Erro ao atualizar status antifraude:', error);
+  }
+};
+
+window.FirebaseHelper.marcarContaMonitorada = async function(uidUsuario, motivo, score = 0, extra = {}) {
+  const db = this.getDB();
+  if (!db || !uidUsuario) return null;
+  try {
+    await this.atualizarStatusAntifraude(uidUsuario, {
+      monitorado: true,
+      bloqueadoParaSaques: true,
+      status: 'monitorado',
+      motivoBloqueio: motivo,
+      scoreBloqueio: score,
+      ultimaAcaoAntifraude: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    return await this.criarNotificacaoSuspeita({
+      uidUsuario,
+      subtipo: 'bloqueio_temporario',
+      titulo: 'Bloqueio temporário para revisão',
+      mensagem: `Conta marcada para revisão e saque temporariamente bloqueado. Motivo: ${motivo}`,
+      prioridade: 'crítica',
+      score,
+      contexto: extra.contexto || '',
+      extra: { ...extra, motivo, bloqueioTemporario: true }
+    });
+  } catch (error) {
+    console.error('Erro ao marcar conta monitorada:', error);
+    return null;
+  }
+};
+
+window.FirebaseHelper.verificarMultiplasContasMesmoIp = async function(ip, uidUsuario, deviceId, fingerprint) {
+  const db = this.getDB();
+  if (!db || !ip || !uidUsuario) return 0;
+  if (typeof ip === 'string' && ip.toLowerCase().includes('desconhecido')) return 0;
+  try {
+    const snapshot = await db.collection('users').where('ip', '==', ip).get();
+    const outros = snapshot.docs.filter(doc => doc.id !== uidUsuario);
+    const outrosMesmoDevice = outros.filter(doc => {
+      const dados = doc.data();
+      return dados.deviceId === deviceId || (dados.fingerprint && fingerprint && dados.fingerprint === fingerprint);
+    });
+    if (outrosMesmoDevice.length > 0) {
+      await this.criarNotificacaoSuspeita({
+        uidUsuario,
+        subtipo: 'multiplas_contas_mesmo_ip',
+        titulo: 'Contas suspeitas no mesmo IP e dispositivo',
+        mensagem: `Encontradas ${outrosMesmoDevice.length + 1} conta(s) com mesmo IP e dispositivo/fingerprint.`,
+        prioridade: 'média',
+        score: this.getScorePorSubtipo('multiplas_contas_mesmo_ip'),
+        contexto: `IP completo: ${ip} / deviceId: ${deviceId || 'desconhecido'}`
+      });
+    }
+    return outrosMesmoDevice.length;
+  } catch (error) {
+    console.warn('Erro ao verificar múltiplas contas no mesmo IP:', error);
+    return 0;
+  }
+};
+
+window.FirebaseHelper.verificarVariasContasMesmoAparelho = async function(deviceId, uidUsuario) {
+  const db = this.getDB();
+  if (!db || !deviceId || !uidUsuario) return 0;
+  try {
+    const snapshot = await db.collection('users').where('deviceId', '==', deviceId).get();
+    const outros = snapshot.docs.filter(doc => doc.id !== uidUsuario);
+    if (outros.length > 0) {
+      await this.criarNotificacaoSuspeita({
+        uidUsuario,
+        subtipo: 'varias_contas_mesmo_aparelho',
+        titulo: 'Mesmo dispositivo usado em várias contas',
+        mensagem: `Detectadas ${outros.length + 1} conta(s) usando o mesmo deviceId.`,
+        prioridade: 'alta',
+        score: this.getScorePorSubtipo('varias_contas_mesmo_aparelho'),
+        contexto: `deviceId: ${deviceId}`
+      });
+    }
+    return outros.length;
+  } catch (error) {
+    console.warn('Erro ao verificar várias contas no mesmo aparelho:', error);
+    return 0;
+  }
+};
+
+window.FirebaseHelper.verificarSpamRecarga = async function(uidUsuario, janelaMinutos = 30, limite = 3) {
+  const db = this.getDB();
+  if (!db || !uidUsuario) return 0;
+  try {
+    const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - janelaMinutos * 60 * 1000);
+    const snapshot = await db.collection('depositos')
+      .where('uid', '==', uidUsuario)
+      .where('data', '>=', corte)
+      .get();
+    const quantidade = snapshot.docs.length;
+    if (quantidade >= limite) {
+      await this.criarNotificacaoSuspeita({
+        uidUsuario,
+        subtipo: 'spam_recarga',
+        titulo: 'Recargas em curto espaço de tempo',
+        mensagem: `Foram realizadas ${quantidade} recargas nos últimos ${janelaMinutos} minutos.`,
+        prioridade: 'alta',
+        score: this.getScorePorSubtipo('spam_recarga'),
+        contexto: `Janela: ${janelaMinutos} minutos`
+      });
+    }
+    return quantidade;
+  } catch (error) {
+    console.warn('Erro ao verificar spam de recarga:', error);
+    return 0;
+  }
+};
+
+window.FirebaseHelper.verificarSaqueForaPadrao = async function(uidUsuario, valorSolicitado, horas = 72) {
+  const db = this.getDB();
+  if (!db || !uidUsuario || !valorSolicitado || valorSolicitado <= 0) return false;
+  try {
+    const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - horas * 60 * 60 * 1000);
+    const snapshot = await db.collection('saques')
+      .where('uid', '==', uidUsuario)
+      .where('dataSaque', '>=', corte)
+      .get();
+    const valores = snapshot.docs
+      .map(doc => Number((doc.data() || {}).valorSolicitado) || 0)
+      .filter(v => v > 0);
+    if (valores.length < 2) return false;
+    const media = valores.reduce((a, b) => a + b, 0) / valores.length;
+    if (media > 0 && valorSolicitado > Math.max(500, media * 3)) {
+      await this.criarNotificacaoSuspeita({
+        uidUsuario,
+        subtipo: 'saque_fora_padrao',
+        titulo: 'Saque fora do padrão histórico',
+        mensagem: `Solicitação de saque de R$ ${valorSolicitado.toFixed(2)} está muito acima da média de R$ ${media.toFixed(2)}.`,
+        prioridade: 'alta',
+        score: this.getScorePorSubtipo('saque_fora_padrao'),
+        valor: valorSolicitado,
+        contexto: `Média últimos ${valores.length} saques: R$ ${media.toFixed(2)}`
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.warn('Erro ao verificar saque fora do padrão:', error);
+    return false;
+  }
+};
+
+window.FirebaseHelper.verificarTrocaPixFrequente = async function(uidUsuario, chaveAtual, horas = 24) {
+  const db = this.getDB();
+  if (!db || !uidUsuario || !chaveAtual) return false;
+  try {
+    const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - horas * 60 * 60 * 1000);
+    const snapshot = await db.collection('saques')
+      .where('uid', '==', uidUsuario)
+      .where('dataSaque', '>=', corte)
+      .get();
+    const chaves = snapshot.docs
+      .map(doc => (doc.data() || {}).chave)
+      .filter(chave => typeof chave === 'string' && chave.trim())
+      .map(chave => chave.trim());
+    const distintos = Array.from(new Set(chaves));
+    const chaveAtualTrim = chaveAtual.trim();
+    if (distintos.length >= 2 || (distintos.length === 1 && distintos[0] !== chaveAtualTrim)) {
+      await this.criarNotificacaoSuspeita({
+        uidUsuario,
+        subtipo: 'troca_pix_frequente',
+        titulo: 'Troca de chave Pix frequente',
+        mensagem: `O usuário está usando chaves Pix diferentes nas últimas ${horas} horas.`,
+        prioridade: 'alta',
+        score: this.getScorePorSubtipo('troca_pix_frequente'),
+        contexto: `Chaves recentes: ${distintos.concat(chaveAtualTrim).filter((v, i, arr) => arr.indexOf(v) === i).join(', ')}`
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.warn('Erro ao verificar troca de Pix frequente:', error);
+    return false;
+  }
+};
+
+window.FirebaseHelper.verificarContaIncompletaAltoValor = async function(uidUsuario, valor, usuario = {}) {
+  if (!uidUsuario || !valor || valor <= 0) return false;
+  const threshold = 500;
+  const nome = (usuario.nome || '').toString().trim();
+  const documento = (usuario.cpf || usuario.documento || usuario.cnpj || usuario.rg || '').toString().trim();
+  const incompleto = nome.length < 6 || !documento;
+  if (incompleto && valor >= threshold) {
+    await this.criarNotificacaoSuspeita({
+      uidUsuario,
+      subtipo: 'conta_incompleta_alto_valor',
+      titulo: 'Conta incompleta movendo alto valor',
+      mensagem: `Transação de R$ ${valor.toFixed(2)} detectada em conta sem documentação ou nome completo.`,
+      prioridade: 'alta',
+      score: this.getScorePorSubtipo('conta_incompleta_alto_valor'),
+      valor,
+      contexto: `Nome válido: ${nome.length >= 6}; documento: ${documento ? 'sim' : 'não'}`
+    });
+    return true;
+  }
+  return false;
+};
+
+window.FirebaseHelper.calcularScoreSuspeita = async function(uidUsuario, dias = 1) {
+  const db = this.getDB();
+  if (!db || !uidUsuario) return 0;
+
+  const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - dias * 24 * 60 * 60 * 1000);
+  try {
+    const snapshot = await db.collection('notificacoes')
+      .where('uidUsuario', '==', uidUsuario)
+      .limit(200)
+      .get();
+
+    return snapshot.docs.reduce((total, doc) => {
+      const data = doc.data();
+      const dataTimestamp = data.data && typeof data.data.toMillis === 'function'
+        ? data.data.toMillis()
+        : new Date(data.data).getTime();
+      if (!dataTimestamp || dataTimestamp < corte.toMillis()) {
+        return total;
+      }
+      return total + (Number(data.score) || 0);
+    }, 0);
+  } catch (error) {
+    console.warn('Erro ao calcular score de suspeita:', error);
+    return 0;
+  }
+};
+
+window.FirebaseHelper.marcarBloqueioAutomatico = async function(uidUsuario, motivo, score = 0, extra = {}) {
+  const db = this.getDB();
+  if (!db || !uidUsuario) return null;
+  try {
+    await db.collection('users').doc(uidUsuario).set({
+      status: 'bloqueado',
+      bloqueado: true,
+      motivoBloqueio: motivo,
+      scoreBloqueio: score,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    return await this.criarNotificacaoSuspeita({
+      uidUsuario,
+      subtipo: 'bloqueio_automatico',
+      titulo: 'Bloqueio automático por risco alto',
+      mensagem: `Conta bloqueada automaticamente por risco ${score}. Motivo: ${motivo}`,
+      prioridade: 'crítica',
+      score,
+      contexto: extra.contexto || '',
+      extra: { ...extra, motivo }
+    });
+  } catch (error) {
+    console.error('Erro ao marcar bloqueio automático:', error);
+    return null;
   }
 };
 
@@ -252,6 +703,8 @@ window.FirebaseHelper.criarNotificacaoSuspeita = async function(options = {}) {
   } = options;
 
   const geo = await this.getGeoData();
+  const agora = new Date();
+  const expiresEm = new Date(agora.getTime() + ((prioridade === 'crítica' || score >= 50) ? 90 : 30) * 24 * 60 * 60 * 1000);
   const payload = {
     tipo,
     subtipo,
@@ -263,10 +716,12 @@ window.FirebaseHelper.criarNotificacaoSuspeita = async function(options = {}) {
     destinatario,
     valor: Number(valor) || 0,
     dispositivo: dispositivo || this.detectarTipoDispositivo(),
+    deviceId: options.deviceId || this.getDeviceId(),
     ip: ip || geo.ip || 'desconhecido',
     pais: pais || geo.country_name || geo.country || 'desconhecido',
     contexto,
     data: firebase.firestore.FieldValue.serverTimestamp(),
+    expiresEm: firebase.firestore.Timestamp.fromDate(expiresEm),
     lida: false,
     resolvido: false,
     extra: typeof extra === 'object' ? extra : { extra }
@@ -280,6 +735,16 @@ window.FirebaseHelper.criarNotificacaoSuspeita = async function(options = {}) {
 
     const docRef = await db.collection('notificacoes').add(payload);
     console.log('Notificação de suspeita criada:', docRef.id, payload);
+    if (uidUsuario) {
+      await this.registrarAuditoriaAntifraude(uidUsuario, 'notificacao_suspeita', subtipo, {
+        score,
+        prioridade,
+        contexto,
+        tipo,
+        ip: payload.ip,
+        pais: payload.pais
+      });
+    }
     return docRef.id;
   } catch (error) {
     console.error('Erro ao criar notificação de suspeita:', error);

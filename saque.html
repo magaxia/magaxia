@@ -724,6 +724,10 @@ alert(mensagem);
         return alert("❌ Sua conta está com o saldo congelado!\n\nContacte o suporte para descongelá-la.");
       }
 
+      if (userData.bloqueadoParaSaques === true || userData.monitorado === true || userData.status === 'monitorado') {
+        return alert("❌ Sua conta está temporariamente bloqueada para saques devido a análise antifraude. Contate o administrador.");
+      }
+
       // Verificar se passaram 4 dias desde o cadastro
       const createdAt = userData.createdAt;
       if (createdAt) {
@@ -835,6 +839,25 @@ alert(mensagem);
         dispositivo: tipo,
         contexto: `Chave: ${chave}`
       });
+
+      try {
+        const usuarioDoc = await window.SistemaAuth.db.collection('users').doc(uid).get();
+        const usuarioData = usuarioDoc.exists ? usuarioDoc.data() : {};
+        if (typeof window.FirebaseHelper.verificarSaqueForaPadrao === 'function') {
+          await window.FirebaseHelper.verificarSaqueForaPadrao(uid, valorSolicitado);
+        }
+        if (typeof window.FirebaseHelper.verificarSaqueSemHistorico === 'function') {
+          await window.FirebaseHelper.verificarSaqueSemHistorico(uid, valorSolicitado);
+        }
+        if (typeof window.FirebaseHelper.verificarTrocaPixFrequente === 'function') {
+          await window.FirebaseHelper.verificarTrocaPixFrequente(uid, chave);
+        }
+        if (typeof window.FirebaseHelper.verificarContaIncompletaAltoValor === 'function') {
+          await window.FirebaseHelper.verificarContaIncompletaAltoValor(uid, valorSolicitado, usuarioData);
+        }
+      } catch (e) {
+        console.warn('Erro na verificação antifraude do saque:', e);
+      }
     }
     
     // Atualizar saldo do usuário (deduzir valor solicitado completo)

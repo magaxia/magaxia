@@ -45,6 +45,62 @@ window.SistemaAuth = {
         return isNaN(date.getTime()) ? 0 : date.getTime();
     },
 
+    getLoginBlockInfo: function(usuario) {
+        const bloqueioAteMs = this.parseTimestampToMs(usuario.loginBloqueadoAte);
+        if (bloqueioAteMs && bloqueioAteMs > Date.now()) {
+            return {
+                blocked: true,
+                minutes: Math.ceil((bloqueioAteMs - Date.now()) / 60000)
+            };
+        }
+        return { blocked: false };
+    },
+
+    registrarFalhaLogin: async function(uid, userRef, usuario = {}, credencial = '') {
+        if (!userRef || !uid) return;
+        try {
+            const agoraMs = Date.now();
+            const ultimoFalhaMs = this.parseTimestampToMs(usuario.ultimoFalhaLogin);
+            let falhas = Number.isFinite(Number(usuario.loginFalhas)) ? Number(usuario.loginFalhas) : 0;
+            if (!ultimoFalhaMs || agoraMs - ultimoFalhaMs > 15 * 60 * 1000) {
+                falhas = 0;
+            }
+            falhas += 1;
+            const updates = {
+                loginFalhas: falhas,
+                ultimoFalhaLogin: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            if (falhas >= 5) {
+                updates.loginBloqueadoAte = firebase.firestore.Timestamp.fromMillis(agoraMs + 10 * 60 * 1000);
+                await this.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'brute_force_detectado',
+                    titulo: 'Tentativas de login suspeitas',
+                    mensagem: `Múltiplas tentativas falhas de login para ${uid}.`,
+                    prioridade: 'alta',
+                    score: this.getScorePorSubtipo('brute_force_detectado'),
+                    contexto: `Credencial: ${credencial}`
+                });
+            }
+            await userRef.set(updates, { merge: true });
+        } catch (error) {
+            console.warn("Falha ao registrar tentativa de login:", error);
+        }
+    },
+
+    resetLoginAttempts: async function(userRef) {
+        if (!userRef) return;
+        try {
+            await userRef.set({
+                loginFalhas: 0,
+                loginBloqueadoAte: null,
+                ultimoFalhaLogin: null
+            }, { merge: true });
+        } catch (error) {
+            console.warn("Falha ao resetar tentativas de login:", error);
+        }
+    },
+
     detectarTipoDispositivo: function() {
         if (typeof navigator === 'undefined' || !navigator.userAgent) return 'desktop';
         return /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
@@ -107,11 +163,6 @@ window.SistemaAuth = {
     },
 
     _validarELogin: async function(uid, usuario, senha, callback) {
-        if (!usuario.senha || usuario.senha !== senha) {
-            callback(false, "Senha incorreta");
-            return;
-        }
-
         const status = usuario.status || "ativo";
         if (status === "suspenso" || usuario.suspenso === true) {
             callback(false, "Sua conta está suspensa");
@@ -126,10 +177,56 @@ window.SistemaAuth = {
             return;
         }
 
+        const userRef = this.db.collection("users").doc(uid);
+        const bloqueioInfo = this.getLoginBlockInfo(usuario);
+        if (bloqueioInfo.blocked) {
+            callback(false, `Tentativas excedidas. Tente novamente em ${bloqueioInfo.minutes} min.`);
+            return;
+        }
+
+        if (!usuario.senha || usuario.senha !== senha) {
+            await this.registrarFalhaLogin(uid, userRef, usuario, senha);
+            callback(false, "Senha incorreta");
+            return;
+        }
+
+        if (usuario.twoFactorEnabled === true && usuario.twoFactorCode) {
+            try {
+                await userRef.set({ last2faChallenge: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+            } catch (error) {
+                console.warn("Falha ao registrar desafio 2FA:", error);
+            }
+            callback(false, "2FA_REQUIRED", {
+                uid,
+                nome: usuario.nome || usuario.email || uid,
+                email: usuario.email,
+                telefone: usuario.telefone
+            });
+            return;
+        }
+
+        return this._completarLogin(uid, usuario, senha, callback);
+    },
+
+    _completarLogin: async function(uid, usuario, senha, callback) {
         const dispositivoAtual = typeof window.FirebaseHelper?.detectarTipoDispositivo === 'function'
             ? window.FirebaseHelper.detectarTipoDispositivo()
             : this.detectarTipoDispositivo();
+        const deviceId = typeof window.FirebaseHelper?.getDeviceId === 'function'
+            ? window.FirebaseHelper.getDeviceId()
+            : `dev-${Math.random().toString(36).substr(2, 10)}-${Date.now()}`;
+        const firebaseHelper = window.FirebaseHelper;
+        const deviceFingerprint = firebaseHelper && typeof firebaseHelper.getDeviceFingerprint === 'function'
+            ? window.FirebaseHelper.getDeviceFingerprint()
+            : '';
+        const geo = firebaseHelper && typeof firebaseHelper.getGeoData === 'function'
+            ? await firebaseHelper.getGeoData()
+            : { ip: 'desconhecido', country_name: 'desconhecido', country: 'desconhecido' };
         const ultimoDispositivo = usuario.dispositivoAtual || "";
+        const ultimoDeviceId = usuario.deviceId || "";
+        const ultimoFingerprint = usuario.fingerprint || "";
+        const ultimoPais = usuario.pais || usuario.ultimoPais || "";
+        const ultimoIp = usuario.ultimoIp || "";
         const ultimoLoginMs = this.parseTimestampToMs(usuario.ultimoLogin);
         const authEmail = usuario.email && typeof usuario.email === 'string' ? usuario.email.trim() : null;
         const totalLogins = Number.isFinite(Number(usuario.totalLogins)) ? Number(usuario.totalLogins) + 1 : 1;
@@ -140,7 +237,13 @@ window.SistemaAuth = {
             ultimaAtualizacaoPresenca: firebase.firestore.FieldValue.serverTimestamp(),
             ultimaPresenca: firebase.firestore.FieldValue.serverTimestamp(),
             totalLogins: firebase.firestore.FieldValue.increment(1),
-            dispositivoAtual: dispositivoAtual
+            dispositivoAtual: dispositivoAtual,
+            deviceId: deviceId,
+            fingerprint: deviceFingerprint,
+            ultimoIp: geo.ip || ultimoIp,
+            ultimoPais: geo.country_name || geo.country || ultimoPais,
+            pais: geo.country_name || geo.country || ultimoPais,
+            ip: geo.ip || ultimoIp
         };
 
         try {
@@ -171,41 +274,174 @@ window.SistemaAuth = {
             ...usuario
         };
 
-        const helper = window.FirebaseHelper;
-        if (helper && typeof helper.criarNotificacaoSuspeita === 'function') {
+        if (firebaseHelper && typeof firebaseHelper.criarNotificacaoSuspeita === 'function') {
             const agoraMs = Date.now();
-            const mesmoDispositivo = ultimoDispositivo && dispositivoAtual && ultimoDispositivo === dispositivoAtual;
+            const dispositivoAlterado = ultimoDispositivo && dispositivoAtual && ultimoDispositivo !== dispositivoAtual;
+            const deviceAlterado = ultimoDeviceId && deviceId && ultimoDeviceId !== deviceId;
+            const fingerprintAlterado = ultimoFingerprint && deviceFingerprint && ultimoFingerprint !== deviceFingerprint;
+            const paisAtual = (geo.country_name || geo.country || '').toString().trim();
+            const paisAlterado = ultimoPais && paisAtual && ultimoPais.toString().trim().toLowerCase() !== paisAtual.toLowerCase();
+            const vpnDetectado = typeof firebaseHelper.isVPNorProxyIp === 'function' && firebaseHelper.isVPNorProxyIp(geo);
 
             if (ultimoLoginMs && agoraMs - ultimoLoginMs < 30000) {
-                await helper.criarNotificacaoSuspeita({
+                await firebaseHelper.criarNotificacaoSuspeita({
                     uidUsuario: uid,
                     subtipo: 'login_curto_intervalo',
                     titulo: 'Login em curto intervalo',
                     mensagem: `Usuário ${uid} realizou login em menos de 30 segundos.`,
                     dispositivo: dispositivoAtual,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    score: firebaseHelper.getScorePorSubtipo('login_curto_intervalo'),
                     contexto: `Último login: ${new Date(ultimoLoginMs).toLocaleTimeString('pt-BR')}`
                 });
             }
 
             if (ultimoLoginMs && agoraMs - ultimoLoginMs <= 5 * 60 * 1000 && totalLogins > 2) {
-                await helper.criarNotificacaoSuspeita({
+                await firebaseHelper.criarNotificacaoSuspeita({
                     uidUsuario: uid,
                     subtipo: 'excesso_logins_5min',
                     titulo: 'Excesso de logins em 5 minutos',
                     mensagem: `Usuário ${uid} efetuou múltiplos logins em menos de 5 minutos.`,
                     dispositivo: dispositivoAtual,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    score: firebaseHelper.getScorePorSubtipo('excesso_logins_5min'),
                     contexto: `Total de logins: ${totalLogins}`
                 });
             }
 
-            if (ultimoDispositivo && dispositivoAtual && ultimoDispositivo !== dispositivoAtual) {
-                await helper.criarNotificacaoSuspeita({
+            if (fingerprintAlterado) {
+                await firebaseHelper.criarNotificacaoSuspeita({
                     uidUsuario: uid,
                     subtipo: 'login_dispositivo_diferente',
-                    titulo: 'Login de dispositivo diferente',
-                    mensagem: `Login detectado em dispositivo diferente: ${dispositivoAtual}.`,
+                    titulo: 'Fingerprint de dispositivo diferente',
+                    mensagem: 'Fingerprint de dispositivo mudou desde o último login.',
                     dispositivo: dispositivoAtual,
-                    contexto: `Dispositivo anterior: ${ultimoDispositivo}`
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    score: firebaseHelper.getScorePorSubtipo('login_dispositivo_diferente'),
+                    contexto: `Fingerprint anterior registrado`
+                });
+            }
+
+            if (dispositivoAlterado || deviceAlterado) {
+                await firebaseHelper.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'dois_dispositivos_simultaneos',
+                    titulo: 'Dispositivo diferente detectado',
+                    mensagem: `Login detectado em dispositivo diferente ou sessão simultânea.`,
+                    dispositivo: dispositivoAtual,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    score: firebaseHelper.getScorePorSubtipo('dois_dispositivos_simultaneos'),
+                    contexto: `Anterior: ${ultimoDispositivo} / ${ultimoDeviceId}`
+                });
+            }
+
+            if (paisAlterado) {
+                await firebaseHelper.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'login_pais_diferente',
+                    titulo: 'Login de país diferente',
+                    mensagem: `Login detectado de país diferente: ${paisAtual}.`,
+                    dispositivo: dispositivoAtual,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    prioridade: 'baixa',
+                    score: firebaseHelper.getScorePorSubtipo('login_pais_diferente'),
+                    contexto: `País anterior: ${ultimoPais}`
+                });
+            }
+
+            if (vpnDetectado) {
+                await firebaseHelper.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'proxy_vpn_detectado',
+                    titulo: 'VPN/Proxy detectado',
+                    mensagem: 'Login originado de VPN/Proxy. Acesso permitido, alerta apenas informativo.',
+                    dispositivo: dispositivoAtual,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    prioridade: 'baixa',
+                    score: firebaseHelper.getScorePorSubtipo('proxy_vpn_detectado'),
+                    contexto: `Provedor: ${geo.provider || 'desconhecido'}`
+                });
+            }
+
+            if (vpnDetectado && (deviceAlterado || fingerprintAlterado || paisAlterado)) {
+                await firebaseHelper.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'vpn_comportamento_suspeito',
+                    titulo: 'VPN com comportamento suspeito',
+                    mensagem: 'VPN/Proxy detectado junto com mudança de dispositivo, fingerprint ou país.',
+                    dispositivo: dispositivoAtual,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    prioridade: 'alta',
+                    score: firebaseHelper.getScorePorSubtipo('vpn_comportamento_suspeito'),
+                    contexto: `Mudança de ambiente detectada`
+                });
+            }
+
+            if (typeof firebaseHelper.verificarMudancaRegiaoRapida === 'function') {
+                await firebaseHelper.verificarMudancaRegiaoRapida(uid, ultimoPais, paisAtual, geo);
+            }
+            if (typeof firebaseHelper.verificarNovoDispositivoOuFingerprint === 'function') {
+                await firebaseHelper.verificarNovoDispositivoOuFingerprint(uid, deviceId, deviceFingerprint, usuario);
+            }
+            if (typeof firebaseHelper.verificarMultiplasContasMesmoIp === 'function') {
+                await firebaseHelper.verificarMultiplasContasMesmoIp(geo.ip, uid, deviceId, deviceFingerprint);
+            }
+            if (typeof firebaseHelper.verificarVariasContasMesmoAparelho === 'function') {
+                await firebaseHelper.verificarVariasContasMesmoAparelho(deviceId, uid);
+            }
+
+            const score = await firebaseHelper.calcularScoreSuspeita(uid, 7);
+            await firebaseHelper.atualizarStatusAntifraude(uid, {
+                riscoAtual: score,
+                ultimoScoreAntifraude: score,
+                ultimaAnaliseAntifraude: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            if (score >= 90) {
+                await firebaseHelper.marcarBloqueioAutomatico(uid, `Score alto: ${score}`, score, {
+                    dispositivoAtual,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    contexto: `Score de alerta recente ${score}`
+                });
+                callback(false, "Sua conta foi bloqueada por atividade suspeita");
+                return;
+            }
+            if (score >= 75) {
+                await firebaseHelper.marcarContaMonitorada(uid, `Score elevado: ${score}`, score, {
+                    dispositivoAtual,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    contexto: `Score de alerta recente ${score}`
+                });
+            } else if (score >= 50) {
+                await firebaseHelper.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'watchlist_conta',
+                    titulo: 'Conta em observação',
+                    mensagem: `Conta com score de risco ${score} enviada ao watchlist.`,
+                    prioridade: 'média',
+                    score,
+                    deviceId,
+                    ip: geo.ip,
+                    pais: paisAtual,
+                    contexto: `Login avaliado`
                 });
             }
         }

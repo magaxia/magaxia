@@ -451,6 +451,12 @@ async function cadastrar(){
         // Usar o UID como código de indicação
         const codigoIndicacao = user.uid;
         const dispositivoAtual = detectarTipoDispositivo();
+        const deviceId = window.FirebaseHelper && typeof window.FirebaseHelper.getDeviceId === 'function'
+            ? window.FirebaseHelper.getDeviceId()
+            : `dev-${Math.random().toString(36).substr(2, 10)}-${Date.now()}`;
+        const geo = window.FirebaseHelper && typeof window.FirebaseHelper.getGeoData === 'function'
+            ? await window.FirebaseHelper.getGeoData()
+            : { ip: 'desconhecido', country_name: 'desconhecido', country: 'desconhecido' };
 
         // Salvar usuário com campos de comissão
         await db.collection("users").doc(user.uid).set({
@@ -462,7 +468,7 @@ async function cadastrar(){
             senha: senha,
             ref: convite,
             codigoIndicacao: codigoIndicacao,
-            indicadorId: convite, // Campo padronizado para o indicador
+            indicadorId: convite,
             saldo: 0,
             comissaoTotal: 0,
             totalIndicados: 0,
@@ -474,7 +480,17 @@ async function cadastrar(){
             atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             dispositivoAtual: dispositivoAtual,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            deviceId: deviceId,
+            fingerprint: window.FirebaseHelper && typeof window.FirebaseHelper.getDeviceFingerprint === 'function'
+              ? window.FirebaseHelper.getDeviceFingerprint()
+              : '',
+            ip: geo.ip || 'desconhecido',
+            ultimoIp: geo.ip || 'desconhecido',
+            pais: geo.country_name || geo.country || 'desconhecido',
+            ultimoPais: geo.country_name || geo.country || 'desconhecido',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            monitorado: false,
+            bloqueadoParaSaques: false
         });
 
         if (window.FirebaseHelper && typeof window.FirebaseHelper.criarNotificacaoSuspeita === 'function') {
@@ -484,8 +500,19 @@ async function cadastrar(){
                 titulo: 'Novo cadastro de usuário',
                 mensagem: `Novo usuário cadastrado: ${user.uid}`,
                 prioridade: 'média',
+                dispositivo: dispositivoAtual,
+                deviceId: deviceId,
+                ip: geo.ip,
+                pais: geo.country_name || geo.country,
                 contexto: `Telefone: ${telefone}`
             });
+
+            if (typeof window.FirebaseHelper.verificarMultiplasContasMesmoIp === 'function') {
+                await window.FirebaseHelper.verificarMultiplasContasMesmoIp(geo.ip, user.uid, deviceId, window.FirebaseHelper.getDeviceFingerprint());
+            }
+            if (typeof window.FirebaseHelper.verificarVariasContasMesmoAparelho === 'function') {
+                await window.FirebaseHelper.verificarVariasContasMesmoAparelho(deviceId, user.uid);
+            }
         }
 
         // ✅ Registrar indicação se houver código de convite
