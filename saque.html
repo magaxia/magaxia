@@ -702,6 +702,17 @@ async function validarLimiteSaque2x(uid, valorSaqueSolicitado) {
   }
 }
 
+function validarDiaSaque() {
+  const diaSemana = new Date().getDay();
+  const permitido = diaSemana === 1 || diaSemana === 3 || diaSemana === 5;
+  return {
+    permitido,
+    mensagem: permitido
+      ? "Dia permitido para saque."
+      : "Saques só são permitidos às segundas, quartas e sextas-feiras."
+  };
+}
+
 // SOLICITAR SAQUE
 
 async function solicitarSaque(){
@@ -715,6 +726,11 @@ async function solicitarSaque(){
   if (!window.SistemaAuth || !window.SistemaAuth.db) {
     alert("❌ Sistema não inicializado. Recarregue a página.");
     return;
+  }
+
+  const resultadoDia = validarDiaSaque();
+  if (!resultadoDia.permitido) {
+    return alert(resultadoDia.mensagem);
   }
 
   const valorSolicitado = Number(document.getElementById("valor").value);
