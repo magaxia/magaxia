@@ -647,6 +647,61 @@ async function validarRequisitosSaque(uid) {
   }
 }
 
+async function validarLimiteSaque2x(uid, valorSaqueSolicitado) {
+  try {
+    if (!uid || !window.SistemaAuth || !window.SistemaAuth.db) {
+      return {
+        permitido: false,
+        mensagem: "Erro de validação do saque. Recarregue a página e tente novamente."
+      };
+    }
+
+    const depositosSnapshot = await window.SistemaAuth.db
+      .collection("depositos")
+      .where("uid", "==", uid)
+      .where("status", "==", "aprovado")
+      .get();
+
+    let totalDepositado = 0;
+    depositosSnapshot.forEach(doc => {
+      totalDepositado += Number(doc.data().valor) || 0;
+    });
+
+    const saquesSnapshot = await window.SistemaAuth.db
+      .collection("saques")
+      .where("uid", "==", uid)
+      .get();
+
+    let totalSacado = 0;
+    saquesSnapshot.forEach(doc => {
+      totalSacado += Number(doc.data().valorSolicitado) || 0;
+    });
+
+    const limiteMaximo = totalDepositado * 2;
+    const restanteParaSaque = limiteMaximo - totalSacado;
+
+    if (valorSaqueSolicitado > restanteParaSaque) {
+      return {
+        permitido: false,
+        mensagem: restanteParaSaque <= 0
+          ? "Você atingiu o limite máximo de saques. Não há saldo adicional disponível para saque."
+          : `O valor solicitado excede o limite de saque disponível. Você pode sacar até ${formatador.format(restanteParaSaque)} com base nos depósitos aprovados.`
+      };
+    }
+
+    return {
+      permitido: true,
+      mensagem: `Saque permitido. Seu limite máximo de saque é ${formatador.format(limiteMaximo)} e você já sacou ${formatador.format(totalSacado)}.`
+    };
+  } catch (error) {
+    console.error("Erro ao validar limite de saque 2x:", error);
+    return {
+      permitido: false,
+      mensagem: "Erro ao validar o limite de saque. Tente novamente mais tarde."
+    };
+  }
+}
+
 // SOLICITAR SAQUE
 
 async function solicitarSaque(){
@@ -679,6 +734,11 @@ async function solicitarSaque(){
   if(valorSolicitado > saldoAtual)
     return alert(" Saldo insuficiente. Saldo disponível: R$ " + formatador.format(saldoAtual));
   
+  const resultadoLimite = await validarLimiteSaque2x(uid, valorSolicitado);
+  if (!resultadoLimite.permitido) {
+    return alert(resultadoLimite.mensagem);
+  }
+
   // Validar requisitos de saque somente se valor mínimo e saldo forem atendidos
   const resultadoValidacao = await validarRequisitosSaque(uid);
   
