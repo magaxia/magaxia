@@ -919,6 +919,18 @@ async function solicitarSaque(){
     return;
   }
 
+  try {
+    const configDoc = await window.SistemaAuth.db.collection('system').doc('config').get();
+    if (configDoc.exists) {
+      const config = configDoc.data() || {};
+      if (config.saqueBloqueado === true) {
+        return alert('🚨 Saques temporariamente suspensos por segurança do sistema');
+      }
+    }
+  } catch (error) {
+    console.warn('Erro ao verificar bloqueio de saques:', error);
+  }
+
   const resultadoHorarioDia = validarHorarioEDiaSaque(vipNivelAtual);
   if (!resultadoHorarioDia.permitido) {
     return alert(resultadoHorarioDia.mensagem);
@@ -975,6 +987,26 @@ alert(mensagem);
   let vipNivel = vipNivelAtual;
 
   // Verificar se o saldo está congelado e atualizar vipNivel se necessário
+  try {
+    const configDoc = await window.SistemaAuth.db.collection('system').doc('config').get();
+    if (!configDoc.exists) {
+      return alert('🚨 Saques temporariamente suspensos por segurança do sistema');
+    }
+
+    const configData = configDoc.data() || {};
+    if (configData.saqueBloqueado === true) {
+      return alert('🚨 Saques temporariamente suspensos por segurança do sistema');
+    }
+
+    const limiteSaque = Number(configData.limiteSaque || configData.limite || 0);
+    if (limiteSaque > 0 && valorSolicitado > limiteSaque) {
+      return alert(`🚨 Valor de saque acima do limite atual do sistema. Limite disponível: R$ ${formatador.format(limiteSaque)}`);
+    }
+  } catch (error) {
+    console.error('Erro ao verificar bloqueio de saques:', error);
+    return alert('🚨 Erro ao verificar segurança do sistema. Saques temporariamente indisponíveis.');
+  }
+
   try {
     const usuarioDoc = await window.SistemaAuth.db.collection("users").doc(uid).get();
     if (usuarioDoc.exists) {

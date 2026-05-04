@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "meu-projeto-dev",
+    "prod": "meu-projeto-prod"
+  }
+}

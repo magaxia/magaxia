@@ -5,7 +5,12 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "server": "node index.js",
+    "dev": "firebase emulators:start --only functions,firestore,auth",
+    "validate": "node scripts/validate-firebase.js",
+    "deploy:dev": "npm run validate && firebase use dev && firebase deploy --only functions,hosting",
+    "deploy:prod": "npm run validate && firebase use prod && firebase deploy --only functions,hosting",
+    "audit:finance": "node audit-finance.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",
@@ -16,5 +21,8 @@
     "firebase-admin": "^12.7.0",
     "helmet": "^7.0.0",
     "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "firebase-tools": "^11.14.0"
   }
 }

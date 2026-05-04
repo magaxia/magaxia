@@ -1,0 +1,25 @@
+# Node modules
+node_modules/
+functions/node_modules/
+public/node_modules/
+
+# Firebase local files
+.firebase/
+
+# Environment config
+.env
+.env.local
+
+# Credentials
+serviceAccountKey.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log*
+*.log
+
+# IDE files
+.vscode/
+.DS_Store
