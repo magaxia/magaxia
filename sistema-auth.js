@@ -116,14 +116,27 @@ window.SistemaAuth = {
             const dadosUsuario = usuarioDoc.exists ? usuarioDoc.data() : {};
 
             const saldoAtual = Number(dadosUsuario.saldoSaque || 0);
-            const cofreAtual = Number(dadosUsuario.cofre?.saldo || 0);
-            const valorCofre = Number((valorGanho * 0.10));
-            const valorSaldo = Number((valorGanho * 0.90));
+            const cofreDados = dadosUsuario.cofre || {};
+            const bloqueadoAtual = Number(cofreDados.bloqueado || 0);
+            const disponivelAtual = Number(cofreDados.disponivel || 0);
+            const historicoAtual = Array.isArray(cofreDados.historico) ? [...cofreDados.historico] : [];
+            const valorCofre = Number((valorGanho * 0.10).toFixed(2));
+            const valorSaldo = Number((valorGanho * 0.90).toFixed(2));
+            const agora = new Date();
+
+            historicoAtual.push({
+                valor: valorCofre,
+                data: agora,
+                status: 'bloqueado',
+                criadoEm: agora
+            });
 
             transaction.set(usuarioRef, {
                 saldoSaque: saldoAtual + valorSaldo,
                 cofre: {
-                    saldo: cofreAtual + valorCofre
+                    bloqueado: bloqueadoAtual + valorCofre,
+                    disponivel: disponivelAtual,
+                    historico: historicoAtual
                 },
                 atualizadoEm: this.firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
