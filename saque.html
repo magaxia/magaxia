@@ -176,20 +176,8 @@ select option {
     <div class="saldo-label">Saldo disponível</div>
     <div id="saldo">R$ 0,00</div>
 
-    <div class="saldo-label">Cofre bloqueado</div>
-    <div id="cofre-bloqueado">R$ 0,00</div>
-
-    <div class="saldo-label">Cofre disponível</div>
-    <div id="cofre-disponivel">R$ 0,00</div>
-
-    <button id="botao-resgatar-cofre" onclick="resgatarCofre()" style="display: none; background: #ffdd57; color: #2b2b2b; border-radius: 12px; border: none; margin-top: 15px; padding: 14px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%;">
-      Resgatar Cofre
-    </button>
-
-    <div id="cofre-historico-container" style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.3); text-align: left;">
-      <h3 style="font-size: 18px; margin-bottom: 10px; color: #39c6ff;">Histórico do Cofre</h3>
-      <ul id="cofre-historico" style="list-style: none; padding: 0; font-size: 14px; opacity: 0.9; max-height: 180px; overflow-y: auto;"></ul>
-    </div>
+    <div class="saldo-label">Cofre total</div>
+    <div id="cofre">R$ 0,00</div>
 
     <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.3); text-align: left;">
       <h3 style="font-size: 18px; margin-bottom: 10px; color: #39c6ff;">Limites de Saque</h3>
@@ -319,57 +307,14 @@ const formatador = new Intl.NumberFormat(
   }
 );
 
-function atualizarBotaoResgatar(disponivel) {
-  const botao = document.getElementById("botao-resgatar-cofre");
-  if (!botao) return;
-  if (disponivel > 0) {
-    botao.disabled = false;
-    botao.style.opacity = "1";
-    botao.style.cursor = "pointer";
-  } else {
-    botao.disabled = true;
-    botao.style.opacity = "0.6";
-    botao.style.cursor = "not-allowed";
-  }
-}
-
-function renderCofreHistorico(historico) {
-  const historicoLista = document.getElementById("cofre-historico");
-  if (!historicoLista) return;
-  historicoLista.innerHTML = "";
-
-  if (!Array.isArray(historico) || historico.length === 0) {
-    historicoLista.innerHTML = "<li>Nenhuma entrada no cofre ainda.</li>";
-    return;
-  }
-
-  const ordenado = [...historico].sort((a, b) => {
-    const dataA = a.data instanceof Date ? a.data : a.data?.toDate ? a.data.toDate() : new Date(a.data);
-    const dataB = b.data instanceof Date ? b.data : b.data?.toDate ? b.data.toDate() : new Date(b.data);
-    return dataB - dataA;
-  });
-
-  ordenado.forEach(entry => {
-    const valor = Number(entry.valor || 0);
-    const dataRegistro = entry.data instanceof Date
-      ? entry.data
-      : entry.data?.toDate
-        ? entry.data.toDate()
-        : new Date(entry.data || Date.now());
-    const quando = new Intl.DateTimeFormat("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short"
-    }).format(dataRegistro);
-    const status = entry.status === "disponivel" ? "Disponível" : entry.status === "resgatado" ? "Resgatado" : "Bloqueado";
-    const linha = document.createElement("li");
-    linha.style.marginBottom = "10px";
-    linha.innerHTML = `
-      <strong>${status}</strong><br>
-      Valor: ${formatador.format(valor)}<br>
-      Data: ${quando}
-    `;
-    historicoLista.appendChild(linha);
-  });
+function getCofreTotal(historico) {
+  if (!Array.isArray(historico)) return 0;
+  return historico.reduce((total, entry) => {
+    if (entry.status === 'bloqueado') {
+      return total + Number(entry.valor || 0);
+    }
+    return total;
+  }, 0);
 }
 
 async function aplicarCofreAutomatico(uid, valorGanho) {
@@ -388,8 +333,6 @@ async function aplicarCofreAutomatico(uid, valorGanho) {
 
     const saldoAtualUsuario = Number(dadosUsuario.saldoSaque || 0);
     const cofreDados = dadosUsuario.cofre || {};
-    const bloqueadoAtual = Number(cofreDados.bloqueado || 0);
-    const disponivelAtual = Number(cofreDados.disponivel || 0);
     const historicoAtual = Array.isArray(cofreDados.historico) ? [...cofreDados.historico] : [];
 
     const valorCofre = Number((valorGanho * 0.10).toFixed(2));
@@ -406,8 +349,6 @@ async function aplicarCofreAutomatico(uid, valorGanho) {
     transaction.set(usuarioRef, {
       saldoSaque: saldoAtualUsuario + valorSaldo,
       cofre: {
-        bloqueado: bloqueadoAtual + valorCofre,
-        disponivel: disponivelAtual,
         historico: historicoAtual
       },
       atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
@@ -415,13 +356,12 @@ async function aplicarCofreAutomatico(uid, valorGanho) {
   });
 }
 
-async function atualizarCofreTempo(uid) {
+async function liberarCofreAutomatico(uid) {
   if (!uid || !window.SistemaAuth || !window.SistemaAuth.db || !window.SistemaAuth.firebase) {
     return;
   }
 
   const usuarioRef = window.SistemaAuth.db.collection('users').doc(uid);
-
   await window.SistemaAuth.db.runTransaction(async (transaction) => {
     const usuarioDoc = await transaction.get(usuarioRef);
     if (!usuarioDoc.exists) {
@@ -429,111 +369,42 @@ async function atualizarCofreTempo(uid) {
     }
 
     const dadosUsuario = usuarioDoc.data() || {};
-    const cofreDados = dadosUsuario.cofre || {};
-    const historicoAtual = Array.isArray(cofreDados.historico) ? [...cofreDados.historico] : [];
+    const historicoAtual = Array.isArray(dadosUsuario.cofre?.historico) ? [...dadosUsuario.cofre.historico] : [];
     const agora = new Date();
 
-    let bloqueado = 0;
-    let disponivel = 0;
-    let mudou = false;
+    let totalLiberado = 0;
+    const historicoFiltrado = [];
 
-    const historicoAtualizado = historicoAtual.map(entry => {
+    historicoAtual.forEach(entry => {
       const item = { ...entry };
       if (item.status === 'bloqueado' && item.data) {
         const dataRegistro = item.data instanceof Date
           ? item.data
           : item.data?.toDate
             ? item.data.toDate()
-            : new Date(item.data || Date.now());
+            : new Date(item.data);
         const diasPassados = Math.floor((agora.getTime() - dataRegistro.getTime()) / (1000 * 60 * 60 * 24));
         if (diasPassados >= 60) {
-          item.status = 'disponivel';
-          item.desbloqueadoEm = agora;
-          mudou = true;
+          totalLiberado += Number(item.valor || 0);
+          return; // remove lote liberado
         }
       }
-      if (item.status === 'bloqueado') {
-        bloqueado += Number(item.valor || 0);
-      } else if (item.status === 'disponivel') {
-        disponivel += Number(item.valor || 0);
-      }
-      return item;
+      historicoFiltrado.push(item);
     });
 
-    const bloqueadoAtual = Number(cofreDados.bloqueado || 0);
-    const disponivelAtual = Number(cofreDados.disponivel || 0);
-
-    if (mudou || bloqueadoAtual !== bloqueado || disponivelAtual !== disponivel) {
-      transaction.set(usuarioRef, {
-        cofre: {
-          bloqueado,
-          disponivel,
-          historico: historicoAtualizado
-        },
-        atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+    if (totalLiberado <= 0) {
+      return;
     }
+
+    const saldoAtualUsuario = Number(dadosUsuario.saldoSaque || 0);
+    transaction.set(usuarioRef, {
+      saldoSaque: Number((saldoAtualUsuario + totalLiberado).toFixed(2)),
+      cofre: {
+        historico: historicoFiltrado
+      },
+      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
   });
-}
-
-async function resgatarCofre() {
-  if (!uid || !window.SistemaAuth || !window.SistemaAuth.db || !window.SistemaAuth.firebase) {
-    alert('❌ Erro interno ao resgatar cofre. Recarregue a página.');
-    return;
-  }
-
-  const usuarioRef = window.SistemaAuth.db.collection('users').doc(uid);
-
-  try {
-    const valorResgatado = await window.SistemaAuth.db.runTransaction(async (transaction) => {
-      const usuarioDoc = await transaction.get(usuarioRef);
-      if (!usuarioDoc.exists) {
-        throw new Error('Usuário não encontrado ao resgatar cofre');
-      }
-
-      const dadosUsuario = usuarioDoc.data() || {};
-      const saldoAtualUsuario = Number(dadosUsuario.saldoSaque || 0);
-      const cofreDados = dadosUsuario.cofre || {};
-      const disponivelAtual = Number(cofreDados.disponivel || 0);
-      const historicoAtual = Array.isArray(cofreDados.historico) ? [...cofreDados.historico] : [];
-
-      if (disponivelAtual <= 0) {
-        throw new Error('Nenhum valor disponível para resgate no cofre');
-      }
-
-      let totalResgatado = 0;
-      const historicoAtualizado = historicoAtual.map(entry => {
-        const item = { ...entry };
-        if (item.status === 'disponivel') {
-          totalResgatado += Number(item.valor || 0);
-          item.status = 'resgatado';
-          item.resgatadoEm = new Date();
-        }
-        return item;
-      });
-
-      if (totalResgatado <= 0) {
-        throw new Error('Nenhum valor disponível para resgate no cofre');
-      }
-
-      transaction.set(usuarioRef, {
-        saldoSaque: saldoAtualUsuario + totalResgatado,
-        cofre: {
-          bloqueado: Number(cofreDados.bloqueado || 0),
-          disponivel: 0,
-          historico: historicoAtualizado
-        },
-        atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-
-      return totalResgatado;
-    });
-
-    alert(`✅ Resgate realizado! R$ ${formatador.format(valorResgatado)} foi transferido para seu saldo disponível.`);
-  } catch (error) {
-    console.error('❌ Erro ao resgatar cofre:', error);
-    alert(error.message || '❌ Erro ao resgatar cofre. Tente novamente.');
-  }
 }
 
 // =============================
@@ -546,31 +417,39 @@ function escutarDepositosAprovados(){
     return;
   }
 
-  // Listener em tempo real do saldo e VIP do usuário
   window.SistemaAuth.db.collection("users").doc(uid)
     .onSnapshot(async doc => {
       if(doc.exists) {
         const dadosUsuario = doc.data();
-        const novoSaldo = dadosUsuario.saldoSaque || 0;
-        const novoBloqueado = dadosUsuario.cofre?.bloqueado || 0;
-        const novoDisponivel = dadosUsuario.cofre?.disponivel || 0;
+        const novoSaldo = Number(dadosUsuario.saldoSaque || 0);
         const novoHistorico = Array.isArray(dadosUsuario.cofre?.historico) ? dadosUsuario.cofre.historico : [];
         const novoVipNivel = Number(dadosUsuario.vipNivel || 0);
-        
+
         if(novoSaldo !== saldoAtual) {
           saldoAtual = novoSaldo;
-          document.getElementById("saldo")
-            .innerText = formatador.format(saldoAtual);
-          
+          document.getElementById("saldo").innerText = formatador.format(saldoAtual);
           console.log("✅ Saldo de Saque atualizado em tempo real: R$ " + formatador.format(saldoAtual));
         }
 
-        document.getElementById("cofre-bloqueado").innerText = formatador.format(novoBloqueado);
-        document.getElementById("cofre-disponivel").innerText = formatador.format(novoDisponivel);
-        atualizarBotaoResgatar(novoDisponivel);
-        renderCofreHistorico(novoHistorico);
-        await atualizarCofreTempo(uid);
-        
+        const cofreTotal = getCofreTotal(novoHistorico);
+        document.getElementById("cofre").innerText = formatador.format(cofreTotal);
+
+        const agora = new Date();
+        const temLoteParaLiberar = novoHistorico.some(entry => {
+          if (entry.status !== 'bloqueado' || !entry.data) return false;
+          const dataRegistro = entry.data instanceof Date
+            ? entry.data
+            : entry.data?.toDate
+              ? entry.data.toDate()
+              : new Date(entry.data);
+          const diasPassados = Math.floor((agora.getTime() - dataRegistro.getTime()) / (1000 * 60 * 60 * 24));
+          return diasPassados >= 60;
+        });
+
+        if (temLoteParaLiberar) {
+          await liberarCofreAutomatico(uid);
+        }
+
         if(novoVipNivel !== vipNivelAtual) {
           vipNivelAtual = novoVipNivel;
           console.log("🎯 Nível VIP atualizado em tempo real: VIP " + vipNivelAtual);
@@ -593,7 +472,6 @@ function escutarDepositosAprovados(){
     }, error => {
       console.error("❌ Erro ao escutar dados do usuário:", error);
     });
-
 }
 
 // 🔐 Proteção de acesso e dados do saque
@@ -620,30 +498,40 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     window.SistemaAuth.db.collection("users").doc(uid).get()
-      .then(doc => {
+      .then(async doc => {
         if (doc.exists) {
           const userData = doc.data();
-          saldoAtual = userData.saldoSaque || 0;
-          const cofreBloqueado = userData.cofre?.bloqueado || 0;
-          const cofreDisponivel = userData.cofre?.disponivel || 0;
+          saldoAtual = Number(userData.saldoSaque || 0);
           const historico = Array.isArray(userData.cofre?.historico) ? userData.cofre.historico : [];
           vipNivelAtual = Number(userData.vipNivel || 0);
           document.getElementById("saldo").innerText = formatador.format(saldoAtual);
-          document.getElementById("cofre-bloqueado").innerText = formatador.format(cofreBloqueado);
-          document.getElementById("cofre-disponivel").innerText = formatador.format(cofreDisponivel);
-          atualizarBotaoResgatar(cofreDisponivel);
-          renderCofreHistorico(historico);
+          document.getElementById("cofre").innerText = formatador.format(getCofreTotal(historico));
           document.getElementById("limite-diario-valor").innerText = formatador.format(obterLimiteDiarioPorVip(vipNivelAtual));
           console.log("✅ Saldo de Saque carregado: R$ " + formatador.format(saldoAtual));
-          console.log("✅ Cofre carregado: R$ " + formatador.format(cofreBloqueado + cofreDisponivel));
+          console.log("✅ Cofre carregado: R$ " + formatador.format(getCofreTotal(historico)));
           console.log("🎯 Nível VIP carregado: VIP " + vipNivelAtual);
+
+          const agora = new Date();
+          const temLoteParaLiberar = historico.some(entry => {
+            if (entry.status !== 'bloqueado' || !entry.data) return false;
+            const dataRegistro = entry.data instanceof Date
+              ? entry.data
+              : entry.data?.toDate
+                ? entry.data.toDate()
+                : new Date(entry.data);
+            const diasPassados = Math.floor((agora.getTime() - dataRegistro.getTime()) / (1000 * 60 * 60 * 24));
+            return diasPassados >= 60;
+          });
+
+          if (temLoteParaLiberar) {
+            await liberarCofreAutomatico(uid);
+          }
         } else {
           console.warn("⚠️ Usuário não encontrado no Firestore");
           saldoAtual = 0;
           vipNivelAtual = 0;
           document.getElementById("saldo").innerText = formatador.format(0);
-          document.getElementById("cofre-bloqueado").innerText = formatador.format(0);
-          document.getElementById("cofre-disponivel").innerText = formatador.format(0);
+          document.getElementById("cofre").innerText = formatador.format(0);
         }
       })
       .catch(error => {
@@ -651,13 +539,12 @@ document.addEventListener('DOMContentLoaded', function() {
         saldoAtual = 0;
         vipNivelAtual = 0;
         document.getElementById("saldo").innerText = formatador.format(0);
-        document.getElementById("cofre-bloqueado").innerText = formatador.format(0);
-        document.getElementById("cofre-disponivel").innerText = formatador.format(0);
+        document.getElementById("cofre").innerText = formatador.format(0);
       })
       .finally(() => {
-        atualizarCofreTempo(uid)
-          .then(() => console.log('🔁 Cofre atualizado por tempo'))
-          .catch(error => console.warn('❌ Erro ao atualizar cofre por tempo:', error));
+        liberarCofreAutomatico(uid)
+          .then(() => console.log('🔁 Cofre liberado automaticamente se necessário'))
+          .catch(error => console.warn('❌ Erro ao liberar cofre automaticamente:', error));
       });
 
     // Escutar mudanças no saldo em tempo real
