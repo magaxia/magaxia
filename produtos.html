@@ -402,6 +402,59 @@ button:active{
   .back-button{
     top: 80px;
   }
+
+  .abas-header{
+    flex-direction: column;
+  }
+
+  .aba-btn{
+    width: 100%;
+  }
+}
+
+/* ABAS */
+.abas-container{
+  margin-top: 30px;
+}
+
+.abas-header{
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.aba-btn{
+  padding: 12px 24px;
+  background: rgba(255,255,255,0.9);
+  border: 2px solid #667eea;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #667eea;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.aba-btn:hover{
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102,126,234,0.3);
+}
+
+.aba-btn.active{
+  background: #667eea;
+  color: white;
+  box-shadow: 0 5px 15px rgba(102,126,234,0.3);
+}
+
+.aba-content{
+  display: none;
+}
+
+.aba-content.active{
+  display: block;
 }
 </style>
 </head>
@@ -425,6 +478,12 @@ button:active{
     <input id="preco" placeholder="Preço (R$)" type="number" min="0" step="0.01">
     <input id="renda" placeholder="Renda Diária (R$)" type="number" min="0" step="0.01">
     <input id="ciclo" placeholder="Ciclo (dias)" type="number" min="1" step="1">
+    <select id="tipo" style="padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 200px;">
+      <option value="eventos">Eventos</option>
+      <option value="vip">VIP</option>
+      <option value="diario">Diário</option>
+      <option value="fixo">Fixo</option>
+    </select>
     <input id="imagem" placeholder="URL da Imagem (opcional)" type="url">
     <button class="btn-admin" onclick="adicionarProduto()">➕ Adicionar Produto</button>
   </div>
@@ -436,8 +495,31 @@ button:active{
   <div class="admin-lista" id="adminLista"></div>
 </div>
 
-<!-- CATÁLOGO DE PRODUTOS PARA USUÁRIOS -->
-<div class="produtos" id="produtosContainer"></div>
+<!-- ABAS DE PRODUTOS -->
+<div class="abas-container">
+  <div class="abas-header">
+    <button class="aba-btn active" onclick="mudarAba('eventos')">🎉 Eventos</button>
+    <button class="aba-btn" onclick="mudarAba('vip')">👑 VIP</button>
+    <button class="aba-btn" onclick="mudarAba('diario')">📅 Diário</button>
+    <button class="aba-btn" onclick="mudarAba('fixo')">🔒 Fixo</button>
+  </div>
+
+  <div id="eventos" class="aba-content active">
+    <div class="produtos" id="produtosEventos"></div>
+  </div>
+
+  <div id="vip" class="aba-content">
+    <div class="produtos" id="produtosVip"></div>
+  </div>
+
+  <div id="diario" class="aba-content">
+    <div class="produtos" id="produtosDiario"></div>
+  </div>
+
+  <div id="fixo" class="aba-content">
+    <div class="produtos" id="produtosFixo"></div>
+  </div>
+</div>
 
 <script>
 // 🔐 CONFIGURAÇÃO DE ADMINISTRADORES
@@ -665,19 +747,30 @@ async function comprarProduto(id, nome, preco, renda, ciclo){
 // 📦 CARREGAR PRODUTOS PARA USUÁRIOS
 function carregarProdutos(){
   console.log("🔄 Iniciando carregamento de produtos...");
-  const container = document.getElementById('produtosContainer');
-  console.log("📦 Container encontrado:", container);
 
-  if (!container) {
-    console.error("❌ Container produtosContainer não encontrado!");
-    return;
+  // Containers para cada tipo
+  const containers = {
+    eventos: document.getElementById('produtosEventos'),
+    vip: document.getElementById('produtosVip'),
+    diario: document.getElementById('produtosDiario'),
+    fixo: document.getElementById('produtosFixo')
+  };
+
+  // Verificar se todos os containers existem
+  for (const [tipo, container] of Object.entries(containers)) {
+    if (!container) {
+      console.error(`❌ Container produtos${tipo.charAt(0).toUpperCase() + tipo.slice(1)} não encontrado!`);
+      return;
+    }
   }
+
+  // Limpar todos os containers
+  Object.values(containers).forEach(container => container.innerHTML = "");
 
   window.SistemaAuth.db.collection("produtos")
     .where("ativo", "==", true)
     .onSnapshot(async (snapshot) => {
       console.log("📦 Snapshot recebida, documentos:", snapshot.size);
-      container.innerHTML = "";
 
       if(snapshot.empty) {
         console.log("📦 Nenhum produto encontrado, criando produtos de exemplo...");
@@ -685,34 +778,56 @@ function carregarProdutos(){
         return;
       }
 
-      // Ordenar produtos por data de criação (mais recentes primeiro) no frontend
-      const produtos = [];
+      // Separar produtos por tipo
+      const produtosPorTipo = {
+        eventos: [],
+        vip: [],
+        diario: [],
+        fixo: []
+      };
+
       snapshot.forEach((doc) => {
-        produtos.push({ id: doc.id, data: doc.data() });
+        const produto = { id: doc.id, data: doc.data() };
+        const tipo = produto.data.tipo || "eventos"; // Compatibilidade com produtos antigos
+
+        if (produtosPorTipo[tipo]) {
+          produtosPorTipo[tipo].push(produto);
+        } else {
+          // Se tipo inválido, vai para eventos
+          produtosPorTipo.eventos.push(produto);
+        }
       });
-      produtos.sort((a, b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
 
-      produtos.forEach(({ id, data: p }) => {
-        const card = document.createElement('div');
-        card.className = 'card';
+      // Ordenar e renderizar cada tipo
+      for (const [tipo, produtos] of Object.entries(produtosPorTipo)) {
+        // Ordenar por data de criação (mais recentes primeiro)
+        produtos.sort((a, b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
 
-        card.innerHTML = `
-          <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
-          <div class="chip">${p.nome}</div>
-          <div class="valor">R$ ${p.preco.toFixed(2)}</div>
-          <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
-          <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
-          <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
-          <button onclick="comprarProduto('${id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
-            🛒 Comprar Agora
-          </button>
-        `;
+        produtos.forEach(({ id, data: p }) => {
+          const card = document.createElement('div');
+          card.className = 'card';
 
-        container.appendChild(card);
-      });
+          card.innerHTML = `
+            <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+            <div class="chip">${p.nome}</div>
+            <div class="valor">R$ ${p.preco.toFixed(2)}</div>
+            <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
+            <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
+            <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
+            <button onclick="comprarProduto('${id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
+              🛒 Comprar Agora
+            </button>
+          `;
+
+          containers[tipo].appendChild(card);
+        });
+      }
     }, (error) => {
       console.error("Erro ao carregar produtos:", error);
-      container.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
+      // Mostrar erro em todos os containers
+      Object.values(containers).forEach(container => {
+        container.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
+      });
     });
 }
 
@@ -726,6 +841,7 @@ async function criarProdutosExemplo() {
       preco: 50,
       rendaDiaria: 5,
       ciclo: 15,
+      tipo: "eventos",
       imagem: "https://via.placeholder.com/300x200/FFD700/000000?text=Bronze",
       ativo: true
     },
@@ -734,6 +850,7 @@ async function criarProdutosExemplo() {
       preco: 100,
       rendaDiaria: 12,
       ciclo: 20,
+      tipo: "vip",
       imagem: "https://via.placeholder.com/300x200/C0C0C0/000000?text=Prata",
       ativo: true
     },
@@ -742,6 +859,7 @@ async function criarProdutosExemplo() {
       preco: 200,
       rendaDiaria: 25,
       ciclo: 25,
+      tipo: "diario",
       imagem: "https://via.placeholder.com/300x200/FFD700/000000?text=Ouro",
       ativo: true
     },
@@ -750,6 +868,7 @@ async function criarProdutosExemplo() {
       preco: 500,
       rendaDiaria: 50,
       ciclo: 30,
+      tipo: "fixo",
       imagem: "https://via.placeholder.com/300x200/B9F2FF/000000?text=Diamante",
       ativo: true
     }
@@ -790,6 +909,7 @@ async function adicionarProduto(){
   const preco = Number(document.getElementById("preco").value);
   const renda = Number(document.getElementById("renda").value);
   const ciclo = Number(document.getElementById("ciclo").value);
+  const tipo = document.getElementById("tipo").value;
   const imagem = document.getElementById("imagem").value.trim();
 
   // Limpar mensagens
@@ -812,6 +932,7 @@ async function adicionarProduto(){
       preco: preco,
       rendaDiaria: renda,
       ciclo: ciclo,
+      tipo: tipo,
       imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
       ativo: true,
       criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
@@ -822,6 +943,7 @@ async function adicionarProduto(){
     document.getElementById("preco").value = "";
     document.getElementById("renda").value = "";
     document.getElementById("ciclo").value = "";
+    document.getElementById("tipo").value = "eventos";
     document.getElementById("imagem").value = "";
 
     mostrarSucesso("✅ Produto adicionado com sucesso!");
@@ -859,6 +981,9 @@ function carregarListaAdmin(){
           <div>
             <b>${p.nome}</b>
             <span class="status-badge ${statusClass}">${statusText}</span>
+          </div>
+          <div class="admin-info">
+            <strong>Tipo:</strong> ${p.tipo || 'eventos'}
           </div>
           <div class="admin-info">
             <strong>Preço:</strong> R$ ${p.preco.toFixed(2)}
@@ -910,6 +1035,9 @@ async function editarProduto(id){
     const novoCiclo = prompt("Ciclo (dias):", produto.ciclo);
     if(novoCiclo === null) return;
 
+    const novoTipo = prompt("Tipo (eventos, vip, diario, fixo):", produto.tipo || "eventos");
+    if(novoTipo === null) return;
+
     const novaImagem = prompt("URL da imagem:", produto.imagem || "");
     if(novaImagem === null) return;
 
@@ -918,11 +1046,19 @@ async function editarProduto(id){
       return;
     }
 
+    // Validar tipo
+    const tiposValidos = ["eventos", "vip", "diario", "fixo"];
+    if (!tiposValidos.includes(novoTipo)) {
+      mostrarErro("Tipo inválido. Use: eventos, vip, diario ou fixo.");
+      return;
+    }
+
     await docRef.update({
       nome: novoNome.trim(),
       preco: Number(novoPreco),
       rendaDiaria: Number(novaRenda),
       ciclo: Number(novoCiclo),
+      tipo: novoTipo,
       imagem: novaImagem.trim() || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto"
     });
 
@@ -982,6 +1118,17 @@ function mostrarErro(mensagem){
   msg.style.display = "block";
   document.getElementById("mensagemSucesso").style.display = "none";
   setTimeout(() => { msg.style.display = "none"; }, 5000);
+}
+
+// 🔄 MUDAR ABA
+function mudarAba(tipo) {
+  // Remover active de todas as abas
+  document.querySelectorAll('.aba-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.aba-content').forEach(content => content.classList.remove('active'));
+
+  // Adicionar active na aba selecionada
+  document.querySelector(`button[onclick="mudarAba('${tipo}')"]`).classList.add('active');
+  document.getElementById(tipo).classList.add('active');
 }
 
 function logout() {
