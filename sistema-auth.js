@@ -101,6 +101,35 @@ window.SistemaAuth = {
         }
     },
 
+    aplicarCofreAutomatico: async function(uid, valorGanho) {
+        if (!uid || typeof valorGanho !== 'number' || valorGanho <= 0) {
+            throw new Error('UID inválido ou valorGanho inválido para cofre automático');
+        }
+        if (!this.db || !this.firebase) {
+            throw new Error('Firestore não inicializado para cofre automático');
+        }
+
+        const usuarioRef = this.db.collection('users').doc(uid);
+
+        await this.db.runTransaction(async (transaction) => {
+            const usuarioDoc = await transaction.get(usuarioRef);
+            const dadosUsuario = usuarioDoc.exists ? usuarioDoc.data() : {};
+
+            const saldoAtual = Number(dadosUsuario.saldoSaque || 0);
+            const cofreAtual = Number(dadosUsuario.cofre?.saldo || 0);
+            const valorCofre = Number((valorGanho * 0.10));
+            const valorSaldo = Number((valorGanho * 0.90));
+
+            transaction.set(usuarioRef, {
+                saldoSaque: saldoAtual + valorSaldo,
+                cofre: {
+                    saldo: cofreAtual + valorCofre
+                },
+                atualizadoEm: this.firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        });
+    },
+
     detectarTipoDispositivo: function() {
         if (typeof navigator === 'undefined' || !navigator.userAgent) return 'desktop';
         return /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
@@ -538,6 +567,12 @@ window.SistemaAuth = {
         return this.usuarioLogado;
     }
 };
+
+if (typeof window.aplicarCofreAutomatico !== 'function' && window.SistemaAuth && typeof window.SistemaAuth.aplicarCofreAutomatico === 'function') {
+    window.aplicarCofreAutomatico = function(uid, valorGanho) {
+        return window.SistemaAuth.aplicarCofreAutomatico(uid, valorGanho);
+    };
+}
 
 document.addEventListener("DOMContentLoaded", function() {
     if (window.SistemaAuth) {

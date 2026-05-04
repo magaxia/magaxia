@@ -176,12 +176,17 @@ select option {
     <div class="saldo-label">Saldo disponível</div>
     <div id="saldo">R$ 0,00</div>
 
+    <div class="saldo-label">Cofre</div>
+    <div id="cofre">R$ 0,00</div>
+
     <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid rgba(255,255,255,0.3); text-align: left;">
       <h3 style="font-size: 18px; margin-bottom: 10px; color: #39c6ff;">Limites de Saque</h3>
       <ul style="list-style: none; padding: 0; font-size: 14px; opacity: 0.9;">
         <li>• Valor mínimo para saque: R$ 30</li>
         <li>• Limite máximo de saque por dia: <span id="limite-diario-valor">R$ 100,00</span></li>
         <li>• Limite diário: 1 saque por dia</li>
+        <li>• Limite semanal: até 7 saques</li>
+        <li>• Limite mensal: até 31 saques</li>
       </ul>
     </div>
 
@@ -318,6 +323,7 @@ function escutarDepositosAprovados(){
       if(doc.exists) {
         const dadosUsuario = doc.data();
         const novoSaldo = dadosUsuario.saldoSaque || 0;
+        const novoCofre = dadosUsuario.cofre?.saldo || 0;
         const novoVipNivel = Number(dadosUsuario.vipNivel || 0);
         
         if(novoSaldo !== saldoAtual) {
@@ -327,6 +333,8 @@ function escutarDepositosAprovados(){
           
           console.log("✅ Saldo de Saque atualizado em tempo real: R$ " + formatador.format(saldoAtual));
         }
+
+        document.getElementById("cofre").innerText = formatador.format(novoCofre);
         
         if(novoVipNivel !== vipNivelAtual) {
           vipNivelAtual = novoVipNivel;
@@ -381,16 +389,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (doc.exists) {
           const userData = doc.data();
           saldoAtual = userData.saldoSaque || 0;
+          const saldoCofre = userData.cofre?.saldo || 0;
           vipNivelAtual = Number(userData.vipNivel || 0);
           document.getElementById("saldo").innerText = formatador.format(saldoAtual);
+          document.getElementById("cofre").innerText = formatador.format(saldoCofre);
           document.getElementById("limite-diario-valor").innerText = formatador.format(obterLimiteDiarioPorVip(vipNivelAtual));
           console.log("✅ Saldo de Saque carregado: R$ " + formatador.format(saldoAtual));
+          console.log("✅ Cofre carregado: R$ " + formatador.format(saldoCofre));
           console.log("🎯 Nível VIP carregado: VIP " + vipNivelAtual);
         } else {
           console.warn("⚠️ Usuário não encontrado no Firestore");
           saldoAtual = 0;
           vipNivelAtual = 0;
           document.getElementById("saldo").innerText = formatador.format(0);
+          document.getElementById("cofre").innerText = formatador.format(0);
         }
       })
       .catch(error => {
@@ -398,6 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saldoAtual = 0;
         vipNivelAtual = 0;
         document.getElementById("saldo").innerText = formatador.format(0);
+        document.getElementById("cofre").innerText = formatador.format(0);
       });
 
     // Escutar mudanças no saldo em tempo real
