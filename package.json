@@ -10,7 +10,11 @@
     "validate": "node scripts/validate-firebase.js",
     "deploy:dev": "npm run validate && firebase use dev && firebase deploy --only functions,hosting",
     "deploy:prod": "npm run validate && firebase use prod && firebase deploy --only functions,hosting",
-    "audit:finance": "node audit-finance.js"
+    "audit:finance": "node audit-finance.js",
+    "install:all": "npm install && cd functions && npm install",
+    "setup": "npm run install:all && firebase login && firebase use dev",
+    "test:functions": "cd functions && npm test",
+    "build": "cd functions && npm run build"
   },
   "dependencies": {
     "cookie-parser": "^1.4.6",

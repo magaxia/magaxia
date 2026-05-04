@@ -20,16 +20,27 @@ window.SistemaAuth = {
 
     inicializar: function() {
         try {
-            if (firebase.apps.length === 0) {
-                const app = firebase.initializeApp(this.firebaseConfig);
-                this.db = firebase.firestore();
-                this.auth = firebase.auth();
-                this.firebase = firebase;
-            } else {
-                this.db = firebase.firestore();
-                this.auth = firebase.auth();
-                this.firebase = firebase;
+            if (typeof firebase === 'undefined') {
+                console.error("❌ Firebase não carregado em SistemaAuth.inicializar");
+                return;
             }
+
+            if (firebase.apps.length === 0) {
+                firebase.initializeApp(this.firebaseConfig);
+            }
+
+            this.db = firebase.firestore();
+            this.auth = firebase.auth();
+            this.firebase = firebase;
+            this.usuarioLogado = this.usuarioLogado || this._carregarUsuarioLocal();
+
+            if (window.SistemaAuth) {
+                window.SistemaAuth.db = this.db;
+                window.SistemaAuth.auth = this.auth;
+                window.SistemaAuth.firebase = this.firebase;
+                window.SistemaAuth.usuarioLogado = this.usuarioLogado;
+            }
+
             console.log("✅ Sistema de Autenticação inicializado");
         } catch (error) {
             console.error("❌ Erro ao inicializar autenticação:", error);
@@ -466,12 +477,19 @@ window.SistemaAuth = {
     },
 
     verificarLogin: function(callback) {
-        const currentUser = this.auth?.currentUser || (firebase && firebase.auth ? firebase.auth().currentUser : null);
+        if (!this.auth || !this.db) {
+            if (typeof firebase !== 'undefined') {
+                this.inicializar();
+            }
+        }
+
+        const currentUser = this.auth?.currentUser || (typeof firebase !== 'undefined' && firebase.auth ? firebase.auth().currentUser : null);
 
         if (currentUser) {
             const uid = currentUser.uid;
             const email = currentUser.email;
             const telefone = currentUser.phoneNumber;
+
             if (!this.db) {
                 console.warn("Firestore não inicializado para verificar login");
                 if (callback) callback(false, null);
@@ -555,7 +573,10 @@ window.SistemaAuth = {
             if (!autenticado || !dados) return;
             if (!this.db) {
                 console.warn("Firestore não inicializado para carregar saldo");
-                return;
+                if (typeof firebase !== 'undefined') {
+                    this.inicializar();
+                }
+                if (!this.db) return;
             }
 
             const uid = dados.uid;
@@ -574,6 +595,18 @@ window.SistemaAuth = {
                     console.error("❌ Erro ao escutar saldo:", error);
                 });
         });
+    },
+
+    _carregarUsuarioLocal: function() {
+        const usuarioLocal = localStorage.getItem("usuarioLogado");
+        if (!usuarioLocal) return null;
+
+        try {
+            return JSON.parse(usuarioLocal);
+        } catch (error) {
+            console.warn("Erro ao parsear usuário local em SistemaAuth:", error);
+            return null;
+        }
     },
 
     obterUsuarioLogado: function() {
