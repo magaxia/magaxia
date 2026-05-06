@@ -592,6 +592,7 @@ let saldoSaque = 0;
 let saldoDeposito = 0;
 let usuarioAtual = null;
 let isAdmin = false;
+let usuarioVipNivel = 0; // Nível VIP do usuário (0-5)
 
 const formatador = new Intl.NumberFormat(
     "pt-BR",
@@ -636,6 +637,9 @@ document.addEventListener('DOMContentLoaded', function() {
       carregarListaAdmin(); // Carregar lista de gerenciamento
     }
 
+    // Carregar nível VIP do usuário
+    carregarNivelVIP();
+
     // Inicializar saldos
     carregarSaldoTotal();
     carregarProdutos();
@@ -645,7 +649,34 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// 💰 CARREGAR SALDO TOTAL
+// � CARREGAR NÍVEL VIP DO USUÁRIO
+function carregarNivelVIP() {
+  if (!uid) {
+    console.warn("⚠️ UID não definido ao tentar carregar VIP");
+    usuarioVipNivel = 0;
+    return;
+  }
+
+  window.SistemaAuth.db
+    .collection("users")
+    .doc(uid)
+    .onSnapshot(doc => {
+      if (!doc.exists) {
+        console.warn("⚠️ Documento do usuário não encontrado, definindo VIP nível 0");
+        usuarioVipNivel = 0;
+        return;
+      }
+
+      const data = doc.data();
+      usuarioVipNivel = Number(data.vipNivel || 0);
+      console.log("👑 Nível VIP do usuário atualizado:", usuarioVipNivel);
+    }, error => {
+      console.error("❌ Erro ao carregar VIP:", error);
+      usuarioVipNivel = 0;
+    });
+}
+
+// �💰 CARREGAR SALDO TOTAL
 function carregarSaldoTotal() {
   if (!uid) {
     console.error("UID inválido:", uid);
@@ -687,9 +718,59 @@ function carregarSaldoTotal() {
     });
 }
 
-// 💰 COMPRAR PRODUTO
-async function comprarProduto(id, nome, preco, renda, ciclo){
+// 🎯 EXTRAIR NÍVEL VIP DO NOME DO PRODUTO
+function getVipProduto(nome) {
+  const match = nome.toLowerCase().match(/vip(\d+)/);
+  const nivel = match ? parseInt(match[1]) : 0;
+  console.log("🎯 Produto:", nome, "| VIP necessário:", nivel);
+  return nivel;
+}
+
+// 🚫 VERIFICAR SE PRODUTO VIP JÁ FOI COMPRADO
+async function verificarJaComprou(produtoId) {
   try {
+    const jaComprou = await window.SistemaAuth.db
+      .collection("compras")
+      .where("userId", "==", uid)
+      .where("produtoId", "==", produtoId)
+      .get();
+
+    return !jaComprou.empty;
+  } catch (err) {
+    console.error("Erro ao verificar compra anterior:", err);
+    return false;
+  }
+}
+
+// 💰 COMPRAR PRODUTO
+async function comprarProduto(id, nome, preco, renda, ciclo, tipo){
+  try {
+    // 👑 VERIFICAR RESTRIÇÃO VIP
+    const vipNecessario = getVipProduto(nome);
+    console.log("👤 Usuário VIP:", usuarioVipNivel, "| Necessário:", vipNecessario);
+
+    if (vipNecessario > 0 && usuarioVipNivel < vipNecessario) {
+      alert(`❌ Este produto é VIP${vipNecessario}.\nSeu nível atual é VIP${usuarioVipNível}.\nVocê não possui acesso a este produto.`);
+      return;
+    }
+
+    // 🚫 VERIFICAR COMPRA ANTERIOR PARA PRODUTOS VIP
+    if (tipo === 'vip') {
+      console.log("🔍 Verificando compra VIP anterior...");
+      const jaComprou = await window.SistemaAuth.db
+        .collection("compras")
+        .where("userId", "==", uid)
+        .where("produtoId", "==", id)
+        .get();
+
+      console.log("✓ Já comprou:", !jaComprou.empty);
+
+      if (!jaComprou.empty) {
+        alert("❌ Você já comprou este produto VIP.\nCada produto VIP pode ser comprado apenas uma vez.");
+        return;
+      }
+    }
+
     // Verificar se usuário está autenticado
     if (!firebase.auth().currentUser) {
       alert("Você precisa estar logado para comprar!");
@@ -781,16 +862,17 @@ async function comprarProduto(id, nome, preco, renda, ciclo){
         saldoDeposito: novoSaldoDeposito
       });
 
-      // Registrar a compra
+      // Registrar a compra com informações completas
       t.set(window.SistemaAuth.db.collection("compras").doc(), {
-        uid: uid,
+        userId: uid,
         produtoId: id,
-        produto: nome,
+        nome: nome,
+        tipo: tipo,
         valor: preco,
         rendaDiaria: renda,
         ciclo: ciclo,
         status: "ativo",
-        dataCompra: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+        data: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
       });
     });
 
@@ -828,13 +910,37 @@ function carregarProdutos(){
         return;
       }
 
-      snapshot.forEach((doc) => {
+      snapshot.forEach(async (doc) => {
         const p = doc.data();
         const tipo = p.tipo || "eventos";
         console.log("Produto:", p.nome, "Tipo:", tipo);
 
+        // 👑 VERIFICAR RESTRIÇÃO VIP
+        const vipNecessario = getVipProduto(p.nome);
+        console.log("  - VIP necessário:", vipNecessario, "| Usuário VIP:", usuarioVipNivel);
+
+        // 🚫 BLOQUEAR VISUALIZAÇÃO DE PRODUTOS VIP INDISPONÍVEIS
+        if (vipNecessario > 0 && usuarioVipNivel < vipNecessario) {
+          console.log("  ❌ Produto oculto (insuficiente VIP)");
+          return; // Não mostrar este produto
+        }
+
         const card = document.createElement('div');
         card.className = 'card';
+
+        // Verificar se produto VIP já foi comprado
+        let classeBot = '';
+        let textoBot = '🛒 Comprar Agora';
+        let avisoVip = '';
+        if (tipo === 'vip') {
+          const jaComprou = await verificarJaComprou(doc.id);
+          if (jaComprou) {
+            classeBot = ' style="background: #9E9E9E; cursor: not-allowed;" disabled';
+            textoBot = '✓ Já Comprado';
+            avisoVip = '<div class="info" style="background: #e8f5e9; color: #2e7d32; padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 10px;">✓ Você já comprou este produto</div>';
+            console.log("  ✓ Produto VIP já comprado por este usuário");
+          }
+        }
 
         card.innerHTML = `
           <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
@@ -843,8 +949,9 @@ function carregarProdutos(){
           <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
           <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
           <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
-          <button onclick="comprarProduto('${doc.id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
-            🛒 Comprar Agora
+          ${avisoVip}
+          <button onclick="comprarProduto('${doc.id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo}, '${tipo}')"${classeBot}>
+            ${textoBot}
           </button>
         `;
 
