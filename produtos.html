@@ -514,7 +514,8 @@ button:active{
     <input id="preco" placeholder="Preço (R$)" type="number" min="0" step="0.01">
     <input id="renda" placeholder="Renda Diária (R$)" type="number" min="0" step="0.01">
     <input id="ciclo" placeholder="Ciclo (dias)" type="number" min="1" step="1">
-    <select id="tipo">
+    <select id="tipo" required>
+      <option value="" disabled selected>Selecione a aba</option>
       <option value="eventos">Eventos</option>
       <option value="vip">VIP</option>
       <option value="diario">Diário</option>
@@ -522,7 +523,7 @@ button:active{
     </select>
     <div id="previewTipo" style="margin-top: 10px; font-weight: bold; color: #667eea;"></div>
     <input id="imagem" placeholder="URL da Imagem (opcional)" type="url">
-    <button class="btn-admin" onclick="adicionarProduto()">➕ Adicionar Produto</button>
+    <button class="btn-admin" onclick="adicionarProdutoPorAba()">➕ Adicionar Produto</button>
   </div>
 
   <div class="sucesso" id="mensagemSucesso"></div>
@@ -945,16 +946,16 @@ async function criarProdutosExemplo() {
   }
 }
 
-// 🎛️ ADICIONAR PRODUTO (ADMIN)
-async function adicionarProduto(){
+// 🎛️ ADICIONAR PRODUTO POR ABA (ADMIN)
+async function adicionarProdutoPorAba(){
   const nome = document.getElementById("nome").value.trim();
   const preco = Number(document.getElementById("preco").value);
   const renda = Number(document.getElementById("renda").value);
   const ciclo = Number(document.getElementById("ciclo").value);
-  const tipo = document.getElementById("tipo").value || "eventos";
+  const tipo = document.getElementById("tipo").value;
   const imagem = document.getElementById("imagem").value.trim();
 
-  console.log("TIPO SALVO:", tipo);
+  console.log("Produto será adicionado na aba:", tipo);
 
   // Limpar mensagens
   document.getElementById("mensagemSucesso").style.display = "none";
@@ -962,6 +963,11 @@ async function adicionarProduto(){
 
   if(!nome || !preco || !renda || !ciclo){
     mostrarErro("Preencha todos os campos obrigatórios");
+    return;
+  }
+
+  if(!tipo){
+    mostrarErro("Selecione a aba para o produto antes de salvar.");
     return;
   }
 
@@ -976,7 +982,7 @@ async function adicionarProduto(){
       preco: preco,
       rendaDiaria: renda,
       ciclo: ciclo,
-      tipo: tipo || "eventos",
+      tipo: tipo,
       imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
       ativo: true,
       criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp(),
@@ -988,8 +994,9 @@ async function adicionarProduto(){
     document.getElementById("preco").value = "";
     document.getElementById("renda").value = "";
     document.getElementById("ciclo").value = "";
-    document.getElementById("tipo").value = "eventos";
+    document.getElementById("tipo").value = "";
     document.getElementById("imagem").value = "";
+    atualizarPreviewTipo();
 
     mostrarSucesso("✅ Produto adicionado com sucesso!");
     carregarListaAdmin(); // Recarregar lista
@@ -1231,11 +1238,45 @@ async function duplicarProduto(id) {
   }
 }
 
+function getNomeTipo(tipo) {
+  const tipos = {
+    eventos: "🎉 Eventos",
+    vip: "👑 VIP",
+    diario: "📅 Diário",
+    fixo: "🔒 Fixo"
+  };
+  return tipos[tipo] || "🎉 Eventos";
+}
+
+function getCorTipo(tipo) {
+  const cores = {
+    eventos: "#4CAF50",
+    vip: "#9C27B0",
+    diario: "#2196F3",
+    fixo: "#FF9800"
+  };
+  return cores[tipo] || "#4CAF50";
+}
+
+function atualizarPreviewTipo() {
+  const tipo = document.getElementById("tipo").value;
+  const preview = document.getElementById("previewTipo");
+
+  if (!tipo) {
+    preview.innerHTML = "Escolha a aba do produto acima.";
+    return;
+  }
+
+  const nome = getNomeTipo(tipo);
+  const cor = getCorTipo(tipo);
+  preview.innerHTML = `Vai aparecer em: <span style="color: ${cor};">${nome}</span>`;
+}
+
 function atualizarPreviewTipoEdit() {
   const tipo = document.getElementById("editTipo").value;
   const preview = document.getElementById("editPreviewTipo");
-  const nome = getNomeTipo(tipo);
-  const cor = getCorTipo(tipo);
+  const nome = getNomeTipo(tipo || "eventos");
+  const cor = getCorTipo(tipo || "eventos");
   preview.innerHTML = `Vai aparecer em: <span style="color: ${cor};">${nome}</span>`;
 }
 
