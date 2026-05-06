@@ -599,7 +599,7 @@ h1{
           <input id="productImage" type="url" placeholder="https://...">
         </div>
         <div class="full-width" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <button class="btn-primary" id="createProductButton" onclick="criarProduto()">Adicionar produto</button>
+          <button class="btn-primary" id="createProductButton" onclick="adicionarProduto()">Adicionar produto</button>
           <button class="btn-secondary" onclick="resetCreateForm()">Limpar formulário</button>
         </div>
       </div>
@@ -705,9 +705,8 @@ h1{
 </div>
 
 <script>
-const ADMINS = [
-  'admin@magaxia.com',
-  'adm@magaxia.com'
+const ADMINS_UID = [
+  'COLOQUE_SEU_UID'
 ];
 const PRODUCT_TYPES = {
   eventos: 'Eventos',
@@ -884,7 +883,7 @@ function renderAdmin(produtos){
   });
 }
 
-async function criarProduto(){
+async function adicionarProduto(){
   if (!requireAdmin()) return;
 
   const nameField = document.getElementById('productName');
@@ -1220,7 +1219,7 @@ firebase.auth().onAuthStateChanged(user => {
   }
 
   uid = user.uid;
-  isAdmin = ADMINS.includes(user.email?.toLowerCase());
+  isAdmin = ADMINS_UID.includes(uid);
   carregarInterfaceAdmin();
   inicializarPagina();
 });
