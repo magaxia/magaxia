@@ -824,8 +824,12 @@ function carregarProdutos(){
       snapshot.forEach((doc) => {
         const p = doc.data();
         const tipo = p.tipo || "eventos";
+        console.log("Produto:", p.nome, "Tipo:", tipo);
+
         if (produtosPorTipo[tipo]) {
           produtosPorTipo[tipo].push({ id: doc.id, data: p });
+        } else {
+          produtosPorTipo.eventos.push({ id: doc.id, data: p });
         }
       });
 
@@ -849,7 +853,15 @@ function carregarProdutos(){
             </button>
           `;
 
-          containers[tipo].appendChild(card);
+          if (tipo === 'vip') {
+            containers.vip.appendChild(card);
+          } else if (tipo === 'diario') {
+            containers.diario.appendChild(card);
+          } else if (tipo === 'fixo') {
+            containers.fixo.appendChild(card);
+          } else {
+            containers.eventos.appendChild(card);
+          }
         });
       });
     }, (error) => {
@@ -939,8 +951,10 @@ async function adicionarProduto(){
   const preco = Number(document.getElementById("preco").value);
   const renda = Number(document.getElementById("renda").value);
   const ciclo = Number(document.getElementById("ciclo").value);
-  const tipo = document.getElementById("tipo").value;
+  const tipo = document.getElementById("tipo").value || "eventos";
   const imagem = document.getElementById("imagem").value.trim();
+
+  console.log("TIPO SALVO:", tipo);
 
   // Limpar mensagens
   document.getElementById("mensagemSucesso").style.display = "none";
@@ -962,7 +976,7 @@ async function adicionarProduto(){
       preco: preco,
       rendaDiaria: renda,
       ciclo: ciclo,
-      tipo: tipo,
+      tipo: tipo || "eventos",
       imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
       ativo: true,
       criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp(),
