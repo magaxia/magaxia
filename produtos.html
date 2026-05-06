@@ -514,8 +514,9 @@ button:active{
     <input id="preco" placeholder="Preço (R$)" type="number" min="0" step="0.01">
     <input id="renda" placeholder="Renda Diária (R$)" type="number" min="0" step="0.01">
     <input id="ciclo" placeholder="Ciclo (dias)" type="number" min="1" step="1">
+    <label for="tipo" style="width:100%; font-weight:600; color:#333;">Escolher aba do produto:</label>
     <select id="tipo" required>
-      <option value="" disabled selected>Selecione a aba</option>
+      <option value="">Selecione a aba</option>
       <option value="eventos">Eventos</option>
       <option value="vip">VIP</option>
       <option value="diario">Diário</option>
@@ -523,7 +524,7 @@ button:active{
     </select>
     <div id="previewTipo" style="margin-top: 10px; font-weight: bold; color: #667eea;"></div>
     <input id="imagem" placeholder="URL da Imagem (opcional)" type="url">
-    <button class="btn-admin" onclick="adicionarProdutoPorAba()">➕ Adicionar Produto</button>
+    <button class="btn-admin" onclick="adicionarProduto()">➕ Adicionar Produto</button>
   </div>
 
   <div class="sucesso" id="mensagemSucesso"></div>
@@ -799,15 +800,15 @@ async function comprarProduto(id, nome, preco, renda, ciclo){
 // 📦 CARREGAR PRODUTOS PARA USUÁRIOS
 function carregarProdutos(){
   console.log("🔄 Iniciando carregamento de produtos...");
-  const containers = {
-    eventos: document.getElementById('produtosEventos'),
-    vip: document.getElementById('produtosVip'),
-    diario: document.getElementById('produtosDiario'),
-    fixo: document.getElementById('produtosFixo')
-  };
+  const eventos = document.getElementById('produtosEventos');
+  const vip = document.getElementById('produtosVip');
+  const diario = document.getElementById('produtosDiario');
+  const fixo = document.getElementById('produtosFixo');
 
-  // Limpar containers
-  Object.values(containers).forEach(c => c.innerHTML = '');
+  eventos.innerHTML = "";
+  vip.innerHTML = "";
+  diario.innerHTML = "";
+  fixo.innerHTML = "";
 
   window.SistemaAuth.db.collection("produtos")
     .where("ativo", "==", true)
@@ -820,56 +821,42 @@ function carregarProdutos(){
         return;
       }
 
-      const produtosPorTipo = { eventos: [], vip: [], diario: [], fixo: [] };
-
       snapshot.forEach((doc) => {
         const p = doc.data();
         const tipo = p.tipo || "eventos";
         console.log("Produto:", p.nome, "Tipo:", tipo);
 
-        if (produtosPorTipo[tipo]) {
-          produtosPorTipo[tipo].push({ id: doc.id, data: p });
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+          <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+          <div class="chip">${p.nome}</div>
+          <div class="valor">R$ ${p.preco.toFixed(2)}</div>
+          <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
+          <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
+          <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
+          <button onclick="comprarProduto('${doc.id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
+            🛒 Comprar Agora
+          </button>
+        `;
+
+        if(tipo === 'vip') {
+          vip.appendChild(card);
+        } else if(tipo === 'diario') {
+          diario.appendChild(card);
+        } else if(tipo === 'fixo') {
+          fixo.appendChild(card);
         } else {
-          produtosPorTipo.eventos.push({ id: doc.id, data: p });
+          eventos.appendChild(card);
         }
-      });
-
-      // Ordenar e renderizar por tipo
-      Object.keys(produtosPorTipo).forEach(tipo => {
-        produtosPorTipo[tipo].sort((a, b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
-
-        produtosPorTipo[tipo].forEach(({ id, data: p }) => {
-          const card = document.createElement('div');
-          card.className = 'card';
-
-          card.innerHTML = `
-            <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
-            <div class="chip">${p.nome}</div>
-            <div class="valor">R$ ${p.preco.toFixed(2)}</div>
-            <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
-            <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
-            <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
-            <button onclick="comprarProduto('${id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
-              🛒 Comprar Agora
-            </button>
-          `;
-
-          if (tipo === 'vip') {
-            containers.vip.appendChild(card);
-          } else if (tipo === 'diario') {
-            containers.diario.appendChild(card);
-          } else if (tipo === 'fixo') {
-            containers.fixo.appendChild(card);
-          } else {
-            containers.eventos.appendChild(card);
-          }
-        });
       });
     }, (error) => {
       console.error("Erro ao carregar produtos:", error);
-      Object.values(containers).forEach(c => {
-        c.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
-      });
+      eventos.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
+      vip.innerHTML = eventos.innerHTML;
+      diario.innerHTML = eventos.innerHTML;
+      fixo.innerHTML = eventos.innerHTML;
     });
 }
 
@@ -946,8 +933,8 @@ async function criarProdutosExemplo() {
   }
 }
 
-// 🎛️ ADICIONAR PRODUTO POR ABA (ADMIN)
-async function adicionarProdutoPorAba(){
+// 🎛️ ADICIONAR PRODUTO (ADMIN)
+async function adicionarProduto(){
   const nome = document.getElementById("nome").value.trim();
   const preco = Number(document.getElementById("preco").value);
   const renda = Number(document.getElementById("renda").value);
@@ -955,7 +942,7 @@ async function adicionarProdutoPorAba(){
   const tipo = document.getElementById("tipo").value;
   const imagem = document.getElementById("imagem").value.trim();
 
-  console.log("Produto será adicionado na aba:", tipo);
+  console.log("Produto será salvo na aba:", tipo);
 
   // Limpar mensagens
   document.getElementById("mensagemSucesso").style.display = "none";
@@ -967,7 +954,7 @@ async function adicionarProdutoPorAba(){
   }
 
   if(!tipo){
-    mostrarErro("Selecione a aba para o produto antes de salvar.");
+    alert("Escolha em qual aba o produto será adicionado!");
     return;
   }
 
