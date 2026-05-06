@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -403,6 +403,95 @@ button:active{
     top: 80px;
   }
 }
+
+/* ABAS */
+.tabs {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.8);
+  border: none;
+  border-radius: 8px;
+  margin: 0 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  color: #333;
+}
+
+.tab-button.active {
+  background: #667eea;
+  color: white;
+}
+
+.tab-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+.aba {
+  display: none;
+}
+
+.aba.ativa {
+  display: grid;
+}
+
+/* MODAL */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background: white;
+  margin: 10% auto;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.close {
+  float: right;
+  font-size: 28px;
+  cursor: pointer;
+  color: #aaa;
+}
+
+.close:hover {
+  color: #000;
+}
+
+#editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+#editForm input, #editForm select {
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+#editForm button {
+  align-self: flex-start;
+}
 </style>
 </head>
 
@@ -425,6 +514,12 @@ button:active{
     <input id="preco" placeholder="Preço (R$)" type="number" min="0" step="0.01">
     <input id="renda" placeholder="Renda Diária (R$)" type="number" min="0" step="0.01">
     <input id="ciclo" placeholder="Ciclo (dias)" type="number" min="1" step="1">
+    <select id="tipo">
+      <option value="eventos">Eventos</option>
+      <option value="vip">VIP</option>
+      <option value="diario">Diário</option>
+      <option value="fixo">Fixo</option>
+    </select>
     <input id="imagem" placeholder="URL da Imagem (opcional)" type="url">
     <button class="btn-admin" onclick="adicionarProduto()">➕ Adicionar Produto</button>
   </div>
@@ -432,12 +527,48 @@ button:active{
   <div class="sucesso" id="mensagemSucesso"></div>
   <div class="erro" id="mensagemErro"></div>
 
+  <h3>� Métricas</h3>
+  <div id="metricas"></div>
+
   <h3>📋 Gerenciar Produtos</h3>
   <div class="admin-lista" id="adminLista"></div>
 </div>
 
+<!-- MODAL DE EDIÇÃO -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="fecharModal()">&times;</span>
+    <h3>Editar Produto</h3>
+    <form id="editForm">
+      <input id="editNome" placeholder="Nome" type="text" required>
+      <input id="editPreco" placeholder="Preço" type="number" min="0" step="0.01" required>
+      <input id="editRenda" placeholder="Renda Diária" type="number" min="0" step="0.01" required>
+      <input id="editCiclo" placeholder="Ciclo" type="number" min="1" step="1" required>
+      <select id="editTipo" required>
+        <option value="eventos">Eventos</option>
+        <option value="vip">VIP</option>
+        <option value="diario">Diário</option>
+        <option value="fixo">Fixo</option>
+      </select>
+      <input id="editImagem" placeholder="URL da Imagem" type="url">
+      <button type="submit" class="btn-admin">Salvar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ABAS DE PRODUTOS -->
+<div class="tabs">
+  <button class="tab-button active" onclick="mudarAba('eventos')">Eventos</button>
+  <button class="tab-button" onclick="mudarAba('vip')">VIP</button>
+  <button class="tab-button" onclick="mudarAba('diario')">Diário</button>
+  <button class="tab-button" onclick="mudarAba('fixo')">Fixo</button>
+</div>
+
 <!-- CATÁLOGO DE PRODUTOS PARA USUÁRIOS -->
-<div class="produtos" id="produtosContainer"></div>
+<div id="produtosEventos" class="produtos aba ativa"></div>
+<div id="produtosVip" class="produtos aba"></div>
+<div id="produtosDiario" class="produtos aba"></div>
+<div id="produtosFixo" class="produtos aba"></div>
 
 <script>
 // 🔐 CONFIGURAÇÃO DE ADMINISTRADORES
@@ -665,19 +796,20 @@ async function comprarProduto(id, nome, preco, renda, ciclo){
 // 📦 CARREGAR PRODUTOS PARA USUÁRIOS
 function carregarProdutos(){
   console.log("🔄 Iniciando carregamento de produtos...");
-  const container = document.getElementById('produtosContainer');
-  console.log("📦 Container encontrado:", container);
+  const containers = {
+    eventos: document.getElementById('produtosEventos'),
+    vip: document.getElementById('produtosVip'),
+    diario: document.getElementById('produtosDiario'),
+    fixo: document.getElementById('produtosFixo')
+  };
 
-  if (!container) {
-    console.error("❌ Container produtosContainer não encontrado!");
-    return;
-  }
+  // Limpar containers
+  Object.values(containers).forEach(c => c.innerHTML = '');
 
   window.SistemaAuth.db.collection("produtos")
     .where("ativo", "==", true)
     .onSnapshot(async (snapshot) => {
       console.log("📦 Snapshot recebida, documentos:", snapshot.size);
-      container.innerHTML = "";
 
       if(snapshot.empty) {
         console.log("📦 Nenhum produto encontrado, criando produtos de exemplo...");
@@ -685,34 +817,44 @@ function carregarProdutos(){
         return;
       }
 
-      // Ordenar produtos por data de criação (mais recentes primeiro) no frontend
-      const produtos = [];
+      const produtosPorTipo = { eventos: [], vip: [], diario: [], fixo: [] };
+
       snapshot.forEach((doc) => {
-        produtos.push({ id: doc.id, data: doc.data() });
+        const p = doc.data();
+        const tipo = p.tipo || "eventos";
+        if (produtosPorTipo[tipo]) {
+          produtosPorTipo[tipo].push({ id: doc.id, data: p });
+        }
       });
-      produtos.sort((a, b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
 
-      produtos.forEach(({ id, data: p }) => {
-        const card = document.createElement('div');
-        card.className = 'card';
+      // Ordenar e renderizar por tipo
+      Object.keys(produtosPorTipo).forEach(tipo => {
+        produtosPorTipo[tipo].sort((a, b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
 
-        card.innerHTML = `
-          <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
-          <div class="chip">${p.nome}</div>
-          <div class="valor">R$ ${p.preco.toFixed(2)}</div>
-          <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
-          <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
-          <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
-          <button onclick="comprarProduto('${id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
-            🛒 Comprar Agora
-          </button>
-        `;
+        produtosPorTipo[tipo].forEach(({ id, data: p }) => {
+          const card = document.createElement('div');
+          card.className = 'card';
 
-        container.appendChild(card);
+          card.innerHTML = `
+            <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+            <div class="chip">${p.nome}</div>
+            <div class="valor">R$ ${p.preco.toFixed(2)}</div>
+            <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
+            <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
+            <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
+            <button onclick="comprarProduto('${id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
+              🛒 Comprar Agora
+            </button>
+          `;
+
+          containers[tipo].appendChild(card);
+        });
       });
     }, (error) => {
       console.error("Erro ao carregar produtos:", error);
-      container.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
+      Object.values(containers).forEach(c => {
+        c.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
+      });
     });
 }
 
@@ -726,6 +868,7 @@ async function criarProdutosExemplo() {
       preco: 50,
       rendaDiaria: 5,
       ciclo: 15,
+      tipo: "eventos",
       imagem: "https://via.placeholder.com/300x200/FFD700/000000?text=Bronze",
       ativo: true
     },
@@ -734,6 +877,7 @@ async function criarProdutosExemplo() {
       preco: 100,
       rendaDiaria: 12,
       ciclo: 20,
+      tipo: "vip",
       imagem: "https://via.placeholder.com/300x200/C0C0C0/000000?text=Prata",
       ativo: true
     },
@@ -742,6 +886,7 @@ async function criarProdutosExemplo() {
       preco: 200,
       rendaDiaria: 25,
       ciclo: 25,
+      tipo: "diario",
       imagem: "https://via.placeholder.com/300x200/FFD700/000000?text=Ouro",
       ativo: true
     },
@@ -750,6 +895,7 @@ async function criarProdutosExemplo() {
       preco: 500,
       rendaDiaria: 50,
       ciclo: 30,
+      tipo: "fixo",
       imagem: "https://via.placeholder.com/300x200/B9F2FF/000000?text=Diamante",
       ativo: true
     }
@@ -762,7 +908,8 @@ async function criarProdutosExemplo() {
       const docRef = window.SistemaAuth.db.collection("produtos").doc();
       batch.set(docRef, {
         ...produto,
-        criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+        criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp(),
+        atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
       });
     }
 
@@ -790,6 +937,7 @@ async function adicionarProduto(){
   const preco = Number(document.getElementById("preco").value);
   const renda = Number(document.getElementById("renda").value);
   const ciclo = Number(document.getElementById("ciclo").value);
+  const tipo = document.getElementById("tipo").value;
   const imagem = document.getElementById("imagem").value.trim();
 
   // Limpar mensagens
@@ -812,9 +960,11 @@ async function adicionarProduto(){
       preco: preco,
       rendaDiaria: renda,
       ciclo: ciclo,
+      tipo: tipo,
       imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
       ativo: true,
-      criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+      criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
     });
 
     // Limpa os campos
@@ -822,6 +972,7 @@ async function adicionarProduto(){
     document.getElementById("preco").value = "";
     document.getElementById("renda").value = "";
     document.getElementById("ciclo").value = "";
+    document.getElementById("tipo").value = "eventos";
     document.getElementById("imagem").value = "";
 
     mostrarSucesso("✅ Produto adicionado com sucesso!");
@@ -847,6 +998,25 @@ function carregarListaAdmin(){
         return;
       }
 
+      // Calcular métricas
+      let total = 0;
+      let ativos = 0;
+      let porTipo = { eventos: 0, vip: 0, diario: 0, fixo: 0 };
+
+      snapshot.forEach((doc) => {
+        const p = doc.data();
+        total++;
+        if(p.ativo) ativos++;
+        const tipo = p.tipo || "eventos";
+        if(porTipo[tipo] !== undefined) porTipo[tipo]++;
+      });
+
+      document.getElementById('metricas').innerHTML = `
+        <div class="admin-info"><strong>Total de Produtos:</strong> ${total}</div>
+        <div class="admin-info"><strong>Produtos Ativos:</strong> ${ativos}</div>
+        <div class="admin-info"><strong>Por Tipo:</strong> Eventos: ${porTipo.eventos}, VIP: ${porTipo.vip}, Diário: ${porTipo.diario}, Fixo: ${porTipo.fixo}</div>
+      `;
+
       snapshot.forEach((doc) => {
         const p = doc.data();
         const linha = document.createElement("div");
@@ -869,8 +1039,12 @@ function carregarListaAdmin(){
           <div class="admin-info">
             <strong>Ciclo:</strong> ${p.ciclo} dias
           </div>
+          <div class="admin-info">
+            <strong>Tipo:</strong> ${p.tipo || "eventos"}
+          </div>
           <div class="admin-actions">
             <button class="btn-editar" onclick="editarProduto('${doc.id}')">✏️ Editar</button>
+            <button class="btn-editar" onclick="duplicarProduto('${doc.id}')">📋 Duplicar</button>
             ${p.ativo ?
               `<button class="btn-desativar" onclick="desativarProduto('${doc.id}')">🚫 Desativar</button>` :
               `<button class="btn-desativar" onclick="ativarProduto('${doc.id}')">✅ Ativar</button>`
@@ -888,56 +1062,75 @@ function carregarListaAdmin(){
 }
 
 // ✏️ EDITAR PRODUTO (ADMIN)
-async function editarProduto(id){
-  try {
-    const docRef = window.SistemaAuth.db.collection("produtos").doc(id);
-    const docSnap = await docRef.get();
-    if(!docSnap.exists){
+let produtoEditandoId = null;
+
+function editarProduto(id){
+  produtoEditandoId = id;
+  window.SistemaAuth.db.collection("produtos").doc(id).get().then(doc => {
+    if(!doc.exists){
       mostrarErro("Produto não encontrado.");
       return;
     }
 
-    const produto = docSnap.data();
-    const novoNome = prompt("Nome do Produto:", produto.nome);
-    if(novoNome === null) return;
+    const produto = doc.data();
+    document.getElementById('editNome').value = produto.nome;
+    document.getElementById('editPreco').value = produto.preco;
+    document.getElementById('editRenda').value = produto.rendaDiaria;
+    document.getElementById('editCiclo').value = produto.ciclo;
+    document.getElementById('editTipo').value = produto.tipo || "eventos";
+    document.getElementById('editImagem').value = produto.imagem || "";
+    document.getElementById('editModal').style.display = 'block';
+  }).catch(e => {
+    mostrarErro("Erro ao carregar produto: " + e.message);
+  });
+}
 
-    const novoPreco = prompt("Preço:", produto.preco);
-    if(novoPreco === null) return;
+function fecharModal() {
+  document.getElementById('editModal').style.display = 'none';
+}
 
-    const novaRenda = prompt("Renda diária:", produto.rendaDiaria);
-    if(novaRenda === null) return;
+document.getElementById('editForm').addEventListener('submit', async e => {
+  e.preventDefault();
 
-    const novoCiclo = prompt("Ciclo (dias):", produto.ciclo);
-    if(novoCiclo === null) return;
+  const nome = document.getElementById('editNome').value.trim();
+  const preco = Number(document.getElementById('editPreco').value);
+  const renda = Number(document.getElementById('editRenda').value);
+  const ciclo = Number(document.getElementById('editCiclo').value);
+  const tipo = document.getElementById('editTipo').value;
+  const imagem = document.getElementById('editImagem').value.trim();
 
-    const novaImagem = prompt("URL da imagem:", produto.imagem || "");
-    if(novaImagem === null) return;
+  if(!nome || preco <= 0 || renda < 0 || ciclo <= 0){
+    alert("Dados inválidos. Nome obrigatório e valores numéricos válidos são necessários.");
+    return;
+  }
 
-    if(!novoNome.trim() || Number(novoPreco) <= 0 || Number(novaRenda) < 0 || Number(novoCiclo) <= 0){
-      mostrarErro("Dados inválidos. Nome obrigatório e valores numéricos válidos são necessários.");
-      return;
-    }
-
-    await docRef.update({
-      nome: novoNome.trim(),
-      preco: Number(novoPreco),
-      rendaDiaria: Number(novaRenda),
-      ciclo: Number(novoCiclo),
-      imagem: novaImagem.trim() || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto"
+  try {
+    await window.SistemaAuth.db.collection("produtos").doc(produtoEditandoId).update({
+      nome,
+      preco,
+      rendaDiaria: renda,
+      ciclo,
+      tipo,
+      imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
+      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
     });
 
     mostrarSucesso("✅ Produto atualizado com sucesso!");
+    fecharModal();
   } catch(e) {
     mostrarErro("❌ Erro ao editar produto: " + e.message);
     console.error(e);
   }
-}
+});
 
 // 🚫 DESATIVAR PRODUTO (ADMIN)
 async function desativarProduto(id){
   if(confirm("Tem certeza que deseja desativar este produto?")) {
     try {
-      await window.SistemaAuth.db.collection("produtos").doc(id).update({ ativo: false });
+      await window.SistemaAuth.db.collection("produtos").doc(id).update({
+        ativo: false,
+        atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+      });
       mostrarSucesso("✅ Produto desativado!");
     } catch(e) {
       mostrarErro("❌ Erro: " + e.message);
@@ -948,7 +1141,10 @@ async function desativarProduto(id){
 // ✅ ATIVAR PRODUTO (ADMIN)
 async function ativarProduto(id){
   try {
-    await window.SistemaAuth.db.collection("produtos").doc(id).update({ ativo: true });
+    await window.SistemaAuth.db.collection("produtos").doc(id).update({
+      ativo: true,
+      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+    });
     mostrarSucesso("✅ Produto ativado!");
   } catch(e) {
     mostrarErro("❌ Erro: " + e.message);
@@ -986,6 +1182,36 @@ function mostrarErro(mensagem){
 
 function logout() {
   window.SistemaAuth.fazerLogout();
+}
+
+// 🧩 FUNÇÕES ADICIONAIS
+function mudarAba(tipo) {
+  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`[onclick="mudarAba('${tipo}')"]`).classList.add('active');
+  document.querySelectorAll('.aba').forEach(div => div.classList.remove('ativa'));
+  document.getElementById('produtos' + tipo.charAt(0).toUpperCase() + tipo.slice(1)).classList.add('ativa');
+}
+
+async function duplicarProduto(id) {
+  try {
+    const doc = await window.SistemaAuth.db.collection("produtos").doc(id).get();
+    if(!doc.exists) {
+      mostrarErro("Produto não encontrado.");
+      return;
+    }
+
+    const p = doc.data();
+    await window.SistemaAuth.db.collection("produtos").add({
+      ...p,
+      nome: p.nome + " (Cópia)",
+      criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    mostrarSucesso("✅ Produto duplicado com sucesso!");
+  } catch(e) {
+    mostrarErro("❌ Erro ao duplicar produto: " + e.message);
+  }
 }
 </script>
 
