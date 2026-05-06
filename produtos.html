@@ -405,49 +405,35 @@ button:active{
 }
 
 /* ABAS */
-.tabs {
+.abas {
   display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
   justify-content: center;
-  align-items: center;
-  gap: 12px;
-  margin: 20px 0;
   flex-wrap: wrap;
-  padding: 10px 14px;
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 30px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 12px 35px rgba(0,0,0,0.08);
+  padding: 12px;
+  background: rgba(255,255,255,0.9);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
-.tab-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: 120px;
-  padding: 12px 18px;
-  background: rgba(255,255,255,0.9);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  margin: 0;
+.abas button {
+  padding: 10px 18px;
+  border: none;
+  background: #111;
+  color: white;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 700;
   transition: all 0.25s ease;
-  color: #2c3e50;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
 }
 
-.tab-button.active {
+.abas button:hover {
+  background: #333;
+}
+
+.abas button.active {
   background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  box-shadow: 0 10px 30px rgba(102,126,234,0.35);
-}
-
-.tab-button:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255,255,255,0.8);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.12);
 }
 
 .aba {
@@ -577,18 +563,18 @@ button:active{
 </div>
 
 <!-- ABAS DE PRODUTOS -->
-<div class="tabs">
-  <button class="tab-button active" onclick="mudarAba('eventos')">🎉 Eventos</button>
-  <button class="tab-button" onclick="mudarAba('vip')">👑 VIP</button>
-  <button class="tab-button" onclick="mudarAba('diario')">📅 Diário</button>
-  <button class="tab-button" onclick="mudarAba('fixo')">🔒 Fixo</button>
+<div class="abas">
+  <button class="active" onclick="trocarAba('eventos')">🎉 Eventos</button>
+  <button onclick="trocarAba('vip')">👑 VIP</button>
+  <button onclick="trocarAba('diario')">📅 Diário</button>
+  <button onclick="trocarAba('fixo')">🔒 Fixo</button>
 </div>
 
 <!-- CATÁLOGO DE PRODUTOS PARA USUÁRIOS -->
-<div id="produtosEventos" class="produtos aba ativa"></div>
-<div id="produtosVip" class="produtos aba"></div>
-<div id="produtosDiario" class="produtos aba"></div>
-<div id="produtosFixo" class="produtos aba"></div>
+<div id="produtosEventos" class="produtos aba" style="display: block;"></div>
+<div id="produtosVip" class="produtos aba" style="display: none;"></div>
+<div id="produtosDiario" class="produtos aba" style="display: none;"></div>
+<div id="produtosFixo" class="produtos aba" style="display: none;"></div>
 
 <script>
 // 🔐 CONFIGURAÇÃO DE ADMINISTRADORES
@@ -1212,11 +1198,20 @@ function logout() {
 }
 
 // 🧩 FUNÇÕES ADICIONAIS
-function mudarAba(tipo) {
-  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`[onclick="mudarAba('${tipo}')"]`).classList.add('active');
-  document.querySelectorAll('.aba').forEach(div => div.classList.remove('ativa'));
-  document.getElementById('produtos' + tipo.charAt(0).toUpperCase() + tipo.slice(1)).classList.add('ativa');
+function trocarAba(aba) {
+  document.getElementById("produtosEventos").style.display = "none";
+  document.getElementById("produtosVip").style.display = "none";
+  document.getElementById("produtosDiario").style.display = "none";
+  document.getElementById("produtosFixo").style.display = "none";
+
+  document.querySelectorAll('.abas button').forEach(btn => btn.classList.remove('active'));
+  const botao = document.querySelector(`.abas button[onclick="trocarAba('${aba}')"]`);
+  if (botao) botao.classList.add('active');
+
+  if(aba === "eventos") document.getElementById("produtosEventos").style.display = "block";
+  if(aba === "vip") document.getElementById("produtosVip").style.display = "block";
+  if(aba === "diario") document.getElementById("produtosDiario").style.display = "block";
+  if(aba === "fixo") document.getElementById("produtosFixo").style.display = "block";
 }
 
 async function duplicarProduto(id) {
