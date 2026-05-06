@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -23,498 +23,384 @@
 
 body{
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #1f2a63 0%, #3f5ecb 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
-  color: #222;
   padding: 20px;
+  color: #333;
 }
 
-button, select, input{
-  font-family: inherit;
-}
-
+/* CABEÇALHO */
 h1{
   text-align: center;
-  color: #fff;
-  font-size: 2.4rem;
-  margin-bottom: 10px;
-  text-shadow: 1px 1px 12px rgba(0,0,0,0.25);
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  position: relative;
 }
 
-.page-header{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  flex-wrap: wrap;
+#saldo{
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.95);
+  padding: 15px 25px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  display: block;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+  z-index: 1000;
+  backdrop-filter: blur(10px);
 }
 
-#saldo,
+/* SALDO TOTAL NO LADO DIREITO */
 #saldo-total-display{
-  background: rgba(255,255,255,0.92);
-  color: #111;
-  padding: 14px 20px;
-  border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
-  font-weight: 700;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  padding: 15px 25px;
+  border-radius: 50px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+  z-index: 1000;
+  color: black;
+  border: 1px solid #ddd;
 }
 
-#saldo-total-display{
-  border: 1px solid rgba(0,0,0,0.08);
+#saldo-total-display #saldoTotal {
+  color: #4CAF50;
+  font-size: 1.2rem;
 }
 
+/* RESPONSIVO PARA CELULAR */
+@media (max-width: 768px) {
+  #saldo-total-display {
+    top: 10px;
+    right: 10px;
+    padding: 10px 15px;
+    font-size: 1rem;
+  }
+}
+
+/* BOTÃO VOLTAR */
 .back-button{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  color: #fff;
-  background: linear-gradient(135deg,#20c1ff,#5c4bff);
-  cursor: pointer;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+  position:fixed;
+  top:20px;
+  left:20px;
+  width:50px;
+  height:50px;
+  background:linear-gradient(135deg, #39c6ff, #b84cff);
+  border:none;
+  border-radius:50%;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:24px;
+  transition:all 0.3s ease;
+  box-shadow:0 8px 25px rgba(57,198,255,0.3);
+  z-index:100;
 }
 
 .back-button:hover{
-  transform: translateY(-2px);
+  transform:translateY(-4px);
+  box-shadow:0 12px 35px rgba(57,198,255,0.4);
 }
 
+/* PAINEL ADMIN */
 .admin-panel{
-  background: rgba(255,255,255,0.96);
-  border-radius: 22px;
-  box-shadow: 0 18px 50px rgba(0,0,0,0.15);
-  padding: 28px;
-  margin-bottom: 28px;
-  display: none;
+  background: rgba(255,255,255,0.95);
+  padding: 25px;
+  border-radius: 15px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  backdrop-filter: blur(10px);
+  display: none; /* Inicialmente oculto */
 }
 
-.admin-panel h2{
-  font-size: 1.7rem;
-  color: #1f2a63;
-  margin-bottom: 12px;
-}
-
-.admin-grid{
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 24px;
-}
-
-.admin-panel-section{
-  background: #f7faff;
-  border-radius: 18px;
-  padding: 20px;
-}
-
-.admin-panel-section h3{
-  margin-bottom: 16px;
-  color: #2b3d82;
+.admin-panel h3{
+  color: #667eea;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
 }
 
 .admin-form{
-  display: grid;
-  grid-template-columns: repeat(2, minmax(160px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: center;
 }
 
-.admin-form label{
-  font-size: 0.9rem;
-  color: #33405d;
-  margin-bottom: 6px;
-  display: block;
+.admin-form input{
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 200px;
+  transition: border-color 0.3s;
 }
 
-.admin-form input,
-.admin-form select{
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(51,64,93,0.16);
-  background: #fff;
-  transition: border-color 0.2s ease;
-}
-
-.admin-form input:focus,
-.admin-form select:focus{
+.admin-form input:focus{
   outline: none;
-  border-color: #5c4bff;
+  border-color: #667eea;
 }
 
-.admin-form .full-width{
-  grid-column: 1 / -1;
-}
-
-.btn-primary,
-.btn-secondary,
-.btn-danger,
-.btn-action{
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.btn-primary{
-  background: linear-gradient(135deg, #5c4bff, #20c1ff);
-  color: #fff;
-  padding: 14px 20px;
-}
-
-.btn-secondary{
-  background: #f5f7ff;
-  color: #2b3d82;
-  padding: 12px 16px;
-}
-
-.btn-danger{
-  background: #ff4d6d;
-  color: #fff;
-  padding: 12px 16px;
-}
-
-.btn-action{
-  background: #4caf50;
+.btn-admin{
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
   color: white;
-  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
 }
 
-.btn-primary:hover,
-.btn-action:hover,
-.btn-danger:hover,
-.btn-secondary:hover{
+.btn-admin:hover{
   transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76,175,80,0.4);
 }
 
-.stats-grid{
+/* PRODUTOS GRID */
+.produtos{
   display: grid;
-  grid-template-columns: repeat(2,minmax(120px,1fr));
-  gap: 14px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
 }
 
-.stat-card{
-  background: #fff;
-  border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 12px 30px rgba(71,91,181,0.08);
-}
-
-.stat-card span{
-  display: block;
-  color: #5c4bff;
-  font-size: 1.6rem;
-  font-weight: 800;
-}
-
-.stat-card small{
-  color: #5f6f95;
-}
-
-.admin-list-header{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.admin-list{
-  display: grid;
-  gap: 16px;
-}
-
-.product-admin-card{
-  background: #fff;
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: 0 14px 36px rgba(56,72,134,0.08);
-}
-
-.product-admin-top{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.product-admin-title{
-  font-size: 1.05rem;
-  color: #1f2a63;
-  font-weight: 700;
-}
-
-.badge{
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.badge.active{
-  color: #1a7f37;
-  background: #e3f6e8;
-}
-
-.badge.inactive{
-  color: #9c1a22;
-  background: #ffe3e1;
-}
-
-.badge.type{
-  color: #33405d;
-  background: #eef1ff;
-}
-
-.product-admin-meta{
-  display: grid;
-  grid-template-columns: repeat(2, minmax(160px,1fr));
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.product-admin-meta div{
-  color: #4b5677;
-  font-size: 0.94rem;
-}
-
-.product-admin-actions{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.card-grid{
-  display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
-  gap: 20px;
-}
-
+/* CARDS DE PRODUTO */
 .card{
-  background: rgba(255,255,255,0.96);
-  border-radius: 24px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 18px 36px rgba(12,28,80,0.12);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  position: relative;
 }
 
 .card:hover{
-  transform: translateY(-4px);
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
 }
 
 .produto-img{
   width: 100%;
-  height: 210px;
+  height: 200px;
   object-fit: cover;
-  display: block;
+  border-bottom: 3px solid #667eea;
 }
 
-.card-content{
-  padding: 18px;
+.chip{
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(102,126,234,0.3);
 }
 
-.card-title{
-  font-size: 1.2rem;
-  margin-bottom: 12px;
-  color: #1f2a63;
+.valor{
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin: 15px 0;
+  color: #4CAF50;
 }
 
-.card-info{
-  color: #465275;
-  font-size: 0.95rem;
+.info{
+  padding: 0 20px;
   margin-bottom: 10px;
+  font-size: 0.95rem;
+  color: #666;
 }
 
-.card-price{
-  font-size: 1.7rem;
-  color: #1a7f37;
-  font-weight: 800;
-  margin-bottom: 12px;
+.destaque{
+  color: #667eea;
+  font-weight: bold;
+  font-size: 1.1rem;
 }
 
-.card-actions{
-  display: grid;
-  gap: 10px;
-}
-
-.tabs{
-  margin-bottom: 24px;
-}
-
-.tab-buttons{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.tab-button{
-  padding: 12px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.14);
-  color: #fff;
+/* BOTÃO COMPRAR */
+button{
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 0 0 15px 15px;
+  font-size: 1rem;
+  font-weight:600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  position:relative;
+  overflow:hidden;
 }
 
-.tab-button.active,
-.tab-button:hover{
-  background: rgba(255,255,255,0.98);
-  color: #1f2a63;
+button:hover{
+  transform:translateY(-2px);
+  box-shadow:0 5px 15px rgba(102,126,234,0.4);
 }
 
-.tab-panel{
-  display: none;
+button:active{
+  transform:translateY(0);
 }
 
-.tab-panel.active{
-  display: block;
+/* LISTA ADMIN DE PRODUTOS */
+.admin-lista{
+  margin-top: 30px;
 }
 
-.section-title{
-  color: #fff;
-  margin-bottom: 12px;
-  font-size: 1.15rem;
-}
-
-.message-box{
+.produto-admin{
   background: rgba(255,255,255,0.95);
-  border-radius: 18px;
-  padding: 24px;
-  text-align: center;
-  color: #4b5677;
-  box-shadow: 0 14px 32px rgba(0,0,0,0.12);
-}
-
-.alert-success,
-.alert-error{
-  display: none;
-  border-radius: 14px;
-  padding: 14px 18px;
-  margin-bottom: 18px;
-  font-weight: 700;
-}
-
-.alert-success{
-  background: #e6f7ea;
-  color: #196b2e;
-}
-
-.alert-error{
-  background: #ffe2e2;
-  color: #9b1e23;
-}
-
-.modal-overlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(15,23,73,0.55);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
   padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
 }
 
-.modal-overlay.active{
+.produto-admin b{
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.status-badge{
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+.status-ativo{
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-inativo{
+  background: #ffebee;
+  color: #c62828;
+}
+
+.admin-info{
+  margin: 8px 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.admin-actions{
+  margin-top: 15px;
   display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.modal-card{
-  background: #fff;
-  width: min(700px,100%);
-  border-radius: 24px;
-  box-shadow: 0 24px 60px rgba(15,23,73,0.3);
-  overflow: hidden;
+.btn-editar{
+  background: linear-gradient(135deg, #1976d2, #115293);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
 }
 
-.modal-header,
-.modal-footer{
-  padding: 22px 26px;
+.btn-editar:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(25,118,210,0.3);
 }
 
-.modal-header{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(71,91,181,0.12);
+.btn-desativar{
+  background: linear-gradient(135deg, #ff9800, #e68900);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
 }
 
-.modal-header h3{
-  margin: 0;
-  color: #1f2a63;
+.btn-desativar:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(255,152,0,0.3);
 }
 
-.modal-body{
-  padding: 24px 26px 16px;
+.btn-excluir{
+  background: linear-gradient(135deg, #ff5252, #ff1744);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
 }
 
-.modal-grid{
-  display: grid;
-  grid-template-columns: 1fr 220px;
-  gap: 20px;
+.btn-excluir:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(255,82,82,0.3);
 }
 
-.modal-form{
-  display: grid;
-  gap: 16px;
+/* MENSAGENS */
+.sucesso{
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: none;
+  font-weight: bold;
 }
 
-.modal-form label{
-  display: block;
-  color: #34405a;
-  margin-bottom: 6px;
+.erro{
+  background: #ffebee;
+  color: #c62828;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: none;
+  font-weight: bold;
 }
 
-.modal-form input,
-.modal-form select{
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(77,93,148,0.18);
-}
+/* RESPONSIVO */
+@media (max-width: 768px){
+  .admin-form{
+    flex-direction: column;
+  }
 
-.image-preview{
-  background: #f7f8ff;
-  border-radius: 18px;
-  overflow: hidden;
-  min-height: 220px;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  color: #6b78a3;
-}
+  .admin-form input{
+    min-width: 100%;
+  }
 
-.image-preview img{
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-}
-
-.footer-actions{
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-@media (max-width: 960px){
-  .admin-grid,
-  .modal-grid{
+  .produtos{
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 720px){
-  .tab-buttons{
-    justify-content: center;
+  h1{
+    font-size: 2rem;
+  }
+
+  #saldo{
+    position: static;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .back-button{
+    top: 80px;
   }
 }
 </style>
@@ -522,707 +408,585 @@ h1{
 
 <body>
 
-<div class="page-header">
-  <button class="back-button" onclick="window.location.href='painel.html'">←</button>
-  <div>
-    <h1>📦 Produtos Magaxia</h1>
-    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-      <div id="saldo">Saldo: Carregando...</div>
-      <div id="saldo-total-display">Saldo Total: R$ <strong id="saldoTotal">0.00</strong></div>
-    </div>
-  </div>
-</div>
+<button class="back-button" onclick="window.location.href='painel.html'">←</button>
 
+<h1>📦 Produtos Magaxia</h1>
+
+<div id="saldo">Saldo: Carregando...</div>
+
+<p id="saldo-total-display">Saldo Total: R$ <span id="saldoTotal">0.00</span></p>
+
+<!-- PAINEL ADMIN (VISÍVEL APENAS PARA ADMINS) -->
 <div class="admin-panel" id="adminPanel">
-  <div class="admin-grid">
-    <section class="admin-panel-section">
-      <h2>Painel Administrativo</h2>
+  <h3>🎛️ Painel Administrativo</h3>
 
-      <div class="alert-success" id="alertSuccess"></div>
-      <div class="alert-error" id="alertError"></div>
-
-      <div class="stats-grid" id="adminMetrics">
-        <div class="stat-card">
-          <span id="metricTotal">0</span>
-          <small>Total de produtos</small>
-        </div>
-        <div class="stat-card">
-          <span id="metricActive">0</span>
-          <small>Produtos ativos</small>
-        </div>
-        <div class="stat-card">
-          <span id="metricEventos">0</span>
-          <small>Eventos</small>
-        </div>
-        <div class="stat-card">
-          <span id="metricVip">0</span>
-          <small>VIP</small>
-        </div>
-        <div class="stat-card">
-          <span id="metricDiario">0</span>
-          <small>Diário</small>
-        </div>
-        <div class="stat-card">
-          <span id="metricFixo">0</span>
-          <small>Fixo</small>
-        </div>
-      </div>
-
-      <div class="admin-form">
-        <div>
-          <label for="productName">Nome do produto</label>
-          <input id="productName" type="text" placeholder="Nome completo">
-        </div>
-        <div>
-          <label for="productPrice">Preço (R$)</label>
-          <input id="productPrice" type="number" min="0" step="0.01" placeholder="0.00">
-        </div>
-        <div>
-          <label for="productIncome">Renda diária (R$)</label>
-          <input id="productIncome" type="number" min="0" step="0.01" placeholder="0.00">
-        </div>
-        <div>
-          <label for="productCycle">Ciclo (dias)</label>
-          <input id="productCycle" type="number" min="1" step="1" placeholder="1">
-        </div>
-        <div>
-          <label for="productType">Tipo</label>
-          <select id="productType">
-            <option value="eventos">Eventos</option>
-            <option value="vip">VIP</option>
-            <option value="diario">Diário</option>
-            <option value="fixo">Fixo</option>
-          </select>
-        </div>
-        <div class="full-width">
-          <label for="productImage">URL da imagem</label>
-          <input id="productImage" type="url" placeholder="https://...">
-        </div>
-        <div class="full-width" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <button class="btn-primary" id="createProductButton" onclick="adicionarProduto()">Adicionar produto</button>
-          <button class="btn-secondary" onclick="resetCreateForm()">Limpar formulário</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="admin-panel-section">
-      <div class="admin-list-header">
-        <h3>Produtos cadastrados</h3>
-        <button class="btn-secondary" onclick="mudarAba('eventos')">Ver catálogo</button>
-      </div>
-      <div class="admin-list" id="adminList"></div>
-    </section>
+  <div class="admin-form">
+    <input id="nome" placeholder="Nome do Produto" type="text">
+    <input id="preco" placeholder="Preço (R$)" type="number" min="0" step="0.01">
+    <input id="renda" placeholder="Renda Diária (R$)" type="number" min="0" step="0.01">
+    <input id="ciclo" placeholder="Ciclo (dias)" type="number" min="1" step="1">
+    <input id="imagem" placeholder="URL da Imagem (opcional)" type="url">
+    <button class="btn-admin" onclick="adicionarProduto()">➕ Adicionar Produto</button>
   </div>
+
+  <div class="sucesso" id="mensagemSucesso"></div>
+  <div class="erro" id="mensagemErro"></div>
+
+  <h3>📋 Gerenciar Produtos</h3>
+  <div class="admin-lista" id="adminLista"></div>
 </div>
 
-<div class="tabs">
-  <div class="tab-buttons">
-    <button class="tab-button active" data-tab="eventos" onclick="mudarAba('eventos')">Eventos</button>
-    <button class="tab-button" data-tab="vip" onclick="mudarAba('vip')">VIP</button>
-    <button class="tab-button" data-tab="diario" onclick="mudarAba('diario')">Diário</button>
-    <button class="tab-button" data-tab="fixo" onclick="mudarAba('fixo')">Fixo</button>
-  </div>
-
-  <div id="eventos" class="tab-panel active">
-    <h2 class="section-title">Eventos</h2>
-    <div class="card-grid" id="produtosEventos"></div>
-  </div>
-
-  <div id="vip" class="tab-panel">
-    <h2 class="section-title">VIP</h2>
-    <div class="card-grid" id="produtosVip"></div>
-  </div>
-
-  <div id="diario" class="tab-panel">
-    <h2 class="section-title">Diário</h2>
-    <div class="card-grid" id="produtosDiario"></div>
-  </div>
-
-  <div id="fixo" class="tab-panel">
-    <h2 class="section-title">Fixo</h2>
-    <div class="card-grid" id="produtosFixo"></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="productModalOverlay">
-  <div class="modal-card">
-    <div class="modal-header">
-      <h3 id="modalTitle">Editar produto</h3>
-      <button class="btn-secondary" onclick="fecharModal()">Fechar</button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-grid">
-        <div class="modal-form">
-          <div>
-            <label for="editProductName">Nome</label>
-            <input id="editProductName" type="text" placeholder="Nome do produto">
-          </div>
-          <div>
-            <label for="editProductPrice">Preço (R$)</label>
-            <input id="editProductPrice" type="number" min="0" step="0.01">
-          </div>
-          <div>
-            <label for="editProductIncome">Renda diária (R$)</label>
-            <input id="editProductIncome" type="number" min="0" step="0.01">
-          </div>
-          <div>
-            <label for="editProductCycle">Ciclo (dias)</label>
-            <input id="editProductCycle" type="number" min="1" step="1">
-          </div>
-          <div>
-            <label for="editProductType">Tipo</label>
-            <select id="editProductType">
-              <option value="eventos">Eventos</option>
-              <option value="vip">VIP</option>
-              <option value="diario">Diário</option>
-              <option value="fixo">Fixo</option>
-            </select>
-          </div>
-          <div>
-            <label for="editProductImage">URL da imagem</label>
-            <input id="editProductImage" type="url" placeholder="https://...">
-          </div>
-          <div>
-            <label for="editProductActive">Ativo</label>
-            <select id="editProductActive">
-              <option value="true">Sim</option>
-              <option value="false">Não</option>
-            </select>
-          </div>
-        </div>
-        <div class="image-preview" id="modalImagePreview">
-          <span>Nenhuma imagem selecionada</span>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <div class="footer-actions">
-        <button class="btn-secondary" onclick="fecharModal()">Cancelar</button>
-        <button class="btn-primary" id="saveProductButton" onclick="salvarProdutoEditado()">Salvar alterações</button>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- CATÁLOGO DE PRODUTOS PARA USUÁRIOS -->
+<div class="produtos" id="produtosContainer"></div>
 
 <script>
-const ADMINS_UID = [
-  'COLOQUE_SEU_UID'
-];
-const PRODUCT_TYPES = {
-  eventos: 'Eventos',
-  vip: 'VIP',
-  diario: 'Diário',
-  fixo: 'Fixo'
-};
-const DEFAULT_TYPE = 'eventos';
+// 🔐 CONFIGURAÇÃO DE ADMINISTRADORES
+const ADMINS = ["admin@magaxia.com", "adm@magaxia.com"]; // Adicione emails de admin aqui
 
+// 🔐 VARIÁVEIS GLOBAIS
 let uid = null;
+let saldoAtual = 0;
+let saldoSaque = 0;
+let saldoDeposito = 0;
+let usuarioAtual = null;
 let isAdmin = false;
-let currentEditProductId = null;
-let isModalOpen = false;
 
-function formatCurrency(value){
-  return new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL' }).format(value);
-}
-
-function getProductValue(product){
-  return {
-    nome: product.nome || '',
-    preco: Number(product.preco || 0),
-    renda: Number(product.renda ?? product.rendaDiaria || 0),
-    ciclo: Number(product.ciclo || 0),
-    tipo: product.tipo || product.type || DEFAULT_TYPE,
-    imagem: product.imagem || 'https://via.placeholder.com/480x320/667eea/FFFFFF?text=Produto',
-    ativo: typeof product.ativo === 'boolean' ? product.ativo : true,
-    quantidadeCompras: Number(product.quantidadeCompras || 0),
-    criadoEm: product.criadoEm || null,
-    atualizadoEm: product.atualizadoEm || null
-  };
-}
-
-function isAdminUser(){
-  return isAdmin === true;
-}
-
-function requireAdmin(){
-  if (!isAdminUser()){
-    mostrarErro('Acesso negado: somente admin pode executar esta ação.');
-    return false;
-  }
-  return true;
-}
-
-function carregarSaldoTotal(){
-  if (!uid) return;
-  window.SistemaAuth.db.collection('users').doc(uid).onSnapshot(doc => {
-    if (!doc.exists) return;
-    const data = doc.data();
-    const saldoDeposito = Number(data.saldoDeposito || 0);
-    const saldoSaque = Number(data.saldoSaque || 0);
-    const total = saldoDeposito + saldoSaque;
-    document.getElementById('saldo').textContent = `Saldo: ${formatCurrency(total)}`;
-    document.getElementById('saldoTotal').textContent = total.toFixed(2);
-  });
-}
-
-function carregarProdutos(){
-  window.SistemaAuth.db.collection('produtos').onSnapshot(snapshot => {
-    const produtos = [];
-    snapshot.forEach(doc => produtos.push({ id: doc.id, data: doc.data() }));
-    renderProdutos(produtos);
-    renderAdmin(produtos);
-  }, error => {
-    console.error('Erro ao carregar produtos:', error);
-    mostrarErro('Erro ao carregar produtos. Tente novamente mais tarde.');
-  });
-}
-
-function renderProdutos(produtos){
-  const containers = {
-    eventos: document.getElementById('produtosEventos'),
-    vip: document.getElementById('produtosVip'),
-    diario: document.getElementById('produtosDiario'),
-    fixo: document.getElementById('produtosFixo')
-  };
-
-  Object.values(containers).forEach(container => container.innerHTML = '');
-
-  const categorias = {
-    eventos: [],
-    vip: [],
-    diario: [],
-    fixo: []
-  };
-
-  produtos.forEach(item => {
-    const data = getProductValue(item.data);
-    if (!data.ativo) return;
-    const tipo = PRODUCT_TYPES[data.tipo] ? data.tipo : DEFAULT_TYPE;
-    categorias[tipo].push({ id: item.id, data });
-  });
-
-  Object.keys(categorias).forEach(tipo => {
-    categorias[tipo].sort((a,b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
-    if (categorias[tipo].length === 0){
-      containers[tipo].innerHTML = `<div class="message-box">Nenhum produto disponível para ${PRODUCT_TYPES[tipo]}.</div>`;
-      return;
+const formatador = new Intl.NumberFormat(
+    "pt-BR",
+    {
+        style: "currency",
+        currency: "BRL"
     }
-    categorias[tipo].forEach(item => {
-      const card = document.createElement('article');
-      card.className = 'card';
-      card.innerHTML = `
-        <img class="produto-img" src="${item.data.imagem}" alt="${item.data.nome}" onerror="this.src='https://via.placeholder.com/480x320/667eea/FFFFFF?text=Produto'" />
-        <div class="card-content">
-          <div class="card-title">${item.data.nome}</div>
-          <div class="card-price">${formatCurrency(item.data.preco)}</div>
-          <div class="card-info">💰 Renda diária: ${formatCurrency(item.data.renda)}</div>
-          <div class="card-info">⏰ Ciclo: ${item.data.ciclo} dias</div>
-          <div class="card-info">📈 Total: ${formatCurrency(item.data.renda * item.data.ciclo)}</div>
-          <div class="card-actions">
-            <button class="btn-action" onclick="comprarProduto('${item.id}', '${item.data.nome}', ${item.data.preco}, ${item.data.renda}, ${item.data.ciclo})">🛒 Comprar agora</button>
-          </div>
-        </div>
-      `;
-      containers[tipo].appendChild(card);
-    });
-  });
-}
+);
 
-function renderAdmin(produtos){
-  const adminList = document.getElementById('adminList');
-  const metricTotal = document.getElementById('metricTotal');
-  const metricActive = document.getElementById('metricActive');
-  const metricEventos = document.getElementById('metricEventos');
-  const metricVip = document.getElementById('metricVip');
-  const metricDiario = document.getElementById('metricDiario');
-  const metricFixo = document.getElementById('metricFixo');
+// 🔐 VERIFICAÇÃO DE AUTENTICAÇÃO E PERMISSÕES
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🔐 Verificando autenticação nos produtos...');
 
-  const normalized = produtos.map(item => ({ id: item.id, data: getProductValue(item.data) }));
-  metricTotal.textContent = normalized.length;
-  metricActive.textContent = normalized.filter(p => p.data.ativo).length;
-  metricEventos.textContent = normalized.filter(p => p.data.tipo === 'eventos').length;
-  metricVip.textContent = normalized.filter(p => p.data.tipo === 'vip').length;
-  metricDiario.textContent = normalized.filter(p => p.data.tipo === 'diario').length;
-  metricFixo.textContent = normalized.filter(p => p.data.tipo === 'fixo').length;
-
-  adminList.innerHTML = '';
-  if (normalized.length === 0){
-    adminList.innerHTML = '<div class="message-box">Nenhum produto cadastrado ainda.</div>';
-    return;
-  }
-
-  normalized.sort((a,b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
-
-  normalized.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'product-admin-card';
-    card.innerHTML = `
-      <div class="product-admin-top">
-        <div>
-          <div class="product-admin-title">${item.data.nome}</div>
-          <div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap;">
-            <span class="badge type">${PRODUCT_TYPES[item.data.tipo] || PRODUCT_TYPES[DEFAULT_TYPE]}</span>
-            <span class="badge ${item.data.ativo ? 'active' : 'inactive'}">${item.data.ativo ? 'Ativo' : 'Inativo'}</span>
-          </div>
-        </div>
-        <div class="product-admin-actions">
-          <button class="btn-secondary" onclick="abrirModalEditar('${item.id}')">Editar</button>
-          <button class="btn-action" onclick="toggleProduto('${item.id}', ${item.data.ativo})">${item.data.ativo ? 'Desativar' : 'Ativar'}</button>
-          <button class="btn-secondary" onclick="duplicarProduto('${item.id}')">Duplicar</button>
-          <button class="btn-danger" onclick="confirmarExclusao('${item.id}', '${item.data.nome}')">Excluir</button>
-        </div>
-      </div>
-      <div class="product-admin-meta">
-        <div><strong>Preço:</strong> ${formatCurrency(item.data.preco)}</div>
-        <div><strong>Renda:</strong> ${formatCurrency(item.data.renda)}</div>
-        <div><strong>Ciclo:</strong> ${item.data.ciclo} dias</div>
-        <div><strong>Compras:</strong> ${item.data.quantidadeCompras}</div>
-      </div>
-    `;
-    adminList.appendChild(card);
-  });
-}
-
-async function adicionarProduto(){
-  if (!requireAdmin()) return;
-
-  const nameField = document.getElementById('productName');
-  const priceField = document.getElementById('productPrice');
-  const incomeField = document.getElementById('productIncome');
-  const cycleField = document.getElementById('productCycle');
-  const typeField = document.getElementById('productType');
-  const imageField = document.getElementById('productImage');
-
-  const nome = nameField.value.trim();
-  const preco = Number(priceField.value);
-  const renda = Number(incomeField.value);
-  const ciclo = Number(cycleField.value);
-  const tipo = typeField.value;
-  const imagem = imageField.value.trim() || 'https://via.placeholder.com/480x320/667eea/FFFFFF?text=Produto';
-
-  if (!nome || preco <= 0 || renda < 0 || ciclo <= 0){
-    mostrarErro('Preencha todos os campos corretamente.');
-    return;
-  }
-
-  const button = document.getElementById('createProductButton');
-  button.textContent = 'Salvando...';
-  button.disabled = true;
-
-  try {
-    await window.SistemaAuth.db.collection('produtos').add({
-      nome,
-      preco,
-      renda,
-      rendaDiaria: renda,
-      ciclo,
-      tipo,
-      imagem,
-      ativo: true,
-      quantidadeCompras: 0,
-      criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp(),
-      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    mostrarSucesso('Produto criado com sucesso.');
-    resetCreateForm();
-  } catch(error){
-    console.error(error);
-    mostrarErro('Erro ao criar produto: ' + error.message);
-  } finally {
-    button.textContent = 'Adicionar produto';
-    button.disabled = false;
-  }
-}
-
-function resetCreateForm(){
-  document.getElementById('productName').value = '';
-  document.getElementById('productPrice').value = '';
-  document.getElementById('productIncome').value = '';
-  document.getElementById('productCycle').value = '';
-  document.getElementById('productType').value = DEFAULT_TYPE;
-  document.getElementById('productImage').value = '';
-}
-
-async function abrirModalEditar(productId){
-  if (!requireAdmin()) return;
-  const snapshot = await window.SistemaAuth.db.collection('produtos').doc(productId).get();
-  if (!snapshot.exists){
-    mostrarErro('Produto não encontrado para edição.');
-    return;
-  }
-
-  const product = getProductValue(snapshot.data());
-  currentEditProductId = productId;
-  document.getElementById('modalTitle').textContent = 'Editar produto';
-  document.getElementById('editProductName').value = product.nome;
-  document.getElementById('editProductPrice').value = product.preco;
-  document.getElementById('editProductIncome').value = product.renda;
-  document.getElementById('editProductCycle').value = product.ciclo;
-  document.getElementById('editProductType').value = product.tipo;
-  document.getElementById('editProductImage').value = product.imagem;
-  document.getElementById('editProductActive').value = product.ativo ? 'true' : 'false';
-  atualizarPreviewImagem(product.imagem);
-  abrirModal();
-}
-
-function abrirModal(){
-  isModalOpen = true;
-  document.getElementById('productModalOverlay').classList.add('active');
-}
-
-function fecharModal(){
-  isModalOpen = false;
-  document.getElementById('productModalOverlay').classList.remove('active');
-  currentEditProductId = null;
-}
-
-function atualizarPreviewImagem(url){
-  const preview = document.getElementById('modalImagePreview');
-  if (!url){
-    preview.innerHTML = '<span>Nenhuma imagem selecionada</span>';
-    return;
-  }
-  preview.innerHTML = `<img src="${url}" alt="Preview da imagem" onerror="this.src='https://via.placeholder.com/480x320/667eea/FFFFFF?text=Imagem+inválida'" />`;
-}
-
-document.getElementById('editProductImage').addEventListener('input', event => {
-  atualizarPreviewImagem(event.target.value.trim());
-});
-
-async function salvarProdutoEditado(){
-  if (!requireAdmin()) return;
-  if (!currentEditProductId){
-    mostrarErro('Nenhum produto selecionado para salvar.');
-    return;
-  }
-
-  const nome = document.getElementById('editProductName').value.trim();
-  const preco = Number(document.getElementById('editProductPrice').value);
-  const renda = Number(document.getElementById('editProductIncome').value);
-  const ciclo = Number(document.getElementById('editProductCycle').value);
-  const tipo = document.getElementById('editProductType').value;
-  const imagem = document.getElementById('editProductImage').value.trim() || 'https://via.placeholder.com/480x320/667eea/FFFFFF?text=Produto';
-  const ativo = document.getElementById('editProductActive').value === 'true';
-
-  if (!nome || preco <= 0 || renda < 0 || ciclo <= 0){
-    mostrarErro('Preencha todos os campos de edição corretamente.');
-    return;
-  }
-
-  const saveButton = document.getElementById('saveProductButton');
-  saveButton.textContent = 'Salvando...';
-  saveButton.disabled = true;
-
-  try {
-    await window.SistemaAuth.db.collection('produtos').doc(currentEditProductId).update({
-      nome,
-      preco,
-      renda,
-      rendaDiaria: renda,
-      ciclo,
-      tipo,
-      imagem,
-      ativo,
-      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
-    });
-    mostrarSucesso('Produto atualizado com sucesso.');
-    fecharModal();
-  } catch(error){
-    console.error(error);
-    mostrarErro('Erro ao salvar produto: ' + error.message);
-  } finally {
-    saveButton.textContent = 'Salvar alterações';
-    saveButton.disabled = false;
-  }
-}
-
-function confirmarExclusao(productId, productName){
-  if (!requireAdmin()) return;
-  const confirmed = confirm(`Tem certeza que deseja excluir "${productName}"? Esta ação não pode ser desfeita.`);
-  if (!confirmed) return;
-  excluirProduto(productId);
-}
-
-async function excluirProduto(productId){
-  if (!requireAdmin()) return;
-  try {
-    await window.SistemaAuth.db.collection('produtos').doc(productId).delete();
-    mostrarSucesso('Produto excluído com sucesso.');
-  } catch(error){
-    console.error(error);
-    mostrarErro('Erro ao excluir produto: ' + error.message);
-  }
-}
-
-async function toggleProduto(productId, currentStatus){
-  if (!requireAdmin()) return;
-  try {
-    await window.SistemaAuth.db.collection('produtos').doc(productId).update({
-      ativo: !currentStatus,
-      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
-    });
-    mostrarSucesso(`Produto ${currentStatus ? 'desativado' : 'ativado'} com sucesso.`);
-  } catch(error){
-    console.error(error);
-    mostrarErro('Erro ao atualizar status: ' + error.message);
-  }
-}
-
-async function duplicarProduto(productId){
-  if (!requireAdmin()) return;
-  try {
-    const snapshot = await window.SistemaAuth.db.collection('produtos').doc(productId).get();
-    if (!snapshot.exists){
-      mostrarErro('Produto não encontrado para duplicar.');
-      return;
-    }
-    const product = getProductValue(snapshot.data());
-    await window.SistemaAuth.db.collection('produtos').add({
-      ...product,
-      nome: product.nome + ' (Cópia)',
-      ativo: false,
-      quantidadeCompras: 0,
-      criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp(),
-      atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
-    });
-    mostrarSucesso('Produto duplicado com sucesso.');
-  } catch(error){
-    console.error(error);
-    mostrarErro('Erro ao duplicar produto: ' + error.message);
-  }
-}
-
-async function comprarProduto(id, nome, preco, renda, ciclo){
-  try {
-    if (!firebase.auth().currentUser){
-      alert('Você precisa estar logado para comprar!');
+  // Verificar autenticação diretamente com Firebase
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) {
+      console.log('❌ Usuário não autenticado, redirecionando para login...');
       window.location.href = 'login.html';
       return;
     }
 
-    if (!uid){
-      alert('UID do usuário não disponível.');
+    console.log('✅ Usuário autenticado, carregando interface...');
+
+    // Dados do usuário
+    const dadosUsuario = {
+      uid: user.uid,
+      email: user.email,
+      telefone: user.phoneNumber || ''
+    };
+
+    // Inicializar variáveis globais
+    uid = dadosUsuario.uid;
+    usuarioAtual = dadosUsuario;
+
+    // Verificar se é admin
+    isAdmin = ADMINS.includes(dadosUsuario.email?.toLowerCase());
+    console.log('👤 Usuário:', dadosUsuario.email, 'Admin:', isAdmin);
+
+    // Mostrar/ocultar painel admin
+    if (isAdmin) {
+      document.getElementById('adminPanel').style.display = 'block';
+      carregarListaAdmin(); // Carregar lista de gerenciamento
+    }
+
+    // Inicializar saldos
+    carregarSaldoTotal();
+    carregarProdutos();
+
+    // Tornar body visível
+    document.body.style.visibility = "visible";
+  });
+});
+
+// 💰 CARREGAR SALDO TOTAL
+function carregarSaldoTotal() {
+  if (!uid) {
+    console.error("UID inválido:", uid);
+    return;
+  }
+
+  window.SistemaAuth.db
+    .collection("users")
+    .doc(uid)
+    .onSnapshot(doc => {
+      if (!doc.exists) {
+        console.error("Usuário não encontrado");
+        return;
+      }
+
+      const data = doc.data();
+
+      const saldoSaque =
+        Number(data.saldoSaque || 0);
+
+      const saldoDeposito =
+        Number(data.saldoDeposito || 0);
+
+      const saldoTotal =
+        saldoSaque + saldoDeposito;
+
+      console.log("UID:", uid);
+      console.log("Deposito:", saldoDeposito);
+      console.log("Saque:", saldoSaque);
+      console.log("Total:", saldoTotal);
+
+      document.getElementById("saldo").style.display = "block";
+
+      document.getElementById("saldo").textContent =
+        `Saldo: R$ ${saldoTotal.toFixed(2)}`;
+
+      document.getElementById("saldoTotal").textContent =
+        saldoTotal.toFixed(2);
+    });
+}
+
+// 💰 COMPRAR PRODUTO
+async function comprarProduto(id, nome, preco, renda, ciclo){
+  try {
+    // Verificar se usuário está autenticado
+    if (!firebase.auth().currentUser) {
+      alert("Você precisa estar logado para comprar!");
+      window.location.href = 'login.html';
       return;
     }
 
-    const userDocRef = window.SistemaAuth.db.collection('users').doc(uid);
-    const userDoc = await userDocRef.get();
-    if (!userDoc.exists){
-      throw new Error('Usuário não encontrado.');
+    // Verificar variáveis globais
+    if (!uid) {
+      alert("Erro: UID do usuário não disponível!");
+      return;
     }
 
-    const userData = userDoc.data();
-    const saldoDeposito = Number(userData.saldoDeposito || 0);
-    const saldoSaque = Number(userData.saldoSaque || 0);
+    // Ler saldos do Firestore para garantir valores atualizados
+    const userDoc = await window.SistemaAuth.db.collection("users").doc(uid).get();
+    const usuario = userDoc.data();
+
+    const saldoDeposito = Number(usuario.saldoDeposito || 0);
+    const saldoSaque = Number(usuario.saldoSaque || 0);
     const saldoTotal = saldoDeposito + saldoSaque;
 
-    if (saldoTotal < preco){
-      alert('Saldo insuficiente para comprar este produto.');
+    // Logs obrigatórios
+    console.log("Saldo Deposito:", saldoDeposito);
+    console.log("Saldo Saque:", saldoSaque);
+    console.log("Saldo Total:", saldoTotal);
+    console.log("Preço Produto:", preco);
+
+    // Validar compra usando saldo total
+    if (saldoTotal < preco) {
+      alert("Saldo insuficiente para comprar este produto.");
       return;
     }
 
-    if (!confirm(`Deseja comprar "${nome}" por ${formatCurrency(preco)}?\nSaldo atual: ${formatCurrency(saldoTotal)}`)){
+    if(!confirm(`Deseja comprar "${nome}" por R$ ${preco.toFixed(2)}?\nSaldo atual: R$ ${saldoTotal.toFixed(2)}`)){
       return;
     }
 
-    await window.SistemaAuth.db.runTransaction(async transaction => {
-      const userSnapshot = await transaction.get(userDocRef);
-      const saldoDepositoBanco = Number(userSnapshot.data().saldoDeposito || 0);
-      const saldoSaqueBanco = Number(userSnapshot.data().saldoSaque || 0);
+    await window.SistemaAuth.db.runTransaction(async t => {
+      const userRef = window.SistemaAuth.db.collection("users").doc(uid);
+      const userDoc = await t.get(userRef);
+
+      // Se documento não existe, criar com saldos zerados
+      if (!userDoc.exists) {
+        console.log("Documento não existe, criando...");
+        t.set(userRef, {
+          saldoDeposito: 0,
+          saldoSaque: 0,
+          email: firebase.auth().currentUser.email,
+          uid: uid,
+          dataCriacao: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+        });
+        throw new Error("Documento do usuário foi criado. Por favor, tente a compra novamente.");
+      }
+
+      // Ler corretamente os campos do Firestore
+      const saldoSaqueBanco = Number(userDoc.data().saldoSaque || 0);
+      const saldoDepositoBanco = Number(userDoc.data().saldoDeposito || 0);
+      const saldoTotalBanco = saldoSaqueBanco + saldoDepositoBanco;
+
+      // Logs adicionais do banco
+      console.log("Valores do Banco - saldoSaque:", saldoSaqueBanco, "saldoDeposito:", saldoDepositoBanco, "Total:", saldoTotalBanco);
+
+      // Validação final com valores do banco
+      if(preco > saldoTotalBanco) throw new Error("Saldo insuficiente");
+
+      // CORREÇÃO: Aplicar prioridade correta - primeiro saldoDeposito, depois saldoSaque
       let novoSaldoDeposito = saldoDepositoBanco;
       let novoSaldoSaque = saldoSaqueBanco;
 
-      if (saldoDepositoBanco >= preco){
-        novoSaldoDeposito -= preco;
+      if (saldoDepositoBanco >= preco) {
+        // 1. Consumir primeiro do saldoDeposito
+        novoSaldoDeposito = saldoDepositoBanco - preco;
       } else {
+        // 2. Se saldoDeposito não for suficiente, usar todo ele e descontar o restante de saldoSaque
         const restante = preco - saldoDepositoBanco;
         novoSaldoDeposito = 0;
         novoSaldoSaque = saldoSaqueBanco - restante;
       }
 
-      if (novoSaldoDeposito < 0) novoSaldoDeposito = 0;
+      // Garantir que nenhum saldo fique negativo
       if (novoSaldoSaque < 0) novoSaldoSaque = 0;
+      if (novoSaldoDeposito < 0) novoSaldoDeposito = 0;
 
-      transaction.update(userDocRef, {
-        saldoDeposito: novoSaldoDeposito,
-        saldoSaque: novoSaldoSaque
+      console.log("Saldos após desconto - saldoSaque:", novoSaldoSaque, "saldoDeposito:", novoSaldoDeposito);
+
+      // Atualizar CORRETAMENTE no Firestore
+      t.update(userRef, {
+        saldoSaque: novoSaldoSaque,
+        saldoDeposito: novoSaldoDeposito
       });
 
-      transaction.set(window.SistemaAuth.db.collection('compras').doc(), {
-        uid,
+      // Registrar a compra
+      t.set(window.SistemaAuth.db.collection("compras").doc(), {
+        uid: uid,
         produtoId: id,
         produto: nome,
         valor: preco,
         rendaDiaria: renda,
-        ciclo,
-        status: 'ativo',
+        ciclo: ciclo,
+        status: "ativo",
         dataCompra: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
       });
     });
 
+    const dataCompraISO = new Date().toISOString();
+    localStorage.setItem('ultimaCompraData', dataCompraISO);
     alert(`✅ Produto "${nome}" comprado com sucesso!`);
-  } catch(error){
-    console.error(error);
-    alert('Erro ao comprar produto: ' + error.message);
+    // O saldo será atualizado automaticamente pelo listener
+  } catch(e) {
+    alert("❌ Erro ao comprar produto: " + e.message);
+    console.error("Erro na compra:", e);
   }
 }
 
-function mostrarSucesso(mensagem){
-  const alertBox = document.getElementById('alertSuccess');
-  alertBox.textContent = mensagem;
-  alertBox.style.display = 'block';
-  document.getElementById('alertError').style.display = 'none';
-  setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
-}
+// 📦 CARREGAR PRODUTOS PARA USUÁRIOS
+function carregarProdutos(){
+  console.log("🔄 Iniciando carregamento de produtos...");
+  const container = document.getElementById('produtosContainer');
+  console.log("📦 Container encontrado:", container);
 
-function mostrarErro(mensagem){
-  const alertBox = document.getElementById('alertError');
-  alertBox.textContent = mensagem;
-  alertBox.style.display = 'block';
-  document.getElementById('alertSuccess').style.display = 'none';
-  setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
-}
-
-function mudarAba(tipo){
-  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tipo));
-  document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.toggle('active', panel.id === tipo));
-}
-
-function setupKeyboardShortcuts(){
-  window.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && isModalOpen){
-      fecharModal();
-    }
-  });
-}
-
-function carregarInterfaceAdmin(){
-  const adminPanel = document.getElementById('adminPanel');
-  if (isAdminUser()){
-    adminPanel.style.display = 'block';
-  } else {
-    adminPanel.style.display = 'none';
-  }
-}
-
-function inicializarPagina(){
-  setupKeyboardShortcuts();
-  carregarSaldoTotal();
-  carregarProdutos();
-}
-
-firebase.auth().onAuthStateChanged(user => {
-  if (!user){
-    window.location.href = 'login.html';
+  if (!container) {
+    console.error("❌ Container produtosContainer não encontrado!");
     return;
   }
 
-  uid = user.uid;
-  isAdmin = ADMINS_UID.includes(uid);
-  carregarInterfaceAdmin();
-  inicializarPagina();
-});
+  window.SistemaAuth.db.collection("produtos")
+    .where("ativo", "==", true)
+    .onSnapshot(async (snapshot) => {
+      console.log("📦 Snapshot recebida, documentos:", snapshot.size);
+      container.innerHTML = "";
+
+      if(snapshot.empty) {
+        console.log("📦 Nenhum produto encontrado, criando produtos de exemplo...");
+        await criarProdutosExemplo();
+        return;
+      }
+
+      // Ordenar produtos por data de criação (mais recentes primeiro) no frontend
+      const produtos = [];
+      snapshot.forEach((doc) => {
+        produtos.push({ id: doc.id, data: doc.data() });
+      });
+      produtos.sort((a, b) => (b.data.criadoEm?.toDate?.() || new Date(0)) - (a.data.criadoEm?.toDate?.() || new Date(0)));
+
+      produtos.forEach(({ id, data: p }) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        card.innerHTML = `
+          <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+          <div class="chip">${p.nome}</div>
+          <div class="valor">R$ ${p.preco.toFixed(2)}</div>
+          <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
+          <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
+          <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
+          <button onclick="comprarProduto('${id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo})">
+            🛒 Comprar Agora
+          </button>
+        `;
+
+        container.appendChild(card);
+      });
+    }, (error) => {
+      console.error("Erro ao carregar produtos:", error);
+      container.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
+    });
+}
+
+// 📦 CRIAR PRODUTOS DE EXEMPLO
+async function criarProdutosExemplo() {
+  console.log("🏗️ Criando produtos de exemplo...");
+
+  const produtosExemplo = [
+    {
+      nome: "Pacote Bronze",
+      preco: 50,
+      rendaDiaria: 5,
+      ciclo: 15,
+      imagem: "https://via.placeholder.com/300x200/FFD700/000000?text=Bronze",
+      ativo: true
+    },
+    {
+      nome: "Pacote Prata",
+      preco: 100,
+      rendaDiaria: 12,
+      ciclo: 20,
+      imagem: "https://via.placeholder.com/300x200/C0C0C0/000000?text=Prata",
+      ativo: true
+    },
+    {
+      nome: "Pacote Ouro",
+      preco: 200,
+      rendaDiaria: 25,
+      ciclo: 25,
+      imagem: "https://via.placeholder.com/300x200/FFD700/000000?text=Ouro",
+      ativo: true
+    },
+    {
+      nome: "Pacote Diamante",
+      preco: 500,
+      rendaDiaria: 50,
+      ciclo: 30,
+      imagem: "https://via.placeholder.com/300x200/B9F2FF/000000?text=Diamante",
+      ativo: true
+    }
+  ];
+
+  try {
+    const batch = window.SistemaAuth.db.batch();
+
+    for (const produto of produtosExemplo) {
+      const docRef = window.SistemaAuth.db.collection("produtos").doc();
+      batch.set(docRef, {
+        ...produto,
+        criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    await batch.commit();
+    console.log("✅ Produtos de exemplo criados com sucesso!");
+    console.log("🔄 Recarregando produtos...");
+
+    // Recarregar produtos após criar os exemplos
+    setTimeout(() => {
+      carregarProdutos();
+    }, 1000);
+
+  } catch (error) {
+    console.error("❌ Erro ao criar produtos de exemplo:", error);
+    const container = document.getElementById('produtosContainer');
+    if (container) {
+      container.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao criar produtos de exemplo</div>";
+    }
+  }
+}
+
+// 🎛️ ADICIONAR PRODUTO (ADMIN)
+async function adicionarProduto(){
+  const nome = document.getElementById("nome").value.trim();
+  const preco = Number(document.getElementById("preco").value);
+  const renda = Number(document.getElementById("renda").value);
+  const ciclo = Number(document.getElementById("ciclo").value);
+  const imagem = document.getElementById("imagem").value.trim();
+
+  // Limpar mensagens
+  document.getElementById("mensagemSucesso").style.display = "none";
+  document.getElementById("mensagemErro").style.display = "none";
+
+  if(!nome || !preco || !renda || !ciclo){
+    mostrarErro("Preencha todos os campos obrigatórios");
+    return;
+  }
+
+  if(preco <= 0 || renda < 0 || ciclo <= 0){
+    mostrarErro("Os valores devem ser maiores que zero");
+    return;
+  }
+
+  try {
+    await window.SistemaAuth.db.collection("produtos").add({
+      nome: nome,
+      preco: preco,
+      rendaDiaria: renda,
+      ciclo: ciclo,
+      imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
+      ativo: true,
+      criadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Limpa os campos
+    document.getElementById("nome").value = "";
+    document.getElementById("preco").value = "";
+    document.getElementById("renda").value = "";
+    document.getElementById("ciclo").value = "";
+    document.getElementById("imagem").value = "";
+
+    mostrarSucesso("✅ Produto adicionado com sucesso!");
+    carregarListaAdmin(); // Recarregar lista
+
+  } catch(e) {
+    mostrarErro("❌ Erro ao adicionar produto: " + e.message);
+    console.error("Erro:", e);
+  }
+}
+
+// 📋 CARREGAR LISTA ADMIN
+function carregarListaAdmin(){
+  const div = document.getElementById("adminLista");
+
+  window.SistemaAuth.db.collection("produtos")
+    .orderBy("criadoEm", "desc")
+    .onSnapshot((snapshot) => {
+      div.innerHTML = "";
+
+      if(snapshot.empty) {
+        div.innerHTML = "<div style='text-align: center; color: #666; padding: 40px;'>Nenhum produto cadastrado</div>";
+        return;
+      }
+
+      snapshot.forEach((doc) => {
+        const p = doc.data();
+        const linha = document.createElement("div");
+        linha.className = "produto-admin";
+
+        const statusClass = p.ativo ? "status-ativo" : "status-inativo";
+        const statusText = p.ativo ? "✓ Ativo" : "✗ Inativo";
+
+        linha.innerHTML = `
+          <div>
+            <b>${p.nome}</b>
+            <span class="status-badge ${statusClass}">${statusText}</span>
+          </div>
+          <div class="admin-info">
+            <strong>Preço:</strong> R$ ${p.preco.toFixed(2)}
+          </div>
+          <div class="admin-info">
+            <strong>Renda diária:</strong> R$ ${p.rendaDiaria.toFixed(2)}
+          </div>
+          <div class="admin-info">
+            <strong>Ciclo:</strong> ${p.ciclo} dias
+          </div>
+          <div class="admin-actions">
+            <button class="btn-editar" onclick="editarProduto('${doc.id}')">✏️ Editar</button>
+            ${p.ativo ?
+              `<button class="btn-desativar" onclick="desativarProduto('${doc.id}')">🚫 Desativar</button>` :
+              `<button class="btn-desativar" onclick="ativarProduto('${doc.id}')">✅ Ativar</button>`
+            }
+            <button class="btn-excluir" onclick="excluirProduto('${doc.id}')">🗑️ Excluir</button>
+          </div>
+        `;
+
+        div.appendChild(linha);
+      });
+    }, (error) => {
+      console.error("Erro ao carregar lista admin:", error);
+      div.innerHTML = "<div style='text-align: center; color: #c62828; padding: 40px;'>Erro ao carregar produtos</div>";
+    });
+}
+
+// ✏️ EDITAR PRODUTO (ADMIN)
+async function editarProduto(id){
+  try {
+    const docRef = window.SistemaAuth.db.collection("produtos").doc(id);
+    const docSnap = await docRef.get();
+    if(!docSnap.exists){
+      mostrarErro("Produto não encontrado.");
+      return;
+    }
+
+    const produto = docSnap.data();
+    const novoNome = prompt("Nome do Produto:", produto.nome);
+    if(novoNome === null) return;
+
+    const novoPreco = prompt("Preço:", produto.preco);
+    if(novoPreco === null) return;
+
+    const novaRenda = prompt("Renda diária:", produto.rendaDiaria);
+    if(novaRenda === null) return;
+
+    const novoCiclo = prompt("Ciclo (dias):", produto.ciclo);
+    if(novoCiclo === null) return;
+
+    const novaImagem = prompt("URL da imagem:", produto.imagem || "");
+    if(novaImagem === null) return;
+
+    if(!novoNome.trim() || Number(novoPreco) <= 0 || Number(novaRenda) < 0 || Number(novoCiclo) <= 0){
+      mostrarErro("Dados inválidos. Nome obrigatório e valores numéricos válidos são necessários.");
+      return;
+    }
+
+    await docRef.update({
+      nome: novoNome.trim(),
+      preco: Number(novoPreco),
+      rendaDiaria: Number(novaRenda),
+      ciclo: Number(novoCiclo),
+      imagem: novaImagem.trim() || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto"
+    });
+
+    mostrarSucesso("✅ Produto atualizado com sucesso!");
+  } catch(e) {
+    mostrarErro("❌ Erro ao editar produto: " + e.message);
+    console.error(e);
+  }
+}
+
+// 🚫 DESATIVAR PRODUTO (ADMIN)
+async function desativarProduto(id){
+  if(confirm("Tem certeza que deseja desativar este produto?")) {
+    try {
+      await window.SistemaAuth.db.collection("produtos").doc(id).update({ ativo: false });
+      mostrarSucesso("✅ Produto desativado!");
+    } catch(e) {
+      mostrarErro("❌ Erro: " + e.message);
+    }
+  }
+}
+
+// ✅ ATIVAR PRODUTO (ADMIN)
+async function ativarProduto(id){
+  try {
+    await window.SistemaAuth.db.collection("produtos").doc(id).update({ ativo: true });
+    mostrarSucesso("✅ Produto ativado!");
+  } catch(e) {
+    mostrarErro("❌ Erro: " + e.message);
+  }
+}
+
+// 🗑️ EXCLUIR PRODUTO (ADMIN)
+async function excluirProduto(id){
+  if(confirm("Tem certeza que deseja EXCLUIR este produto? Esta ação não pode ser desfeita!")) {
+    try {
+      await window.SistemaAuth.db.collection("produtos").doc(id).delete();
+      mostrarSucesso("✅ Produto excluído!");
+    } catch(e) {
+      mostrarErro("❌ Erro: " + e.message);
+    }
+  }
+}
+
+// 📢 FUNÇÕES DE MENSAGENS
+function mostrarSucesso(mensagem){
+  const msg = document.getElementById("mensagemSucesso");
+  msg.innerText = mensagem;
+  msg.style.display = "block";
+  document.getElementById("mensagemErro").style.display = "none";
+  setTimeout(() => { msg.style.display = "none"; }, 5000);
+}
+
+function mostrarErro(mensagem){
+  const msg = document.getElementById("mensagemErro");
+  msg.innerText = mensagem;
+  msg.style.display = "block";
+  document.getElementById("mensagemSucesso").style.display = "none";
+  setTimeout(() => { msg.style.display = "none"; }, 5000);
+}
+
+function logout() {
+  window.SistemaAuth.fazerLogout();
+}
 </script>
 
 </body>
