@@ -901,7 +901,6 @@ function carregarProdutos(){
 
   window.SistemaAuth.db.collection("produtos")
     .where("ativo", "==", true)
-    .orderBy("criadoEm", "asc")
     .onSnapshot(async (snapshot) => {
       console.log("📦 Snapshot recebida, documentos:", snapshot.size);
 
@@ -911,8 +910,17 @@ function carregarProdutos(){
         return;
       }
 
-      snapshot.forEach(async (doc) => {
-        const p = doc.data();
+      const produtosOrdenados = snapshot.docs
+        .map((doc) => ({ id: doc.id, data: doc.data() }))
+        .sort((a, b) => {
+          const aTs = a.data.criadoEm ? (typeof a.data.criadoEm.toMillis === 'function' ? a.data.criadoEm.toMillis() : new Date(a.data.criadoEm).getTime()) : 0;
+          const bTs = b.data.criadoEm ? (typeof b.data.criadoEm.toMillis === 'function' ? b.data.criadoEm.toMillis() : new Date(b.data.criadoEm).getTime()) : 0;
+          return aTs - bTs;
+        });
+
+      for (const produto of produtosOrdenados) {
+        const docId = produto.id;
+        const p = produto.data;
         const tipo = p.tipo || "eventos";
         console.log("Produto:", p.nome, "Tipo:", tipo);
 
@@ -934,7 +942,7 @@ function carregarProdutos(){
         let textoBot = '🛒 Comprar Agora';
         let avisoVip = '';
         if (tipo === 'vip') {
-          const jaComprou = await verificarJaComprou(doc.id);
+          const jaComprou = await verificarJaComprou(docId);
           if (jaComprou) {
             classeBot = ' style="background: #9E9E9E; cursor: not-allowed;" disabled';
             textoBot = '✓ Já Comprado';
@@ -955,7 +963,7 @@ function carregarProdutos(){
           <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
           <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
           ${avisoVip}
-          <button onclick="comprarProduto('${doc.id}', '${p.nome}', ${p.preco}, ${rendimento}, ${p.ciclo}, '${tipo}')"${classeBot}>
+          <button onclick="comprarProduto('${docId}', '${p.nome}', ${p.preco}, ${rendimento}, ${p.ciclo}, '${tipo}')"${classeBot}>
             ${textoBot}
           </button>
         `;
@@ -1118,7 +1126,7 @@ function carregarListaAdmin(){
   const div = document.getElementById("adminLista");
 
   window.SistemaAuth.db.collection("produtos")
-    .orderBy("criadoEm", "desc")
+    .orderBy("criadoEm", "asc")
     .onSnapshot((snapshot) => {
       div.innerHTML = "";
 
