@@ -750,7 +750,7 @@ async function comprarProduto(id, nome, preco, renda, ciclo, tipo){
     console.log("👤 Usuário VIP:", usuarioVipNivel, "| Necessário:", vipNecessario);
 
     if (vipNecessario > 0 && usuarioVipNivel < vipNecessario) {
-      alert(`❌ Este produto é VIP${vipNecessario}.\nSeu nível atual é VIP${usuarioVipNível}.\nVocê não possui acesso a este produto.`);
+      alert(`❌ Este produto é VIP${vipNecessario}.\nSeu nível atual é VIP${usuarioVipNivel}.\nVocê não possui acesso a este produto.`);
       return;
     }
 
@@ -901,6 +901,7 @@ function carregarProdutos(){
 
   window.SistemaAuth.db.collection("produtos")
     .where("ativo", "==", true)
+    .orderBy("criadoEm", "asc")
     .onSnapshot(async (snapshot) => {
       console.log("📦 Snapshot recebida, documentos:", snapshot.size);
 
