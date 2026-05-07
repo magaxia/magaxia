@@ -942,15 +942,19 @@ function carregarProdutos(){
           }
         }
 
+        const rendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? 0);
+        const labelRendimento = p.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária';
+        const totalRendimento = rendimento * Number(p.ciclo ?? 0);
+
         card.innerHTML = `
           <img src="${p.imagem || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
           <div class="chip">${p.nome}</div>
           <div class="valor">R$ ${p.preco.toFixed(2)}</div>
-          <div class="info">💰 Renda Diária: <span class="destaque">R$ ${p.rendaDiaria.toFixed(2)}</span></div>
+          <div class="info">💰 ${labelRendimento}: <span class="destaque">R$ ${rendimento.toFixed(2)}</span></div>
           <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
-          <div class="info">📈 Total: R$ ${(p.rendaDiaria * p.ciclo).toFixed(2)}</div>
+          <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
           ${avisoVip}
-          <button onclick="comprarProduto('${doc.id}', '${p.nome}', ${p.preco}, ${p.rendaDiaria}, ${p.ciclo}, '${tipo}')"${classeBot}>
+          <button onclick="comprarProduto('${doc.id}', '${p.nome}', ${p.preco}, ${rendimento}, ${p.ciclo}, '${tipo}')"${classeBot}>
             ${textoBot}
           </button>
         `;
@@ -1148,6 +1152,8 @@ function carregarListaAdmin(){
 
         const statusClass = p.ativo ? "status-ativo" : "status-inativo";
         const statusText = p.ativo ? "✓ Ativo" : "✗ Inativo";
+        const rendimentoAdmin = Number(p.valorRendimento ?? p.rendaDiaria ?? 0);
+        const labelAdmin = p.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda diária';
 
         linha.innerHTML = `
           <div>
@@ -1158,7 +1164,7 @@ function carregarListaAdmin(){
             <strong>Preço:</strong> R$ ${p.preco.toFixed(2)}
           </div>
           <div class="admin-info">
-            <strong>Renda diária:</strong> R$ ${p.rendaDiaria.toFixed(2)}
+            <strong>${labelAdmin}:</strong> R$ ${rendimentoAdmin.toFixed(2)}
           </div>
           <div class="admin-info">
             <strong>Ciclo:</strong> ${p.ciclo} dias
