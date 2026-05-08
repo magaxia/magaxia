@@ -1,19 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /system/logs/{logId} {
-      allow create: if request.auth != null;
-      allow read: if false;
-      allow update, delete: if false;
+
+    function isAdmin(email) {
+      return email in [
+        'admin@magaxia.com',
+        'adm@magaxia.com'
+      ];
     }
 
-    match /system/config {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.token.admin == true;
+    function getUserVipLevel(uid) {
+      let userDoc = get(/databases/$(database)/documents/users/$(uid));
+      return userDoc.exists ? (userDoc.data.vipNivel != null ? userDoc.data.vipNivel : userDoc.data.vipLevel) : 0;
     }
 
-    match /{document=**} {
-      allow read, write: if false;
+    function getProductRequiredVip(produtoId) {
+      let produtoDoc = get(/databases/$(database)/documents/produtos/$(produtoId));
+      return produtoDoc.exists ? (produtoDoc.data.requiredVip != null ? produtoDoc.data.requiredVip : 0) : 0;
+    }
+
+    match /produtos/{produtoId} {
+      allow read: if request.auth != null && resource.data.ativo == true;
+
+      allow create: if request.auth != null
+        && isAdmin(request.auth.token.email)
+        && request.resource.data.requiredVip is int
+        && request.resource.data.requiredVip >= 0
+        && request.resource.data.requiredVip <= 5;
+
+      allow update, delete: if request.auth != null
+        && isAdmin(request.auth.token.email);
+    }
+
+    match /compras/{compraId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.produtoId is string
+        && request.resource.data.valor is number
+        && request.resource.data.valor >= 0
+        && getProductRequiredVip(request.resource.data.produtoId) <= getUserVipLevel(request.auth.uid)
+        && get(/databases/$(database)/documents/produtos/$(request.resource.data.produtoId)).data.ativo == true;
     }
   }
 }
