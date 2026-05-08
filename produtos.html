@@ -189,6 +189,36 @@ h1{
   box-shadow: 0 20px 40px rgba(0,0,0,0.3);
 }
 
+.card.bloqueado{
+  opacity: 0.55;
+  pointer-events: none;
+  filter: grayscale(0.45);
+}
+
+.card.bloqueado .chip{
+  background: #999 !important;
+}
+
+button.bloqueado{
+  background: #9E9E9E !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+.vip-alert{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #fff4e5;
+  color: #bf360c;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #ffcc80;
+  font-weight: bold;
+  margin: 0 20px 15px;
+}
+
 .produto-img{
   width: 100%;
   height: 200px;
@@ -530,6 +560,7 @@ button:active{
       <option value="fixo">Fixo</option>
     </select>
     <div id="previewTipo" style="margin-top: 10px; font-weight: bold; color: #667eea;"></div>
+    <input id="requiredVip" placeholder="Nível VIP necessário (0-5)" type="number" min="0" max="5" step="1">
     <input id="imagem" placeholder="URL da Imagem (opcional)" type="url">
     <button class="btn-admin" onclick="adicionarProduto()">➕ Adicionar Produto</button>
   </div>
@@ -561,6 +592,7 @@ button:active{
         <option value="fixo">Fixo</option>
       </select>
       <div id="editPreviewTipo" style="margin-top: 10px; font-weight: bold; color: #667eea;"></div>
+      <input id="editRequiredVip" placeholder="Nível VIP necessário (0-5)" type="number" min="0" max="5" step="1">
       <input id="editImagem" placeholder="URL da Imagem" type="url">
       <button type="submit" class="btn-admin">Salvar</button>
     </form>
@@ -668,7 +700,7 @@ function carregarNivelVIP() {
       }
 
       const data = doc.data();
-      usuarioVipNivel = Number(data.vipNivel || 0);
+      usuarioVipNivel = Number(data.vipNivel || data.vipLevel || 0);
       console.log("👑 Nível VIP do usuário atualizado:", usuarioVipNivel);
     }, error => {
       console.error("❌ Erro ao carregar VIP:", error);
@@ -743,14 +775,14 @@ async function verificarJaComprou(produtoId) {
 }
 
 // 💰 COMPRAR PRODUTO
-async function comprarProduto(id, nome, preco, renda, ciclo, tipo){
+async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
   try {
     // 👑 VERIFICAR RESTRIÇÃO VIP
-    const vipNecessario = getVipProduto(nome);
+    const vipNecessario = Number(requiredVip || 0);
     console.log("👤 Usuário VIP:", usuarioVipNivel, "| Necessário:", vipNecessario);
 
     if (vipNecessario > 0 && usuarioVipNivel < vipNecessario) {
-      alert(`❌ Este produto é VIP${vipNecessario}.\nSeu nível atual é VIP${usuarioVipNivel}.\nVocê não possui acesso a este produto.`);
+      alert(`Seu nível VIP é insuficiente para comprar este produto.\nNecessário VIP ${vipNecessario}, você é VIP ${usuarioVipNivel}.`);
       return;
     }
 
@@ -925,28 +957,36 @@ function carregarProdutos(){
         console.log("Produto:", p.nome, "Tipo:", tipo);
 
         // 👑 VERIFICAR RESTRIÇÃO VIP
-        const vipNecessario = getVipProduto(p.nome);
+        const vipNecessario = Number((p.requiredVip !== undefined ? p.requiredVip : getVipProduto(p.nome)) || 0);
         console.log("  - VIP necessário:", vipNecessario, "| Usuário VIP:", usuarioVipNivel);
 
-        // 🚫 BLOQUEAR VISUALIZAÇÃO DE PRODUTOS VIP INDISPONÍVEIS
-        if (vipNecessario > 0 && usuarioVipNivel < vipNecessario) {
-          console.log("  ❌ Produto oculto (insuficiente VIP)");
-          return; // Não mostrar este produto
-        }
+        const podeComprarPorVIP = usuarioVipNivel >= vipNecessario;
+        const bloqueadoPorVIP = vipNecessario > 0 && !podeComprarPorVIP;
 
         const card = document.createElement('div');
-        card.className = 'card';
+        card.className = 'card' + (bloqueadoPorVIP ? ' bloqueado' : '');
 
         // Verificar se produto VIP já foi comprado
-        let classeBot = '';
         let textoBot = '🛒 Comprar Agora';
         let avisoVip = '';
-        if (tipo === 'vip') {
+        let botaoAtributos = '';
+        let botaoClass = '';
+
+        if (bloqueadoPorVIP) {
+          textoBot = `🔒 Bloqueado`;
+          avisoVip = `<div class="vip-alert">🔒 Necessário VIP ${vipNecessario}</div>`;
+          botaoAtributos = ' disabled';
+          botaoClass = 'bloqueado';
+        }
+
+        if (!bloqueadoPorVIP && tipo === 'vip') {
           const jaComprou = await verificarJaComprou(docId);
           if (jaComprou) {
-            classeBot = ' style="background: #9E9E9E; cursor: not-allowed;" disabled';
             textoBot = '✓ Já Comprado';
             avisoVip = '<div class="info" style="background: #e8f5e9; color: #2e7d32; padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 10px;">✓ Você já comprou este produto</div>';
+            botaoAtributos = ' disabled';
+            botaoClass = 'bloqueado';
+            card.className = 'card bloqueado';
             console.log("  ✓ Produto VIP já comprado por este usuário");
           }
         }
@@ -963,7 +1003,7 @@ function carregarProdutos(){
           <div class="info">⏰ Ciclo: ${p.ciclo} dias</div>
           <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
           ${avisoVip}
-          <button onclick="comprarProduto('${docId}', '${p.nome}', ${p.preco}, ${rendimento}, ${p.ciclo}, '${tipo}')"${classeBot}>
+          <button class="${botaoClass}" onclick="comprarProduto('${docId}', '${p.nome}', ${p.preco}, ${rendimento}, ${p.ciclo}, '${tipo}', ${vipNecessario})"${botaoAtributos}>
             ${textoBot}
           </button>
         `;
@@ -997,6 +1037,7 @@ async function criarProdutosExemplo() {
       preco: 50,
       rendaDiaria: 5,
       ciclo: 15,
+      requiredVip: 0,
       tipo: "eventos",
       imagem: "https://via.placeholder.com/300x200/FFD700/000000?text=Bronze",
       ativo: true
@@ -1006,6 +1047,7 @@ async function criarProdutosExemplo() {
       preco: 100,
       rendaDiaria: 12,
       ciclo: 20,
+      requiredVip: 2,
       tipo: "vip",
       imagem: "https://via.placeholder.com/300x200/C0C0C0/000000?text=Prata",
       ativo: true
@@ -1066,10 +1108,7 @@ async function adicionarProduto(){
   const preco = Number(document.getElementById("preco").value);
   const renda = Number(document.getElementById("renda").value);
   const ciclo = Number(document.getElementById("ciclo").value);
-  const tipo = document.getElementById("tipo").value;
-  const imagem = document.getElementById("imagem").value.trim();
-
-  console.log("Produto será salvo na aba:", tipo);
+    const requiredVip = Number(document.getElementById("requiredVip").value || 0);
 
   // Limpar mensagens
   document.getElementById("mensagemSucesso").style.display = "none";
@@ -1090,12 +1129,18 @@ async function adicionarProduto(){
     return;
   }
 
+  if (requiredVip < 0 || requiredVip > 5) {
+    mostrarErro("O nível VIP precisa ser entre 0 e 5");
+    return;
+  }
+
   try {
     await window.SistemaAuth.db.collection("produtos").add({
       nome: nome,
       preco: preco,
       rendaDiaria: renda,
       ciclo: ciclo,
+      requiredVip: requiredVip,
       tipo: tipo,
       imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
       ativo: true,
@@ -1179,6 +1224,9 @@ function carregarListaAdmin(){
             <strong>Ciclo:</strong> ${p.ciclo} dias
           </div>
           <div class="admin-info">
+            <strong>VIP necessário:</strong> VIP ${p.requiredVip || 0}
+          </div>
+          <div class="admin-info">
             <strong>Tipo:</strong> <span class="tipo-badge" style="background-color: ${getCorTipo(p.tipo || 'eventos')}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem;">${getNomeTipo(p.tipo || 'eventos')}</span>
           </div>
           <div class="admin-actions">
@@ -1216,6 +1264,7 @@ function editarProduto(id){
     document.getElementById('editPreco').value = produto.preco;
     document.getElementById('editRenda').value = produto.rendaDiaria;
     document.getElementById('editCiclo').value = produto.ciclo;
+    document.getElementById('editRequiredVip').value = produto.requiredVip || 0;
     document.getElementById('editTipo').value = produto.tipo || "eventos";
     document.getElementById('editImagem').value = produto.imagem || "";
     atualizarPreviewTipoEdit(); // Atualizar preview no modal
@@ -1236,11 +1285,16 @@ document.getElementById('editForm').addEventListener('submit', async e => {
   const preco = Number(document.getElementById('editPreco').value);
   const renda = Number(document.getElementById('editRenda').value);
   const ciclo = Number(document.getElementById('editCiclo').value);
+  const requiredVip = Number(document.getElementById('editRequiredVip').value || 0);
   const tipo = document.getElementById('editTipo').value;
   const imagem = document.getElementById('editImagem').value.trim();
 
   if(!nome || preco <= 0 || renda < 0 || ciclo <= 0){
     alert("Dados inválidos. Nome obrigatório e valores numéricos válidos são necessários.");
+    return;
+  }
+  if (requiredVip < 0 || requiredVip > 5) {
+    alert("O nível VIP precisa ser entre 0 e 5.");
     return;
   }
 
@@ -1250,6 +1304,7 @@ document.getElementById('editForm').addEventListener('submit', async e => {
       preco,
       rendaDiaria: renda,
       ciclo,
+      requiredVip: requiredVip,
       tipo,
       imagem: imagem || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto",
       atualizadoEm: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
