@@ -487,51 +487,48 @@ button:active{
 
 /* ABAS */
 .abas-categorias {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
   margin-bottom: 30px;
-  justify-content: center;
-  padding: 20px;
+  padding: 14px;
   background: rgba(255, 255, 255, 0.98);
   border-radius: 20px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.abas-categorias::-webkit-scrollbar {
-  display: none;
 }
 
 .botao-aba {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: 110px;
-  flex: 0 0 auto;
-  white-space: nowrap;
-  padding: 12px 14px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 4px;
+  font-size: 12px;
+  font-weight: 700;
   border: 2px solid transparent;
   background: linear-gradient(135deg, #f8f9fa, #e9ecef);
   color: #495057;
-  border-radius: 14px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   position: relative;
+  min-height: 42px;
+}
+
+.botao-aba span {
+  display: inline-block;
+  min-width: 0;
   overflow: hidden;
-  min-height: 70px;
+  text-overflow: ellipsis;
 }
 
 .botao-aba::before {
@@ -550,12 +547,12 @@ button:active{
 }
 
 .botao-aba:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
 .botao-aba:active {
-  transform: translateY(-1px);
+  transform: translateY(0);
 }
 
 /* BOTÕES ESPECÍFICOS POR CATEGORIA */
@@ -585,8 +582,8 @@ button:active{
 
 /* BOTÃO ATIVO */
 .botao-aba.active {
-  transform: scale(1.05);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  transform: scale(1.03);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
 }
 
 .botao-aba.active[data-categoria="diario"] {
@@ -616,33 +613,23 @@ button:active{
 /* RESPONSIVO PARA MOBILE */
 @media (max-width: 768px) {
   .abas-categorias {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    gap: 8px;
-    padding: 15px;
-    max-width: 100%;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 5px;
   }
 
   .botao-aba {
-    min-width: 105px;
-    font-size: 14px;
-    padding: 12px 12px;
-    min-height: 65px;
+    padding: 7px 2px;
+    font-size: 11px;
+    border-radius: 9px;
+    min-height: 40px;
   }
 }
 
-@media (max-width: 480px) {
-  .abas-categorias {
-    gap: 6px;
-    padding: 12px;
-  }
-
+@media (max-width: 420px) {
   .botao-aba {
-    min-width: 95px;
-    font-size: 13px;
-    padding: 10px 10px;
-    min-height: 60px;
+    font-size: 10px;
+    padding: 6px 1px;
+    min-height: 38px;
   }
 }
 
