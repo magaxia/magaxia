@@ -9,7 +9,7 @@ function getBeneficiosPorVip(vipNivel) {
                 bonusIndicacao: 4,
                 prioridadeSaque: 'leve até 60h',
                 produtos: 'Acesso a novos produtos e tarefas',
-                bonusMensal: null,
+                salarioMensal: 266,
                 bonusEventos: null,
                 beneficiosExtras: 'Aumento no limite de saque diário e taxa de saque reduzida'
             };
@@ -21,7 +21,7 @@ function getBeneficiosPorVip(vipNivel) {
                 bonusIndicacao: 10,
                 prioridadeSaque: 'saques até 48h',
                 produtos: 'Produtos com retornos maiores',
-                bonusMensal: null,
+                salarioMensal: 532,
                 bonusEventos: null,
                 beneficiosExtras: 'Participação em promoções exclusivas'
             };
@@ -33,9 +33,9 @@ function getBeneficiosPorVip(vipNivel) {
                 bonusIndicacao: 17,
                 prioridadeSaque: 'saques mais rápidos até 36h',
                 produtos: 'Acesso antecipado a novos recursos',
-                bonusMensal: 200,
+                salarioMensal: 798,
                 bonusEventos: null,
-                beneficiosExtras: 'Bônus mensal e vantagens avançadas'
+                beneficiosExtras: 'Salário mensal e vantagens avançadas'
             };
         case 4:
             return {
@@ -45,7 +45,7 @@ function getBeneficiosPorVip(vipNivel) {
                 bonusIndicacao: 25,
                 prioridadeSaque: 'alta prioridade até 24h',
                 produtos: 'Limite premium e recursos avançados',
-                bonusMensal: 350,
+                salarioMensal: 1064,
                 bonusEventos: 300,
                 beneficiosExtras: 'Bônus de eventos e vantagens premium'
             };
@@ -57,7 +57,7 @@ function getBeneficiosPorVip(vipNivel) {
                 bonusIndicacao: 30,
                 prioridadeSaque: 'prioridade máxima até 12h',
                 produtos: 'Acesso total a todos os recursos',
-                bonusMensal: 500,
+                salarioMensal: 1330,
                 bonusEventos: 350,
                 beneficiosExtras: 'Convites para promoções especiais e benefícios exclusivos VIP',
                 bonusExclusivo: 'Bônus exclusivo de R$10'
@@ -70,7 +70,7 @@ function getBeneficiosPorVip(vipNivel) {
                 bonusIndicacao: 0,
                 prioridadeSaque: 'prioridade padrão',
                 produtos: 'Produtos padrão',
-                bonusMensal: null,
+                salarioMensal: null,
                 bonusEventos: null,
                 beneficiosExtras: 'Acesso básico à plataforma e comissão padrão por indicação'
             };
@@ -126,7 +126,7 @@ function mostrarNivelVIP(usuario) {
 ⏱️ Prioridade de saque: ${beneficios.prioridadeSaque}
 💸 Bônus por indicação: ${formatarTexto(beneficios.bonusIndicacao, true)}
 ✨ Produtos e acessos: ${beneficios.produtos}
-${beneficios.bonusMensal ? `🎁 Bônus mensal: ${formatarTexto(beneficios.bonusMensal, true)}\n` : ''}${beneficios.bonusEventos ? `🎉 Bônus de eventos: ${formatarTexto(beneficios.bonusEventos, true)}\n` : ''}${beneficios.bonusExclusivo ? `🌟 ${beneficios.bonusExclusivo}\n` : ''}${beneficios.beneficiosExtras ? `ℹ️ ${beneficios.beneficiosExtras}` : ''}`;
+${beneficios.salarioMensal ? `💼 Salário mensal: ${formatarTexto(beneficios.salarioMensal, true)}\n` : ''}${beneficios.bonusEventos ? `🎉 Bônus de eventos: ${formatarTexto(beneficios.bonusEventos, true)}\n` : ''}${beneficios.bonusExclusivo ? `🌟 ${beneficios.bonusExclusivo}\n` : ''}${beneficios.beneficiosExtras ? `ℹ️ ${beneficios.beneficiosExtras}` : ''}`;
 
     const frase = getFraseMotivacional(nivel);
 
