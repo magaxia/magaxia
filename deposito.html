@@ -616,6 +616,222 @@ async function adicionarSaldo(usuarioId, valorComissao, nivel, usuarioOrigemId, 
     }
 }
 
+// =============================================
+// BÔNUS DE INDICAÇÃO POR VIP (FIXO, 1ª RECARGA APROVADA)
+// Regras: paga apenas 1 vez por indicado. Usa transação para evitar duplicados.
+// Registra em `indicacaoBonificacoes` e em `historicoIndicacoes` para auditoria.
+// =============================================
+
+async function gerarBonusIndicacaoVIP(deposito, depositoId) {
+  try {
+    const db = window.SistemaAuth.db;
+    const firebase = window.SistemaAuth.firebase;
+
+    if (!deposito || deposito.status !== 'aprovado') {
+      console.log('⏭️ Depósito inválido para bônus:', depositoId);
+      return;
+    }
+
+    const idIndicado = deposito.usuarioId || deposito.uid;
+    if (!idIndicado) {
+      console.warn('⏭️ Depósito sem usuário indicado, id:', depositoId);
+      return;
+    }
+
+    // Procurar indicação desse usuário (quem o indicou)
+    const indicacaoSnap = await db.collection('indicacoes').where('idIndicado', '==', idIndicado).limit(1).get();
+    if (indicacaoSnap.empty) {
+      console.log('⏭️ Nenhuma indicação encontrada para indicado:', idIndicado);
+      return;
+    }
+
+    const indicacao = indicacaoSnap.docs[0].data();
+    const idIndicador = indicacao.idIndicador;
+    if (!idIndicador) {
+      console.log('⏭️ Indicação sem idIndicador, pulando:', idIndicado);
+      return;
+    }
+
+    // Documento único para prevenir pagamentos duplicados: {indicador}_{indicado}
+    const bonusDocId = `${idIndicador}_${idIndicado}`;
+    const bonusDocRef = db.collection('indicacaoBonificacoes').doc(bonusDocId);
+
+    // Verificar se este NÃO é o PRIMEIRO depósito aprovado do indicado
+    // Se já existir qualquer outro depósito aprovado do indicado (exceto o atual), não pagamos o bônus
+    try {
+      const aprovadosSnap = await db.collection('depositos')
+        .where('usuarioId', '==', idIndicado)
+        .where('status', '==', 'aprovado')
+        .get();
+
+      let aprovadosOutros = 0;
+      aprovadosSnap.forEach(d => { if (d.id !== String(depositoId)) aprovadosOutros += 1; });
+
+      if (aprovadosOutros > 0) {
+        console.log('⏭️ Indicado já possui depósito(s) aprovado(s); bônus não aplicável:', idIndicado);
+        // Criar registro bloqueador caso não exista
+        const existing = await bonusDocRef.get();
+        if (!existing.exists) {
+          const now = window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp();
+          const indicadorDoc = await db.collection('users').doc(idIndicador).get();
+          const vipIndic = Number((indicadorDoc.exists && indicadorDoc.data().vipNivel) || 0);
+          await bonusDocRef.set({
+            idIndicador,
+            idIndicado,
+            depositoId: depositoId || null,
+            vipIndicador: vipIndic,
+            valor: 0,
+            data: now,
+            status: 'nao_aplicavel',
+            observacao: 'Indicado já possuía depósito aprovado antes desta recarga'
+          });
+
+          const histRef = db.collection('historicoIndicacoes').doc();
+          await histRef.set({
+            tipo: 'bonus_indicacao',
+            idIndicador,
+            idIndicado,
+            depositoId: depositoId || null,
+            vipIndicador: vipIndic,
+            valor: 0,
+            data: now,
+            status: 'nao_aplicavel',
+            notas: 'Indicado já possuía depósito aprovado anteriormente'
+          });
+        }
+        return;
+      }
+    } catch (errChk) {
+      console.warn('⚠️ Erro ao verificar depósitos aprovados anteriores do indicado, prosseguindo com cautela:', errChk);
+    }
+
+    // Tabela fixa de bonificação por VIP
+    const tabelaBonus = { 1: 4.00, 2: 10.00, 3: 17.00, 4: 25.00, 5: 30.00 };
+
+    // Transação: verifica existência, atualiza saldo do indicador e registra histórico atomically
+    await db.runTransaction(async (t) => {
+      const bonusDoc = await t.get(bonusDocRef);
+      if (bonusDoc.exists) {
+        console.log('⏭️ Bônus de indicação já registrado (prévio):', bonusDocId);
+        return;
+      }
+
+      const indicadorRef = db.collection('users').doc(idIndicador);
+      const indicadorDoc = await t.get(indicadorRef);
+      if (!indicadorDoc.exists) {
+        throw new Error('Indicador não encontrado: ' + idIndicador);
+      }
+
+      const indicador = indicadorDoc.data();
+      const vipIndicador = Number(indicador.vipNivel || 0);
+      const valorBonus = Number(tabelaBonus[vipIndicador] || 0);
+
+      // Mesmo que VIP seja 0 ou não tenha bônus, criamos um registro para bloquear futuras tentativas
+      const now = firebase.firestore.FieldValue.serverTimestamp();
+
+      if (valorBonus <= 0) {
+        // Registrar como "sem_bonus" para prevenir pagamentos futuros
+        t.set(bonusDocRef, {
+          idIndicador,
+          idIndicado,
+          depositoId: depositoId || null,
+          vipIndicador,
+          valor: 0,
+          data: now,
+          status: 'sem_bonus',
+          observacao: 'VIP sem bonificação ou nível 0'
+        });
+
+        // Registrar histórico de auditoria
+        const histRef = db.collection('historicoIndicacoes').doc();
+        t.set(histRef, {
+          tipo: 'bonus_indicacao',
+          idIndicador,
+          idIndicado,
+          depositoId: depositoId || null,
+          vipIndicador,
+          valor: 0,
+          data: now,
+          status: 'sem_bonus',
+          notas: 'VIP sem bonificação'
+        });
+
+        console.log('⚠️ Indicador sem bônus por VIP (registro criado para bloquear futuras tentativas):', idIndicador);
+        return;
+      }
+
+      // Atualizar saldo do indicador
+      const saldoDepositoAtual = Number(indicador.saldoDeposito || 0);
+      const novoSaldoDeposito = Number((saldoDepositoAtual + valorBonus).toFixed(2));
+
+      t.update(indicadorRef, {
+        saldoDeposito: novoSaldoDeposito,
+        updatedAt: new Date()
+      });
+
+      // Registrar documento de bônus (documento único)
+      t.set(bonusDocRef, {
+        idIndicador,
+        idIndicado,
+        depositoId: depositoId || null,
+        vipIndicador,
+        valor: valorBonus,
+        data: now,
+        status: 'pago',
+        aprovadoPor: 'sistema',
+        observacao: 'Bônus de indicação automático (1ª recarga aprovada)'
+      });
+
+      // Registrar histórico para auditoria
+      const historicoRef = db.collection('historicoIndicacoes').doc();
+      t.set(historicoRef, {
+        tipo: 'bonus_indicacao',
+        idIndicador,
+        idIndicado,
+        depositoId: depositoId || null,
+        vipIndicador,
+        valor: valorBonus,
+        data: now,
+        status: 'pago',
+        origem: 'sistema',
+        notas: 'Bônus pago automaticamente por VIP'
+      });
+      
+      // ===== Registrar no histórico financeiro (global) e no subcollection do usuário =====
+      const historicoFinanceiroRef = db.collection('historicoFinanceiro').doc();
+      t.set(historicoFinanceiroRef, {
+        usuarioId: idIndicador,
+        tipo: 'Bônus de Indicação',
+        valor: valorBonus,
+        idIndicado: idIndicado,
+        depositoId: depositoId || null,
+        vipIndicador: vipIndicador,
+        data: now,
+        status: 'pago',
+        origem: 'sistema',
+        notas: 'Bônus de indicação pago automaticamente (transação)'
+      });
+
+      const userHistRef = db.collection('users').doc(idIndicador).collection('historicoFinanceiro').doc();
+      t.set(userHistRef, {
+        tipo: 'Bônus de Indicação',
+        valor: valorBonus,
+        idIndicado: idIndicado,
+        depositoId: depositoId || null,
+        vipIndicador: vipIndicador,
+        data: now,
+        status: 'pago',
+        origem: 'sistema',
+        notas: 'Bônus de indicação automático'
+      });
+    });
+
+    console.log('✅ Bônus de indicação processado (VIP) para indicado:', idIndicado);
+  } catch (error) {
+    console.error('❌ Erro ao processar bônus de indicação VIP:', error);
+  }
+}
+
 // =============================
 // ATUALIZAR SALDO AUTOMATICAMENTE
 // =============================
@@ -674,6 +890,16 @@ function escutarDepositosAprovados() {
 
                     // Agora, gerar comissão se somos um indicador
                     await gerarComissaoIndicacao(deposito, depositoId);
+
+                    // === Novo: gerar bônus de indicação baseado no VIP do indicador (fixo por VIP)
+                    // Implementação aditiva: não altera o fluxo de depósitos existente.
+                    try {
+                      if (typeof gerarBonusIndicacaoVIP === 'function') {
+                        await gerarBonusIndicacaoVIP(deposito, depositoId);
+                      }
+                    } catch (e) {
+                      console.error('Erro ao gerar bônus de indicação VIP:', e);
+                    }
                 } catch (error) {
                     console.error("Erro ao processar depósito aprovado:", error);
                 }
