@@ -196,7 +196,6 @@ p {
 
 // Usando firebase-helper.js: auth e db já configurados
 
-const BONUS_EVENTO_CLOUD_FUNCTION = true;
 let uid = null;
 let valorAtual = 0;
 let saldoDeposito = 0;
@@ -263,11 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
     escutarDepositosAprovados();
 
     // Escutar compras de produtos da aba "Eventos" e processar bônus VIP automaticamente
-    if (!BONUS_EVENTO_CLOUD_FUNCTION) {
-      escutarBonusEventosDeCompra();
-    } else {
-      console.log('⚙️ Bônus Evento VIP via Cloud Function ativado; lógica frontend local desabilitada.');
-    }
+    escutarBonusEventosDeCompra();
   });
 });
 
