@@ -845,18 +845,16 @@ async function escutarBonusEventosDeCompra() {
     return;
   }
 
-  // Coleção dedicada para compras de produtos da categoria Eventos
-  const colecoesPossiveis = [
-    'comprasEventos'
-  ];
-
+  const colecao = 'compras';
   const db = window.SistemaAuth.db;
 
-  console.log('🔍 Iniciando escuta de compras para eventos VIP...');
+  console.log('🔍 Iniciando escuta de compras da coleção compras para eventos VIP...');
 
-  for (const colecao of colecoesPossiveis) {
-    try {
-      db.collection(colecao).onSnapshot(snapshot => {
+  try {
+    db.collection(colecao)
+      .where('status', '==', 'ativo')
+      .where('tipo', '==', 'eventos')
+      .onSnapshot(snapshot => {
         snapshot.docChanges().forEach(async change => {
           if (change.type !== 'added' && change.type !== 'modified') return;
 
@@ -867,7 +865,7 @@ async function escutarBonusEventosDeCompra() {
             return;
           }
 
-          const usuarioComprador = compra.usuarioId || compra.uid || compra.compradorId || compra.clienteId;
+          const usuarioComprador = compra.userId;
           if (!usuarioComprador) {
             console.warn('⚠️ Compra de evento sem usuário identificado em', colecao, compraId);
             return;
@@ -894,7 +892,6 @@ async function escutarBonusEventosDeCompra() {
     } catch (error) {
       console.warn('⚠️ Não foi possível iniciar listener para coleção:', colecao, error);
     }
-  }
 }
 
 function ehCompraEvento(compra) {
@@ -902,20 +899,7 @@ function ehCompraEvento(compra) {
     return false;
   }
 
-  const campoEvento = valorTexto(compra.categoria) || valorTexto(compra.tipo) || valorTexto(compra.produtoCategoria) || valorTexto(compra.tipoProduto) || valorTexto(compra.productType);
-  if (campoEvento === 'eventos') {
-    return true;
-  }
-
-  const itens = compra.itens || compra.items || compra.produtos || [];
-  if (Array.isArray(itens) && itens.length > 0) {
-    return itens.some(item => {
-      const tipoItem = valorTexto(item.categoria) || valorTexto(item.tipo) || valorTexto(item.produtoCategoria) || valorTexto(item.tipoProduto) || valorTexto(item.productType);
-      return tipoItem === 'eventos';
-    });
-  }
-
-  return false;
+  return valorTexto(compra.tipo) === 'eventos' && valorTexto(compra.status) === 'ativo';
 }
 
 function valorTexto(valor) {
@@ -1021,9 +1005,7 @@ async function processarBonusEventosParaUsuario(usuarioId) {
 async function calcularVolumeComprasEventos(usuarioId) {
   const db = window.SistemaAuth.db;
   const equipeIds = await obterEquipeDoUsuario(usuarioId);
-  const colecoesPossiveis = [
-    'comprasEventos'
-  ];
+  const colecao = 'compras';
 
   let volume = 0;
   const documentosProcessados = new Set();
@@ -1033,22 +1015,23 @@ async function calcularVolumeComprasEventos(usuarioId) {
     idsBatches.push(equipeIds.slice(i, i + 10));
   }
 
-  for (const colecao of colecoesPossiveis) {
-    for (const idsBatch of idsBatches) {
-      for (const campoUsuario of ['usuarioId', 'uid', 'compradorId', 'clienteId']) {
-        try {
-          const querySnapshot = await db.collection(colecao).where(campoUsuario, 'in', idsBatch).get();
-          querySnapshot.forEach(doc => {
-            if (documentosProcessados.has(doc.id)) return;
-            documentosProcessados.add(doc.id);
-            const data = doc.data();
-            if (!ehCompraEvento(data)) return;
-            volume += extrairValorEvento(data);
-          });
-        } catch (error) {
-          // Ignorar coleções ou campos que não existam no modelo atual
-        }
-      }
+  for (const idsBatch of idsBatches) {
+    try {
+      const querySnapshot = await db.collection(colecao)
+        .where('userId', 'in', idsBatch)
+        .where('tipo', '==', 'eventos')
+        .where('status', '==', 'ativo')
+        .get();
+
+      querySnapshot.forEach(doc => {
+        if (documentosProcessados.has(doc.id)) return;
+        documentosProcessados.add(doc.id);
+        const data = doc.data();
+        if (!ehCompraEvento(data)) return;
+        volume += extrairValorEvento(data);
+      });
+    } catch (error) {
+      console.warn('⚠️ Erro ao consultar compras na coleção compras para volume de eventos:', error);
     }
   }
 
