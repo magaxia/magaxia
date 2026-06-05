@@ -260,6 +260,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Escutar depósitos aprovados
     escutarDepositosAprovados();
+
+    // Escutar compras de produtos da aba "Eventos" e processar bônus VIP automaticamente
+    escutarBonusEventosDeCompra();
   });
 });
 
@@ -830,6 +833,300 @@ async function gerarBonusIndicacaoVIP(deposito, depositoId) {
   } catch (error) {
     console.error('❌ Erro ao processar bônus de indicação VIP:', error);
   }
+}
+
+// =============================
+// BÔNUS ESPECIAL VIP 4 / VIP 5 - EVENTOS
+// =============================
+
+async function escutarBonusEventosDeCompra() {
+  if (!window.SistemaAuth || !window.SistemaAuth.db) {
+    console.warn('⚠️ Sistema Auth não inicializado, não é possível escutar bônus de eventos.');
+    return;
+  }
+
+  const colecoesPossiveis = [
+    'compras',
+    'pedidos',
+    'vendas',
+    'orders',
+    'comprasEventos',
+    'eventosCompras'
+  ];
+
+  const db = window.SistemaAuth.db;
+
+  console.log('🔍 Iniciando escuta de compras para eventos VIP...');
+
+  for (const colecao of colecoesPossiveis) {
+    try {
+      db.collection(colecao).onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(async change => {
+          if (change.type !== 'added' && change.type !== 'modified') return;
+
+          const compra = change.doc.data();
+          const compraId = change.doc.id;
+
+          if (!compra || !ehCompraEvento(compra)) {
+            return;
+          }
+
+          const usuarioComprador = compra.usuarioId || compra.uid || compra.compradorId || compra.clienteId;
+          if (!usuarioComprador) {
+            console.warn('⚠️ Compra de evento sem usuário identificado em', colecao, compraId);
+            return;
+          }
+
+          console.log('🔔 Compra de evento detectada em', colecao, compraId, 'para usuário', usuarioComprador);
+
+          try {
+            await processarBonusEventosParaUsuario(usuarioComprador);
+
+            const uplines = await obterUplinesDoUsuario(usuarioComprador);
+            for (const uplineId of uplines) {
+              await processarBonusEventosParaUsuario(uplineId);
+            }
+          } catch (error) {
+            console.error('❌ Falha ao processar bônus de evento para compra', compraId, error);
+          }
+        });
+      }, error => {
+        console.warn(`⚠️ Erro ao escutar coleção ${colecao}:`, error);
+      });
+
+      console.log('✅ Listener ativado para coleção de compras:', colecao);
+    } catch (error) {
+      console.warn('⚠️ Não foi possível iniciar listener para coleção:', colecao, error);
+    }
+  }
+}
+
+function ehCompraEvento(compra) {
+  if (!compra || typeof compra !== 'object') {
+    return false;
+  }
+
+  const campoEvento = valorTexto(compra.categoria) || valorTexto(compra.tipo) || valorTexto(compra.produtoCategoria) || valorTexto(compra.tipoProduto) || valorTexto(compra.productType);
+  if (campoEvento === 'eventos') {
+    return true;
+  }
+
+  const itens = compra.itens || compra.items || compra.produtos || [];
+  if (Array.isArray(itens) && itens.length > 0) {
+    return itens.some(item => {
+      const tipoItem = valorTexto(item.categoria) || valorTexto(item.tipo) || valorTexto(item.produtoCategoria) || valorTexto(item.tipoProduto) || valorTexto(item.productType);
+      return tipoItem === 'eventos';
+    });
+  }
+
+  return false;
+}
+
+function valorTexto(valor) {
+  return typeof valor === 'string' ? valor.trim().toLowerCase() : null;
+}
+
+function valorNumerico(valor) {
+  if (typeof valor === 'number') return valor;
+  if (typeof valor === 'string') {
+    const numero = Number(valor.replace(',', '.'));
+    return Number.isFinite(numero) ? numero : 0;
+  }
+  return 0;
+}
+
+async function processarBonusEventosParaUsuario(usuarioId) {
+  const db = window.SistemaAuth.db;
+  const firebase = window.SistemaAuth.firebase;
+
+  if (!usuarioId) {
+    console.warn('⚠️ Usuário inválido para bônus de evento:', usuarioId);
+    return;
+  }
+
+  const metasVIP = [
+    { vip: 4, meta: 500, bonus: 175 },
+    { vip: 5, meta: 1000, bonus: 350 }
+  ];
+
+  const volumeAtingido = await calcularVolumeComprasEventos(usuarioId);
+
+  for (const config of metasVIP) {
+    const bonusDocId = `${usuarioId}_vip${config.vip}`;
+    const bonusDocRef = db.collection('bonusEventos').doc(bonusDocId);
+
+    try {
+      await db.runTransaction(async t => {
+        const bonusDoc = await t.get(bonusDocRef);
+        if (bonusDoc.exists && bonusDoc.data().status === 'pago') {
+          console.log(`⏭️ Bônus Evento VIP ${config.vip} já pago para usuário`, usuarioId);
+          return;
+        }
+
+        if (volumeAtingido < config.meta) {
+          console.log(`⏳ Meta VIP ${config.vip} ainda não atingida para usuário ${usuarioId}: R$ ${volumeAtingido.toFixed(2)} / R$ ${config.meta.toFixed(2)}`);
+          return;
+        }
+
+        const userRef = db.collection('users').doc(usuarioId);
+        const userDoc = await t.get(userRef);
+        if (!userDoc.exists) {
+          throw new Error('Usuário não encontrado para bônus de evento: ' + usuarioId);
+        }
+
+        const userData = userDoc.data();
+        const saldoAtual = Number(userData.saldoDeposito || 0);
+        const novoSaldo = Number((saldoAtual + config.bonus).toFixed(2));
+
+        t.update(userRef, {
+          saldoDeposito: novoSaldo
+        });
+
+        t.set(bonusDocRef, {
+          usuarioId: usuarioId,
+          vip: config.vip,
+          meta: config.meta,
+          volumeAtingido: Number(volumeAtingido.toFixed(2)),
+          bonus: config.bonus,
+          status: 'pago',
+          dataPagamento: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        const historicoRef = db.collection('historicoFinanceiro').doc();
+        t.set(historicoRef, {
+          usuarioId: usuarioId,
+          tipo: 'Bônus Evento VIP',
+          valor: config.bonus,
+          status: 'pago',
+          data: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+
+      console.log(`✅ Bônus Evento VIP ${config.vip} pago para usuário ${usuarioId}: R$ ${config.bonus}`);
+    } catch (error) {
+      console.error(`❌ Erro ao processar bônus Evento VIP ${config.vip} para usuário ${usuarioId}:`, error);
+    }
+  }
+}
+
+async function calcularVolumeComprasEventos(usuarioId) {
+  const db = window.SistemaAuth.db;
+  const equipeIds = await obterEquipeDoUsuario(usuarioId);
+  const colecoesPossiveis = [
+    'compras',
+    'pedidos',
+    'vendas',
+    'orders',
+    'comprasEventos',
+    'eventosCompras'
+  ];
+
+  let volume = 0;
+  const documentosProcessados = new Set();
+
+  const idsBatches = [];
+  for (let i = 0; i < equipeIds.length; i += 10) {
+    idsBatches.push(equipeIds.slice(i, i + 10));
+  }
+
+  for (const colecao of colecoesPossiveis) {
+    for (const idsBatch of idsBatches) {
+      for (const campoUsuario of ['usuarioId', 'uid', 'compradorId', 'clienteId']) {
+        try {
+          const querySnapshot = await db.collection(colecao).where(campoUsuario, 'in', idsBatch).get();
+          querySnapshot.forEach(doc => {
+            if (documentosProcessados.has(doc.id)) return;
+            documentosProcessados.add(doc.id);
+            const data = doc.data();
+            if (!ehCompraEvento(data)) return;
+            volume += extrairValorEvento(data);
+          });
+        } catch (error) {
+          // Ignorar coleções ou campos que não existam no modelo atual
+        }
+      }
+    }
+  }
+
+  console.log(`🔢 Volume de compras de Eventos para ${usuarioId}: R$ ${formatador.format(volume)}`);
+  return volume;
+}
+
+async function obterEquipeDoUsuario(usuarioId) {
+  const db = window.SistemaAuth.db;
+  const idsVisitados = new Set([usuarioId]);
+  const fila = [usuarioId];
+  const equipe = [usuarioId];
+
+  while (fila.length > 0) {
+    const batch = fila.splice(0, 10);
+    try {
+      const snapshot = await db.collection('indicacoes').where('idIndicador', 'in', batch).get();
+      snapshot.forEach(doc => {
+        const idIndicado = doc.data().idIndicado;
+        if (idIndicado && !idsVisitados.has(idIndicado)) {
+          idsVisitados.add(idIndicado);
+          fila.push(idIndicado);
+          equipe.push(idIndicado);
+        }
+      });
+    } catch (error) {
+      console.warn('⚠️ Erro ao obter equipe do usuário', usuarioId, error);
+    }
+  }
+
+  return equipe;
+}
+
+async function obterUplinesDoUsuario(usuarioId) {
+  const db = window.SistemaAuth.db;
+  const idsVisitados = new Set([usuarioId]);
+  const fila = [usuarioId];
+  const uplines = [];
+
+  while (fila.length > 0) {
+    const idAtual = fila.shift();
+    try {
+      const snapshot = await db.collection('indicacoes').where('idIndicado', '==', idAtual).get();
+      snapshot.forEach(doc => {
+        const idIndicador = doc.data().idIndicador;
+        if (idIndicador && !idsVisitados.has(idIndicador)) {
+          idsVisitados.add(idIndicador);
+          uplines.push(idIndicador);
+          fila.push(idIndicador);
+        }
+      });
+    } catch (error) {
+      console.warn('⚠️ Erro ao obter uplines do usuário', usuarioId, error);
+    }
+  }
+
+  return uplines;
+}
+
+function extrairValorEvento(compra) {
+  if (!compra || typeof compra !== 'object') {
+    return 0;
+  }
+
+  const itens = compra.itens || compra.items || compra.produtos || [];
+  if (Array.isArray(itens) && itens.length > 0) {
+    return itens.reduce((total, item) => {
+      if (!ehCompraEvento(item)) return total;
+      const quantidade = valorNumerico(item.quantidade) || valorNumerico(item.qtd) || 1;
+      const valorItem = valorNumerico(item.valor) || valorNumerico(item.preco) || valorNumerico(item.price) || valorNumerico(item.amount);
+      return total + valorItem * quantidade;
+    }, 0);
+  }
+
+  return (
+    valorNumerico(compra.valor) ||
+    valorNumerico(compra.total) ||
+    valorNumerico(compra.preco) ||
+    valorNumerico(compra.amount) ||
+    valorNumerico(compra.valorTotal) ||
+    0
+  );
 }
 
 // =============================
