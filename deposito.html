@@ -907,10 +907,10 @@ function valorTexto(valor) {
 }
 
 function valorNumerico(valor) {
-  if (typeof valor === 'number') return valor;
+  if (typeof valor === 'number') return valor > 0 ? valor : 0;
   if (typeof valor === 'string') {
     const numero = Number(valor.replace(',', '.'));
-    return Number.isFinite(numero) ? numero : 0;
+    return Number.isFinite(numero) && numero > 0 ? numero : 0;
   }
   return 0;
 }
@@ -923,6 +923,8 @@ async function processarBonusEventosParaUsuario(usuarioId) {
     console.warn('⚠️ Usuário inválido para bônus de evento:', usuarioId);
     return;
   }
+
+  console.log(`🔍 Analisando bônus Evento VIP para usuário ${usuarioId}`);
 
   const userRef = db.collection('users').doc(usuarioId);
   const userDoc = await userRef.get();
@@ -943,6 +945,7 @@ async function processarBonusEventosParaUsuario(usuarioId) {
     : [{ vip: 5, meta: 1000, bonus: 350 }];
 
   const volumeAtingido = await calcularVolumeComprasEventos(usuarioId);
+  console.log(`📊 Volume calculado para usuário ${usuarioId}: R$ ${formatador.format(volumeAtingido)}`);
 
   for (const config of metasVIP) {
     const bonusDocId = `${usuarioId}_vip${config.vip}`;
@@ -951,15 +954,18 @@ async function processarBonusEventosParaUsuario(usuarioId) {
     try {
       await db.runTransaction(async t => {
         const bonusDoc = await t.get(bonusDocRef);
-        if (bonusDoc.exists && bonusDoc.data().status === 'pago') {
-          console.log(`⏭️ Bônus Evento VIP ${config.vip} já pago para usuário`, usuarioId);
+        if (bonusDoc.exists) {
+          const statusExistente = bonusDoc.data().status || 'desconhecido';
+          console.log(`⏭️ Bônus Evento VIP ${config.vip} já registrado para usuário ${usuarioId} com status ${statusExistente}. Nenhum novo pagamento será feito.`);
           return;
         }
 
         if (volumeAtingido < config.meta) {
-          console.log(`⏳ Meta VIP ${config.vip} ainda não atingida para usuário ${usuarioId}: R$ ${volumeAtingido.toFixed(2)} / R$ ${config.meta.toFixed(2)}`);
+          console.log(`⏳ Meta VIP ${config.vip} não atingida para usuário ${usuarioId}: ${formatador.format(volumeAtingido)} / ${formatador.format(config.meta)}. Bônus não pago.`);
           return;
         }
+
+        console.log(`🎯 Meta VIP ${config.vip} atingida para usuário ${usuarioId}: ${formatador.format(volumeAtingido)} >= ${formatador.format(config.meta)}`);
 
         const userRef = db.collection('users').doc(usuarioId);
         const userDoc = await t.get(userRef);
@@ -1010,6 +1016,8 @@ async function calcularVolumeComprasEventos(usuarioId) {
   let volume = 0;
   const documentosProcessados = new Set();
 
+  console.log(`🔎 Calculando volume de compras de Eventos para usuário ${usuarioId}. Equipe total: ${equipeIds.length}`);
+
   const idsBatches = [];
   for (let i = 0; i < equipeIds.length; i += 10) {
     idsBatches.push(equipeIds.slice(i, i + 10));
@@ -1026,9 +1034,25 @@ async function calcularVolumeComprasEventos(usuarioId) {
       querySnapshot.forEach(doc => {
         if (documentosProcessados.has(doc.id)) return;
         documentosProcessados.add(doc.id);
+
         const data = doc.data();
-        if (!ehCompraEvento(data)) return;
-        volume += extrairValorEvento(data);
+        if (!data || !data.userId) {
+          console.warn('⚠️ Compra ignorada por falta de userId:', doc.id);
+          return;
+        }
+
+        if (!ehCompraEvento(data)) {
+          console.warn('⚠️ Compra ignorada por tipo/status inválidos:', doc.id);
+          return;
+        }
+
+        const valor = extrairValorEvento(data);
+        if (valor <= 0) {
+          console.warn('⚠️ Compra de evento ignorada por valor inválido/nulo/negativo:', doc.id, 'valorExtraido=', valor);
+          return;
+        }
+
+        volume += valor;
       });
     } catch (error) {
       console.warn('⚠️ Erro ao consultar compras na coleção compras para volume de eventos:', error);
@@ -1099,21 +1123,23 @@ function extrairValorEvento(compra) {
   const itens = compra.itens || compra.items || compra.produtos || [];
   if (Array.isArray(itens) && itens.length > 0) {
     return itens.reduce((total, item) => {
-      if (!ehCompraEvento(item)) return total;
+      if (!item || typeof item !== 'object') return total;
       const quantidade = valorNumerico(item.quantidade) || valorNumerico(item.qtd) || 1;
       const valorItem = valorNumerico(item.valor) || valorNumerico(item.preco) || valorNumerico(item.price) || valorNumerico(item.amount);
+      if (valorItem <= 0 || quantidade <= 0) return total;
       return total + valorItem * quantidade;
     }, 0);
   }
 
-  return (
+  const valorDireto =
     valorNumerico(compra.valor) ||
     valorNumerico(compra.total) ||
     valorNumerico(compra.preco) ||
     valorNumerico(compra.amount) ||
     valorNumerico(compra.valorTotal) ||
-    0
-  );
+    0;
+
+  return valorDireto > 0 ? valorDireto : 0;
 }
 
 // =============================
