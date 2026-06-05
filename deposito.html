@@ -845,13 +845,9 @@ async function escutarBonusEventosDeCompra() {
     return;
   }
 
+  // Coleção dedicada para compras de produtos da categoria Eventos
   const colecoesPossiveis = [
-    'compras',
-    'pedidos',
-    'vendas',
-    'orders',
-    'comprasEventos',
-    'eventosCompras'
+    'comprasEventos'
   ];
 
   const db = window.SistemaAuth.db;
@@ -944,10 +940,23 @@ async function processarBonusEventosParaUsuario(usuarioId) {
     return;
   }
 
-  const metasVIP = [
-    { vip: 4, meta: 500, bonus: 175 },
-    { vip: 5, meta: 1000, bonus: 350 }
-  ];
+  const userRef = db.collection('users').doc(usuarioId);
+  const userDoc = await userRef.get();
+  if (!userDoc.exists) {
+    console.warn('⚠️ Usuário não encontrado para verificar VIP:', usuarioId);
+    return;
+  }
+
+  const userData = userDoc.data();
+  const vipNivel = Number(userData.vipNivel || 0);
+  if (vipNivel !== 4 && vipNivel !== 5) {
+    console.log('⏭️ Usuário não é VIP 4 ou VIP 5:', usuarioId, vipNivel);
+    return;
+  }
+
+  const metasVIP = vipNivel === 4
+    ? [{ vip: 4, meta: 500, bonus: 175 }]
+    : [{ vip: 5, meta: 1000, bonus: 350 }];
 
   const volumeAtingido = await calcularVolumeComprasEventos(usuarioId);
 
@@ -1013,12 +1022,7 @@ async function calcularVolumeComprasEventos(usuarioId) {
   const db = window.SistemaAuth.db;
   const equipeIds = await obterEquipeDoUsuario(usuarioId);
   const colecoesPossiveis = [
-    'compras',
-    'pedidos',
-    'vendas',
-    'orders',
-    'comprasEventos',
-    'eventosCompras'
+    'comprasEventos'
   ];
 
   let volume = 0;
