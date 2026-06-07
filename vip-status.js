@@ -60,7 +60,7 @@ function getBeneficiosPorVip(vipNivel) {
                 salarioMensal: 1330,
                 bonusEventos: 350,
                 beneficiosExtras: 'Convites para promoções especiais e benefícios exclusivos VIP',
-                bonusExclusivo: 'Bônus exclusivo de R$10'
+                bonusExclusivo: 'Bônus de 10% Cashback na compra de produtos FIXO'
             };
         default:
             return {
