@@ -196,7 +196,6 @@ p {
 
 // Usando firebase-helper.js: auth e db já configurados
 
-const BONUS_EVENTO_CLOUD_FUNCTION = true;
 let uid = null;
 let valorAtual = 0;
 let saldoDeposito = 0;
@@ -262,15 +261,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Escutar depósitos aprovados
     escutarDepositosAprovados();
 
-    // Escutar compras FIXO para cashback VIP 5
-    escutarCashbackFixoDeCompra();
-
     // Escutar compras de produtos da aba "Eventos" e processar bônus VIP automaticamente
-    if (!BONUS_EVENTO_CLOUD_FUNCTION) {
-      escutarBonusEventosDeCompra();
-    } else {
-      console.log('⚙️ Bônus Evento VIP via Cloud Function ativado; lógica frontend local desabilitada.');
-    }
+    escutarBonusEventosDeCompra();
   });
 });
 
@@ -900,167 +892,6 @@ async function escutarBonusEventosDeCompra() {
     } catch (error) {
       console.warn('⚠️ Não foi possível iniciar listener para coleção:', colecao, error);
     }
-}
-
-function ehCompraFixo(compra) {
-  if (!compra || typeof compra !== 'object') {
-    return false;
-  }
-
-  return valorTexto(compra.tipo) === 'fixo' && valorTexto(compra.status) === 'ativo';
-}
-
-function extrairUsuarioCompra(compra) {
-  if (!compra || typeof compra !== 'object') {
-    return null;
-  }
-
-  return compra.userId || compra.usuarioId || compra.usuarioID || compra.idUsuario || null;
-}
-
-function extrairValorCompra(compra) {
-  if (!compra || typeof compra !== 'object') {
-    return 0;
-  }
-
-  return valorNumerico(compra.valor) || 0;
-}
-
-async function escutarCashbackFixoDeCompra() {
-  if (!window.SistemaAuth || !window.SistemaAuth.db) {
-    console.warn('⚠️ Sistema Auth não inicializado, não é possível escutar cashback fixo.');
-    return;
-  }
-
-  const colecao = 'compras';
-  const db = window.SistemaAuth.db;
-
-  console.log('🔍 Iniciando escuta de compras FIXO para cashback VIP 5...');
-
-  try {
-    db.collection(colecao)
-      .where('status', '==', 'ativo')
-      .where('tipo', '==', 'fixo')
-      .onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(async change => {
-          if (change.type !== 'added' && change.type !== 'modified') return;
-
-          const compra = change.doc.data();
-          const compraId = change.doc.id;
-
-          if (!ehCompraFixo(compra)) {
-            return;
-          }
-
-          const usuarioComprador = extrairUsuarioCompra(compra);
-          if (!usuarioComprador) {
-            console.warn('⚠️ Compra FIXO sem usuário identificado em', compraId);
-            return;
-          }
-
-          console.log('🔔 Compra FIXO detectada para cashback VIP 5:', compraId, 'usuário', usuarioComprador);
-
-          try {
-            await processarCashbackFixoParaUsuario(compraId, compra, usuarioComprador);
-          } catch (error) {
-            console.error('❌ Falha ao processar cashback fixo para compra', compraId, error);
-          }
-        });
-      }, error => {
-        console.warn(`⚠️ Erro ao escutar coleção ${colecao}:`, error);
-      });
-
-    console.log('✅ Listener ativado para cashback FIXO na coleção:', colecao);
-  } catch (error) {
-    console.warn('⚠️ Não foi possível iniciar listener de cashback fixo:', error);
-  }
-}
-
-async function processarCashbackFixoParaUsuario(compraId, compra, usuarioId) {
-  const db = window.SistemaAuth.db;
-  const firebase = window.SistemaAuth.firebase;
-
-  if (!compraId || !usuarioId) {
-    throw new Error('Compra ou usuário inválido para cashback fixo.');
-  }
-
-  const compraRef = db.collection('compras').doc(compraId);
-  const userRef = db.collection('users').doc(usuarioId);
-  const cashbackRef = db.collection('cashbackFixo').doc(compraId);
-
-  await db.runTransaction(async t => {
-    const compraDoc = await t.get(compraRef);
-    if (!compraDoc.exists) {
-      throw new Error('Compra não encontrada: ' + compraId);
-    }
-
-    const compraData = compraDoc.data();
-    if (!ehCompraFixo(compraData)) {
-      throw new Error('Compra não elegível para cashback fixo: ' + compraId);
-    }
-
-    const usuarioDoc = await t.get(userRef);
-    if (!usuarioDoc.exists) {
-      throw new Error('Usuário não encontrado: ' + usuarioId);
-    }
-
-    const userData = usuarioDoc.data();
-    const vipNivel = Number(userData.vipNivel || 0);
-    if (vipNivel !== 5) {
-      console.log('⏭️ Usuário não é VIP 5, cashback não será processado:', usuarioId, vipNivel);
-      return;
-    }
-
-    const cashbackDoc = await t.get(cashbackRef);
-    if (cashbackDoc.exists) {
-      console.log('⏭️ Cashback FIXO já processado anteriormente para compra:', compraId);
-      return;
-    }
-
-    const valorCompra = Number(extrairValorCompra(compraData).toFixed(2));
-    if (valorCompra <= 0) {
-      console.log('⏭️ Compra FIXO ignorada para cashback VIP 5 devido a valor inválido ou ausente:', compraId, valorCompra);
-      return;
-    }
-
-    const cashback = Number((valorCompra * 0.10).toFixed(2));
-    const saldoAtual = Number(userData.saldoDeposito || 0);
-    const novoSaldoDeposito = Number((saldoAtual + cashback).toFixed(2));
-
-    t.update(userRef, {
-      saldoDeposito: novoSaldoDeposito
-    });
-
-    const historicoFinanceiroRef = db.collection('historicoFinanceiro').doc();
-    t.set(historicoFinanceiroRef, {
-      usuarioId: usuarioId,
-      tipo: 'Cashback FIXO VIP 5',
-      valor: cashback,
-      status: 'pago',
-      data: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    const userHistRef = db.collection('users').doc(usuarioId).collection('historicoFinanceiro').doc();
-    t.set(userHistRef, {
-      tipo: 'Cashback FIXO VIP 5',
-      valor: cashback,
-      status: 'pago',
-      data: firebase.firestore.FieldValue.serverTimestamp(),
-      notas: 'Cashback automático para VIP 5'
-    });
-
-    t.set(cashbackRef, {
-      compraId,
-      usuarioId,
-      vip: 5,
-      valorCompra,
-      cashback,
-      status: 'pago',
-      dataPagamento: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    console.log(`✅ Cashback FIXO VIP 5 pago para compra ${compraId}: valorCompra R$ ${valorCompra}, cashback R$ ${cashback}`);
-  });
 }
 
 function ehCompraEvento(compra) {
