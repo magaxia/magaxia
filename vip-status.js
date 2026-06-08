@@ -125,7 +125,7 @@ function mostrarNivelVIP(usuario) {
 📊 Limite diário de saque: ${formatarTexto(limiteDiario, true)}
 ⏱️ Prioridade de saque: ${beneficios.prioridadeSaque}
 💸 Bônus por indicação: ${formatarTexto(beneficios.bonusIndicacao, true)}
-✨ Produtos e acessos: ${beneficios.produtos}
+✨ Produtos: ${beneficios.produtos}
 ${beneficios.salarioMensal ? `💼 Salário mensal: ${formatarTexto(beneficios.salarioMensal, true)}\n` : ''}${beneficios.bonusEventos ? `🎉 Bônus de eventos: ${formatarTexto(beneficios.bonusEventos, true)}\n` : ''}${beneficios.bonusExclusivo ? `🌟 ${beneficios.bonusExclusivo}\n` : ''}${beneficios.beneficiosExtras ? `ℹ️ ${beneficios.beneficiosExtras}` : ''}`;
 
     const frase = getFraseMotivacional(nivel);
