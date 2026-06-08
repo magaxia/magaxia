@@ -59,7 +59,7 @@ function getBeneficiosPorVip(vipNivel) {
                 produtos: 'Acesso total a todos os recursos e Produtos vip5',
                 salarioMensal: 1330,
                 bonusEventos: 350,
-                beneficiosExtras: 'Convites para promoções especiais e benefícios exclusivos VIP',
+                beneficiosExtras: 'Convites para promoções especiais Vip5',
                 bonusExclusivo: 'Bônus de 10% Cashback na compra de produtos FIXO'
             };
         default:
