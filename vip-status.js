@@ -8,7 +8,7 @@ function getBeneficiosPorVip(vipNivel) {
                 limiteDiario: 150,
                 bonusIndicacao: 4,
                 prioridadeSaque: 'leve até 60h',
-                produtos: 'Acesso a novos produtos e tarefas',
+                produtos: 'Acesso a produtos Vip1',
                 salarioMensal: 266,
                 bonusEventos: null,
                 beneficiosExtras: 'Aumento no limite de saque diário e taxa de saque reduzida'
@@ -20,7 +20,7 @@ function getBeneficiosPorVip(vipNivel) {
                 limiteDiario: 200,
                 bonusIndicacao: 10,
                 prioridadeSaque: 'saques até 48h',
-                produtos: 'Produtos com retornos maiores',
+                produtos: 'Acesso a produtos Vip2 ',
                 salarioMensal: 532,
                 bonusEventos: null,
                 beneficiosExtras: 'Participação em promoções exclusivas'
@@ -32,7 +32,7 @@ function getBeneficiosPorVip(vipNivel) {
                 limiteDiario: 300,
                 bonusIndicacao: 17,
                 prioridadeSaque: 'saques mais rápidos até 36h',
-                produtos: 'Acesso antecipado a novos recursos',
+                produtos: 'Acesso a produtos Vip3',
                 salarioMensal: 798,
                 bonusEventos: null,
                 beneficiosExtras: 'Salário mensal e vantagens avançadas'
@@ -44,7 +44,7 @@ function getBeneficiosPorVip(vipNivel) {
                 limiteDiario: 450,
                 bonusIndicacao: 25,
                 prioridadeSaque: 'alta prioridade até 24h',
-                produtos: 'Limite premium e recursos avançados',
+                produtos: 'Acesso a produtos Vip4',
                 salarioMensal: 1064,
                 bonusEventos: 300,
                 beneficiosExtras: 'Bônus de eventos e vantagens premium'
@@ -56,7 +56,7 @@ function getBeneficiosPorVip(vipNivel) {
                 limiteDiario: 600,
                 bonusIndicacao: 30,
                 prioridadeSaque: 'prioridade máxima até 12h',
-                produtos: 'Acesso total a todos os recursos',
+                produtos: 'Acesso total a todos os recursos e Produtos vip5',
                 salarioMensal: 1330,
                 bonusEventos: 350,
                 beneficiosExtras: 'Convites para promoções especiais e benefícios exclusivos VIP',
