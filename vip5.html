@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>🔒 Ativar Convite VIP 5</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="vip5.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="firebase-helper.js"></script>
+<script src="sistema-auth.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.FirebaseHelper && typeof window.FirebaseHelper.initializeFirebase === 'function') {
+      window.FirebaseHelper.initializeFirebase();
+    }
+    if (window.SistemaAuth && typeof window.SistemaAuth.inicializar === 'function') {
+      window.SistemaAuth.inicializar();
+    }
+    if (!window.db && window.FirebaseHelper && typeof window.FirebaseHelper.getDB === 'function') {
+      window.db = window.FirebaseHelper.getDB();
+    }
+    if (!window.auth && window.FirebaseHelper && typeof window.FirebaseHelper.getAuth === 'function') {
+      window.auth = window.FirebaseHelper.getAuth();
+    }
+    if (!window.usuarioAtual && window.SistemaAuth && typeof window.SistemaAuth.obterUsuarioLogado === 'function') {
+      window.usuarioAtual = window.SistemaAuth.obterUsuarioLogado();
+    }
+    if (window.SistemaAuth && typeof window.SistemaAuth.verificarLogin === 'function') {
+      window.SistemaAuth.verificarLogin(function(authenticated, usuario){
+        if (authenticated && usuario) {
+          window.usuarioAtual = usuario;
+        }
+      });
+    }
+  });
+</script>
+<script src="vip5-storage.js"></script>
+<script src="vip5.js"></script>
+</head>
+<body>
+<div class="vip5-activation-container">
+  <div class="vip5-activation-card">
+    <h1>🔒 Ativar Convite VIP 5</h1>
+    <p>Bem-vindo à ativação exclusiva do VIP 5. Insira abaixo o código recebido e garanta acesso imediato aos benefícios VIP.</p>
+
+    <div id="vip5-message" class="alert-message"></div>
+
+    <div class="alert-message success show" id="vip5-user-info" style="display:none; margin-bottom: 20px;">Você está logado.</div>
+
+    <form id="vip5-activate-form" class="vip5-activation-form">
+      <div class="form-group">
+        <label for="vip5-code-input">Digite seu código VIP</label>
+        <input id="vip5-code-input" type="text" placeholder="Ex: ABC123-DEF456-GHI789" required />
+      </div>
+      <div class="vip5-activation-footer">
+        <button class="btn-save" type="submit" style="background: #1e88e5;">Ativar Convite</button>
+        <span id="vip5-user-label" style="color:#475569; font-size:14px;">Aguardando login...</span>
+      </div>
+    </form>
+
+    <div class="vip5-benefits" id="vip5-benefits">
+      <h3>Benefícios VIP 5 ativados</h3>
+      <ul>
+        <li>Participação antecipada em promoções.</li>
+        <li>Acesso a ofertas exclusivas VIP 5.</li>
+        <li>Acesso a promoções ocultas para usuários comuns.</li>
+        <li>Acesso a campanhas futuras exclusivas.</li>
+        <li>Possibilidade de expansão para novos benefícios.</li>
+      </ul>
+    </div>
+
+    <div style="margin-top: 28px; color: #6b7280; font-size: 13px;">
+      <p>O código VIP é de uso único, associado ao seu ID de usuário e protegido por data de validade.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
