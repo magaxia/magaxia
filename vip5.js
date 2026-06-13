@@ -48,10 +48,23 @@ const Vip5Activation = {
       const result = await Vip5Storage.activateVipCode(code, this.user?.uid || null, this.user?.email || null);
       if (result.success) {
         this.showMessage("✅ Convite ativado com sucesso. Redirecionando para a área VIP...", "success");
-        document.getElementById("vip5-benefits").classList.add("show");
-        setTimeout(() => {
-          window.location.href = 'vip5-usuario.html';
-        }, 1500);
+        const benefitsEl = document.getElementById("vip5-benefits");
+        if (benefitsEl) benefitsEl.classList.add("show");
+
+        // Desabilita o botão de envio para evitar múltiplos cliques
+        try {
+          const formEl = event && event.target ? (event.target.closest ? event.target.closest('form') : null) : null;
+          const submitBtn = (formEl && formEl.querySelector('button[type="submit"]')) || document.querySelector('.btn-save');
+          if (submitBtn) submitBtn.disabled = true;
+        } catch (err) {
+          // silencioso — não bloquear fluxo se algo falhar ao buscar o botão
+        }
+
+        // Garante que o DOM seja pintado/atualizado antes do redirecionamento
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+
+        // Redireciona somente após todas as confirmações assíncronas terem sido concluídas
+        window.location.href = 'vip5-usuario.html';
       } else {
         const message = result.message || "Falha ao ativar o código.";
         this.showMessage(message, "error");
