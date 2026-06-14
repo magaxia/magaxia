@@ -76,11 +76,20 @@ const Vip5Activation = {
         window.location.href = 'vip5-usuario.html';
       } else {
         const message = result.message || "Falha ao ativar o código.";
-        this.showMessage(message, "error");
+        if (/quota|exceeded|resource-exhausted/i.test(message)) {
+          this.showMessage("Serviço temporariamente indisponível: limite de uso excedido. Tente novamente em alguns minutos.", "error");
+        } else {
+          this.showMessage(message, "error");
+        }
       }
     } catch (error) {
       console.error("Erro ao ativar VIP 5:", error);
-      this.showMessage(error.message || "Erro inesperado durante a ativação.", "error");
+      const errMsg = error && (error.message || error.code || '').toString();
+      if (/quota|exceeded|resource-exhausted/i.test(errMsg)) {
+        this.showMessage("Serviço temporariamente indisponível: limite de uso excedido. Tente novamente em alguns minutos.", "error");
+      } else {
+        this.showMessage(error.message || "Erro inesperado durante a ativação.", "error");
+      }
     }
   },
 

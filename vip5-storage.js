@@ -420,65 +420,96 @@ const Vip5Storage = (() => {
 
   async function fetchVipCodes() {
     const database = ensureDb();
-    await updateExpiredCodes();
+    // NOTE: Calling `updateExpiredCodes` from the client can trigger many
+    // reads/writes and quickly hit Firestore quotas in large projects.
+    // Prefer running expiration updates from a server-side / admin scheduled
+    // job. Here we run a limited client-side pass to avoid quota spikes.
+    try {
+      await updateExpiredCodes({ limit: 50 });
+    } catch (err) {
+      console.warn('updateExpiredCodes skipped/failed to avoid quota issues:', err);
+    }
 
-    const snapshot = await getCodesCollection()
-      .orderBy("createdAt", "desc")
-      .limit(250)
-      .get();
+    try {
+      const snapshot = await getCodesCollection()
+        .orderBy("createdAt", "desc")
+        .limit(250)
+        .get();
 
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn('fetchVipCodes failed (possible quota/read issue):', err);
+      return [];
+    }
   }
 
   async function fetchVipLogs(limit = 200) {
     const database = ensureDb();
-    const snapshot = await getLogsCollection()
-      .orderBy("createdAt", "desc")
-      .limit(limit)
-      .get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    try {
+      const snapshot = await getLogsCollection()
+        .orderBy("createdAt", "desc")
+        .limit(limit)
+        .get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.warn('fetchVipLogs failed (possible quota/read issue):', err);
+      return [];
+    }
   }
 
   async function fetchVipStats() {
-    const codes = await fetchVipCodes();
-    const total = codes.length;
-    return {
-      totalCreated: total,
-      totalUsed: codes.filter(item => item.status === "used").length,
-      totalActive: codes.filter(item => item.status === "active").length,
-      totalExpired: codes.filter(item => item.status === "expired").length,
-      totalRevoked: codes.filter(item => item.status === "revoked").length,
-    };
+    try {
+      const codes = await fetchVipCodes();
+      const total = codes.length;
+      return {
+        totalCreated: total,
+        totalUsed: codes.filter(item => item.status === "used").length,
+        totalActive: codes.filter(item => item.status === "active").length,
+        totalExpired: codes.filter(item => item.status === "expired").length,
+        totalRevoked: codes.filter(item => item.status === "revoked").length,
+      };
+    } catch (err) {
+      console.warn('fetchVipStats failed (possible quota/read issue):', err);
+      return { totalCreated: 0, totalUsed: 0, totalActive: 0, totalExpired: 0, totalRevoked: 0 };
+    }
   }
 
-  async function updateExpiredCodes() {
+  async function updateExpiredCodes(options = {}) {
     const database = ensureDb();
     const now = firebase.firestore.Timestamp.now();
+    const limit = Number(options.limit) || 50; // keep small by default
+
+    // Only read a limited set to avoid large client-side scans
     const snapshot = await getCodesCollection()
       .where("status", "==", "active")
+      .limit(limit)
       .get();
 
-    const promises = [];
+    // Use a batched write when available to reduce roundtrips
+    const batchSupported = typeof database.batch === 'function';
+    const batch = batchSupported ? database.batch() : null;
+    const updates = [];
+
     snapshot.forEach(doc => {
       const data = doc.data();
       const expiresAt = data.expiresAt;
       if (!expiresAt || !expiresAt.toDate) return;
       if (expiresAt.toDate() < new Date()) {
-        promises.push(doc.ref.update({ status: "expired" }));
-        promises.push(registerLog({
-          action: "expire",
-          codeId: doc.id,
-          code: data.code,
-          actorUid: null,
-          actorEmail: null,
-          targetUid: data.boundTo?.uid || null,
-          status: "expired",
-          message: "Código expirou automaticamente.",
-        }));
+        if (batch) {
+          batch.update(doc.ref, { status: "expired" });
+        } else {
+          updates.push(doc.ref.update({ status: "expired" }));
+        }
+        // Intentionally skip client-side log creation here to avoid extra writes
+        // Prefer server-side logging (Cloud Function) for heavy operations.
       }
     });
 
-    await Promise.all(promises);
+    if (batch) {
+      await batch.commit();
+    } else if (updates.length) {
+      await Promise.all(updates);
+    }
   }
 
   async function registerLog({ action, codeId, code, actorUid, actorEmail, targetUid, status, message, metadata }) {
@@ -495,7 +526,14 @@ const Vip5Storage = (() => {
       metadata: metadata || null,
       createdAt: firebase.firestore.Timestamp.now(),
     };
-    return getLogsCollection().add(payload);
+    try {
+      return await getLogsCollection().add(payload);
+    } catch (err) {
+      // Swallow quota/ write errors for logs to avoid breaking main flows.
+      // Log a warning locally and continue. Server-side logging is recommended.
+      console.warn('registerLog failed (logs are best-effort):', err);
+      return null;
+    }
   }
 
   function formatTimestamp(timestamp) {
