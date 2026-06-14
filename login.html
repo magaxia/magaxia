@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const displayName = (userData && (userData.nome || userData.email || userData.uid)) || 'usuário';
         mostrarMensagem(`✅ Bem-vindo, ${displayName}! Abrindo painel...`, 'success');
         setTimeout(() => {
-          window.location.href = 'vip5.html';
+          window.location.href = 'painel.html';
         }, 1000);
       } else {
         mostrarMensagem(err || 'Erro no login', 'error');
