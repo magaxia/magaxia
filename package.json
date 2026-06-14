@@ -1,0 +1,11 @@
+{
+  "name": "vip5-promocoes-emulator-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:emulator": "node emulator-promo-tests.js"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.0"
+  }
+}

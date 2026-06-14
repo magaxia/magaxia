@@ -2,7 +2,39 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAdmin(email) {
+    // ===== HELPER FUNCTIONS: VIP5 SYSTEM =====
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true
+        || (request.auth.token.roles is list && request.auth.token.roles.hasAny(['admin']))
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true
+      );
+    }
+
+    // get user doc data
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    // checks whether the authenticated user has any exact level present in the provided list
+    function userHasAnyExactLevel(listOfLevels) {
+      if (!isSignedIn()) { return false; }
+      let u = userDoc(request.auth.uid);
+      return u != null && (
+        (u.nivelVip != null && listOfLevels.hasAny([u.nivelVip])) ||
+        (u.vipLevel != null && listOfLevels.hasAny([u.vipLevel])) ||
+        (u.nivel != null && listOfLevels.hasAny([u.nivel])) ||
+        (u.vipLevels is list && listOfLevels.hasAny(u.vipLevels))
+      );
+    }
+
+    // ===== HELPER FUNCTIONS: PRODUCTOS SYSTEM (from firestore.rules (1)) =====
+    function isAdminByEmail(email) {
       return email in [
         'admin@magaxia.com',
         'adm@magaxia.com'
@@ -19,19 +51,171 @@ service cloud.firestore {
       return produtoDoc.exists ? (produtoDoc.data.requiredVip != null ? produtoDoc.data.requiredVip : 0) : 0;
     }
 
+    // default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Promotions (public and VIP)
+    match /vip5_promocoes/{promoId} {
+      allow get, list: if isAdmin() || (
+        resource.data.status != 'encerrada' &&
+        // not expired
+        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
+        // visible if public window OR vip window satisfied (for vip content)
+        (
+          (resource.data.dataPublica != null && request.time >= resource.data.dataPublica) ||
+          (isSignedIn() && resource.data.dataVip != null && request.time >= resource.data.dataVip && userHasAnyExactLevel([resource.data.dataVip == null ? '' : resource.data.vipLevel]))
+        )
+      );
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Hidden promotions: exact-level visibility only
+    match /vip5_promocoes_ocultas/{id} {
+      allow get, list: if isAdmin() || (
+        resource.data.status == 'ativa' &&
+        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
+        // must have vipLevels array and user must match one of them exactly
+        (resource.data.vipLevels is list && userHasAnyExactLevel(resource.data.vipLevels))
+      );
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Offers
+    match /vip5_ofertas/{id} {
+      allow get, list: if isAdmin() || (
+        resource.data.status != 'encerrada' &&
+        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
+        // if vipLevels present, require user to have an exact level in the list; otherwise public
+        ( !(resource.data.vipLevels is list) || resource.data.vipLevels.size() == 0 || userHasAnyExactLevel(resource.data.vipLevels) )
+      );
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Coupons
+    match /vip5_cupons/{id} {
+      allow get, list: if isAdmin() || (
+        resource.data.status == 'ativo' &&
+        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
+        (resource.data.vipLevels is list && userHasAnyExactLevel(resource.data.vipLevels))
+      );
+
+      // Allow updates by admin OR allow a user to 'use' a coupon by incrementing usage fields only for themselves
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        // quantity incremented by 1
+        (
+          (resource.data.quantidadeUtilizada is int && request.resource.data.quantidadeUtilizada == resource.data.quantidadeUtilizada + 1) ||
+          (resource.data.quantidadeUtilizada == null && request.resource.data.quantidadeUtilizada == 1)
+        ) &&
+        // usosPorUsuario for this uid incremented by 1 (or set to 1 if absent)
+        (
+          ((resource.data.usosPorUsuario[request.auth.uid] is int) && request.resource.data.usosPorUsuario[request.auth.uid] == resource.data.usosPorUsuario[request.auth.uid] + 1) ||
+          (!(resource.data.usosPorUsuario[request.auth.uid] is int) && request.resource.data.usosPorUsuario[request.auth.uid] == 1)
+        ) &&
+        // don't allow changing status/metadata in the same operation
+        request.resource.data.status == resource.data.status
+      );
+
+      allow create, delete: if isAdmin();
+    }
+
+    // Coupon codes index - admin only
+    match /vip5_coupon_codes/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Draws / Sorteios
+    match /vip5_sorteios/{id} {
+      allow get, list: if isAdmin() || (
+        resource.data.status != 'encerrado' &&
+        (resource.data.dataFim == null || request.time < resource.data.dataFim) &&
+        (resource.data.nivelVip == null || userHasAnyExactLevel([resource.data.nivelVip]))
+      );
+
+      // allow participant to add themselves (simple validation: participants list must add this uid and totalParticipantes incremented by 1)
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        // user is being added to participantes
+        (request.resource.data.participantes is list && !(resource.data.participantes is list && resource.data.participantes.hasAny([request.auth.uid])) && request.resource.data.participantes.hasAny([request.auth.uid])) &&
+        // totalParticipants incremented by 1
+        ((resource.data.totalParticipantes is int && request.resource.data.totalParticipantes == resource.data.totalParticipantes + 1) || (resource.data.totalParticipantes == null && request.resource.data.totalParticipantes == 1)) &&
+        // ensure status and nivel unchanged
+        request.resource.data.status == resource.data.status && request.resource.data.nivelVip == resource.data.nivelVip
+      );
+
+      allow create, delete: if isAdmin();
+    }
+
+    // Benefits
+    match /vip5_beneficios_temporarios/{id} {
+      allow get, list: if isAdmin() || (
+        resource.data.status == 'ativo' &&
+        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
+        (resource.data.nivelVip == null || userHasAnyExactLevel([resource.data.nivelVip]))
+      );
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    // User notifications
+    match /vip5_notificacoes/{id} {
+      allow get: if isSignedIn() && resource.data.usuarioId == request.auth.uid;
+      allow list: if isSignedIn() && request.query.where('usuarioId', '==', request.auth.uid);
+      allow update: if isSignedIn() &&
+        resource.data.usuarioId == request.auth.uid &&
+        request.resource.data.usuarioId == request.auth.uid &&
+        request.resource.data.lida == true &&
+        request.resource.data.lidaEm == request.time &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['lida', 'lidaEm']);
+      allow create, delete: if false;
+    }
+
+    // Levels
+    match /vip5_niveis/{id} {
+      allow get, list: if isAdmin() || isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Logs - admin and user-owned history
+    match /vip5_logs/{logId} {
+      allow get: if isAdmin() || (isSignedIn() && resource.data.actorUid == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && request.query.where('actorUid', '==', request.auth.uid));
+      allow create: if isAdmin() || (
+        isSignedIn() &&
+        request.resource.data.actorUid == request.auth.uid &&
+        request.resource.data.module == 'vip' &&
+        request.resource.data.submodule == 'usuario' &&
+        request.resource.data.action is string
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Fallbacks for other VIP collections - admin only
+    match /vip5_{doc=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // ===== PRODUCTOS SYSTEM COLLECTIONS (from firestore.rules (1)) =====
+    // Products collection
     match /produtos/{produtoId} {
       allow read: if request.auth != null && resource.data.ativo == true;
 
       allow create: if request.auth != null
-        && isAdmin(request.auth.token.email)
+        && isAdminByEmail(request.auth.token.email)
         && request.resource.data.requiredVip is int
         && request.resource.data.requiredVip >= 0
         && request.resource.data.requiredVip <= 5;
 
       allow update, delete: if request.auth != null
-        && isAdmin(request.auth.token.email);
+        && isAdminByEmail(request.auth.token.email);
     }
 
+    // Purchases collection
     match /compras/{compraId} {
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;
 

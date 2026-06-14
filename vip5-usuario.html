@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Área VIP do Usuário - VIP5</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="vip5.css" />
+  <link rel="stylesheet" href="vip5-usuario.css" />
+  <link rel="stylesheet" href="vip5-cards-premium.css" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="firebase-helper.js"></script>
+  <script src="sistema-auth.js"></script>
+  <script src="sistema-config.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.FirebaseHelper && typeof window.FirebaseHelper.initializeFirebase === 'function') {
+        window.FirebaseHelper.initializeFirebase();
+      }
+      if (window.SistemaAuth && typeof window.SistemaAuth.inicializar === 'function') {
+        window.SistemaAuth.inicializar();
+      }
+      if (!window.db && window.FirebaseHelper && typeof window.FirebaseHelper.getDB === 'function') {
+        window.db = window.FirebaseHelper.getDB();
+      }
+      if (!window.auth && window.FirebaseHelper && typeof window.FirebaseHelper.getAuth === 'function') {
+        window.auth = window.FirebaseHelper.getAuth();
+      }
+    });
+  </script>
+  <script src="vip5-usuario-storage.js"></script>
+  <script src="vip5-usuario.js"></script>
+</head>
+<body>
+  <main class="vip5-user-root">
+    <header class="vip5-user-header">
+      <div>
+        <h1>Área do Usuário VIP</h1>
+        <p>Os benefícios, cupons, sorteios e promoções são carregados automaticamente conforme seu nível VIP.</p>
+      </div>
+      <div class="vip5-user-actions">
+        <button id="vip5-refresh-btn" class="btn-save">🔄 Atualizar</button>
+        <a class="btn-save vip5-user-link" href="vip5.html">Ativar VIP 5</a>
+        <a class="btn-save vip5-user-link secondary" href="login.html">Login</a>
+      </div>
+    </header>
+
+    <div id="vip5-user-alert" class="alert-message"></div>
+
+    <section class="vip5-user-dashboard">
+      <aside class="vip5-user-sidebar">
+        <div class="vip5-user-sidebar-top">
+          <div>
+            <div class="vip5-user-sidebar-label">👑 PAINEL VIP</div>
+            <p>Área profissional do usuário VIP.</p>
+          </div>
+          <button id="vip5-sidebar-toggle" class="vip5-sidebar-toggle" type="button">☰</button>
+        </div>
+        <nav class="vip5-user-sidebar-nav">
+          <button type="button" class="vip5-user-sidebar-link active" data-vip5-tab="promocoes">🎯 Promoções VIP</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="ocultas">🔥 Promoções Ocultas</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="ofertas">💎 Ofertas VIP</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="cupons">🎫 Cupons VIP</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="meusCupons">🎟️ Meus Cupons</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="beneficios">🎁 Benefícios</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="sorteios">🎉 Sorteios</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="notificacoes">🔔 Notificações</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="historico">📜 Histórico</button>
+          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="conta">👤 Minha Conta</button>
+        </nav>
+      </aside>
+
+      <section class="vip5-user-main-content">
+        <div class="vip5-user-panel-header">
+          <div>
+            <h2>Bem-vindo à sua central VIP</h2>
+            <p>Selecione uma aba para navegar entre promoções, cupons, sorteios e sua conta.</p>
+          </div>
+          <div class="vip5-user-panel-buttons">
+            <button id="vip5-refresh-btn-secondary" class="btn-save">🔄 Atualizar</button>
+          </div>
+        </div>
+
+        <div class="vip5-user-card vip5-user-account-card vip5-user-header-card">
+          <div class="vip5-user-header-grid">
+            <div>
+              <span class="vip5-user-label">Nome</span>
+              <strong id="vip5-user-name">Carregando...</strong>
+            </div>
+            <div>
+              <span class="vip5-user-label">Email</span>
+              <strong id="vip5-user-email">Carregando...</strong>
+            </div>
+            <div>
+              <span class="vip5-user-label">Status</span>
+              <strong id="vip5-user-status">Carregando...</strong>
+            </div>
+            <div>
+              <span class="vip5-user-label">Níveis</span>
+              <strong id="vip5-user-levels">Carregando...</strong>
+            </div>
+            <div>
+              <span class="vip5-user-label">Ativado em</span>
+              <strong id="vip5-user-activated-at">—</strong>
+            </div>
+            <div>
+              <span class="vip5-user-label">Expira em</span>
+              <strong id="vip5-user-expires-at">—</strong>
+            </div>
+          </div>
+          <div class="vip5-user-badges" id="vip5-user-badges"></div>
+        </div>
+
+        <div class="vip5-user-tab-panels">
+          <div class="vip5-user-tab-pane active" data-tab="promocoes">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>Promoções VIP</h3>
+                <p>Explore todas as promoções disponíveis para o seu nível.</p>
+              </div>
+              <div class="vip5-tab-controls">
+                <input id="vip5-promocoes-search" type="search" placeholder="Pesquisar promoções" />
+                <select id="vip5-promocoes-filter">
+                  <option value="">Todos os status</option>
+                  <option value="ativa">Ativas</option>
+                  <option value="programada">Programadas</option>
+                </select>
+              </div>
+            </div>
+            <div id="vip5-user-promocoes" class="vip5-user-list vip5-user-list-empty">Carregando promoções...</div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="ocultas">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>Promoções Ocultas</h3>
+                <p>Conteúdo exclusivo para o seu nível VIP.</p>
+              </div>
+            </div>
+            <div id="vip5-user-ocultas" class="vip5-user-list vip5-user-list-empty">Carregando promoções ocultas...</div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="ofertas">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>Ofertas VIP</h3>
+                <p>Veja as oportunidades de compra e benefícios exclusivos.</p>
+              </div>
+              <div class="vip5-tab-controls">
+                <input id="vip5-ofertas-search" type="search" placeholder="Pesquisar ofertas" />
+              </div>
+            </div>
+            <div id="vip5-user-ofertas" class="vip5-user-list vip5-user-list-empty">Carregando ofertas...</div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="cupons">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>Cupons VIP</h3>
+                <p>Confira seus cupons ativos e use-os diretamente.</p>
+              </div>
+            </div>
+            <div id="vip5-user-cupons" class="vip5-user-list vip5-user-list-empty">Carregando cupons VIP...</div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="meusCupons">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>🎟️ Meus Cupons</h3>
+                <p>Adicione, copie e marque seus cupons VIP como utilizados.</p>
+              </div>
+            </div>
+            <div class="vip5-user-card vip5-user-coupon-card">
+              <form id="vip5-coupon-validate-form" class="vip5-user-coupon-form">
+                <input id="vip5-coupon-input" type="text" placeholder="Digite o código do cupom" autocomplete="off" />
+                <button type="submit" class="btn-save">Verificar cupom</button>
+              </form>
+              <div id="vip5-coupon-result" class="vip5-user-list-empty">Use um cupom para adicioná-lo ao painel.</div>
+            </div>
+            <div id="vip5-user-meus-cupons" class="vip5-user-list vip5-user-list-empty">Carregando seus cupons...</div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="beneficios">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>🎁 Benefícios</h3>
+                <p>Confira seus benefícios ativos e condições especiais.</p>
+              </div>
+            </div>
+            <div id="vip5-user-beneficios" class="vip5-user-list vip5-user-list-empty">Carregando benefícios...</div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="sorteios">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>🎉 Sorteios</h3>
+                <p>Participe dos sorteios VIP disponíveis para seu nível.</p>
+              </div>
+            </div>
+            <div id="vip5-user-sorteios" class="vip5-user-list vip5-user-list-empty">Carregando sorteios...</div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="notificacoes">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>🔔 Notificações</h3>
+                <p>Gerencie avisos não lidos e lidos em um único lugar.</p>
+              </div>
+            </div>
+            <div class="vip5-user-notification-groups">
+              <div>
+                <h4>Não lidas</h4>
+                <div id="vip5-user-notifications" class="vip5-user-list vip5-user-list-empty">Carregando notificações...</div>
+              </div>
+              <div>
+                <h4>Lidas</h4>
+                <div id="vip5-user-notifications-read" class="vip5-user-list vip5-user-list-empty">Nenhuma notificação lida ainda.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="historico">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>📜 Histórico</h3>
+                <p>Registros de ações, cupons usados e participações em sorteios.</p>
+              </div>
+            </div>
+            <div id="vip5-user-history" class="vip5-user-list vip5-user-list-empty">Carregando histórico...</div>
+          </div>
+
+          <div class="vip5-user-tab-pane" data-tab="conta">
+            <div class="vip5-tab-panel-header">
+              <div>
+                <h3>👤 Minha Conta</h3>
+                <p>Detalhes de usuário e estatísticas gerais do painel VIP.</p>
+              </div>
+            </div>
+            <div class="vip5-account-grid">
+              <div class="vip5-user-card vip5-user-account-card">
+                <h4>Perfil</h4>
+                <dl class="vip5-account-details">
+                  <div><dt>UID</dt><dd id="vip5-user-account-uid">—</dd></div>
+                  <div><dt>Email</dt><dd id="vip5-user-account-email">—</dd></div>
+                  <div><dt>Nível VIP</dt><dd id="vip5-user-account-level">—</dd></div>
+                  <div><dt>Ativado em</dt><dd id="vip5-user-account-activated">—</dd></div>
+                  <div><dt>Expira em</dt><dd id="vip5-user-account-expires">—</dd></div>
+                  <div><dt>Status</dt><dd id="vip5-user-account-status">—</dd></div>
+                </dl>
+              </div>
+              <div class="vip5-user-card vip5-account-summary-card">
+                <h4>Estatísticas</h4>
+                <div class="vip5-account-summary-grid">
+                  <div><span class="vip5-user-summary-value" id="vip5-user-count-promocoes">0</span><p>Promoções</p></div>
+                  <div><span class="vip5-user-summary-value" id="vip5-user-count-ofertas">0</span><p>Ofertas</p></div>
+                  <div><span class="vip5-user-summary-value" id="vip5-user-count-cupons">0</span><p>Cupons</p></div>
+                  <div><span class="vip5-user-summary-value" id="vip5-user-count-sorteios">0</span><p>Sorteios</p></div>
+                  <div><span class="vip5-user-summary-value" id="vip5-user-count-beneficios">0</span><p>Benefícios</p></div>
+                  <div><span class="vip5-user-summary-value" id="vip5-user-count-ocultas">0</span><p>Ocultas</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>
