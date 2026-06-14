@@ -52,6 +52,16 @@ window.SistemaAuth = {
         if (typeof value.toMillis === 'function') {
             return value.toMillis();
         }
+        if (typeof value === 'object') {
+            if (typeof value.seconds === 'number') {
+                const nanos = Number(value.nanoseconds || value._nanoseconds || 0);
+                return value.seconds * 1000 + Math.floor(nanos / 1000000);
+            }
+            if (typeof value._seconds === 'number') {
+                const nanos = Number(value._nanoseconds || 0);
+                return value._seconds * 1000 + Math.floor(nanos / 1000000);
+            }
+        }
         const date = new Date(value);
         return isNaN(date.getTime()) ? 0 : date.getTime();
     },
@@ -326,6 +336,7 @@ window.SistemaAuth = {
             ultimoLogin: new Date().toISOString(),
             ...usuario
         };
+        window.usuarioAtual = this.usuarioLogado;
 
         if (firebaseHelper && typeof firebaseHelper.criarNotificacaoSuspeita === 'function') {
             const agoraMs = Date.now();
@@ -509,7 +520,15 @@ window.SistemaAuth = {
                         uid: doc.id,
                         ...dadosAtualizados
                     };
+                    window.usuarioAtual = this.usuarioLogado;
                     localStorage.setItem("usuarioLogado", JSON.stringify(this.usuarioLogado));
+                    if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.saveToLocalStorage === 'function') {
+                        const expiresAtMs = this.parseTimestampToMs(this.usuarioLogado.vip5ExpiresAt || this.usuarioLogado.vipExpiresAt);
+                        const isVip = this.usuarioLogado.vip5Active === true || this.usuarioLogado.vipActive === true;
+                        if (isVip && expiresAtMs && expiresAtMs > Date.now()) {
+                            window.Vip5ExpirationManager.saveToLocalStorage(this.usuarioLogado.vip5Code || '', expiresAtMs, this.usuarioLogado.uid);
+                        }
+                    }
                     if (callback) callback(true, this.usuarioLogado);
                 })
                 .catch(error => {
@@ -523,11 +542,83 @@ window.SistemaAuth = {
         if (usuarioLocal) {
             try {
                 this.usuarioLogado = JSON.parse(usuarioLocal);
+                window.usuarioAtual = this.usuarioLogado;
+                window.SistemaAuth.usuarioLogado = this.usuarioLogado;
+                if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.saveToLocalStorage === 'function') {
+                    const expiresAtMs = this.parseTimestampToMs(this.usuarioLogado.vip5ExpiresAt || this.usuarioLogado.vipExpiresAt);
+                    const isVip = this.usuarioLogado.vip5Active === true || this.usuarioLogado.vipActive === true;
+                    if (isVip && expiresAtMs && expiresAtMs > Date.now()) {
+                        window.Vip5ExpirationManager.saveToLocalStorage(this.usuarioLogado.vip5Code || '', expiresAtMs, this.usuarioLogado.uid);
+                    }
+                }
                 if (callback) callback(true, this.usuarioLogado);
                 return true;
             } catch (e) {
                 console.warn("Erro ao parsear usuário local", e);
             }
+        }
+
+        if (this.auth && typeof this.auth.onAuthStateChanged === 'function') {
+            let resolved = false;
+            const timeoutId = setTimeout(() => {
+                if (resolved) return;
+                resolved = true;
+                unsubscribe();
+                if (callback) callback(false, null);
+            }, 3000);
+
+            const unsubscribe = this.auth.onAuthStateChanged((user) => {
+                if (resolved) return;
+                resolved = true;
+                clearTimeout(timeoutId);
+                unsubscribe();
+                if (!user) {
+                    if (callback) callback(false, null);
+                    return;
+                }
+
+                const uid = user.uid;
+                const email = user.email;
+                const telefone = user.phoneNumber;
+
+                if (!this.db) {
+                    console.warn("Firestore não inicializado para verificar login");
+                    if (callback) callback(false, null);
+                    return;
+                }
+
+                this.buscarUsuarioFirestore(uid, email, telefone)
+                    .then(doc => {
+                        if (!doc) {
+                            console.warn("Usuário não encontrado no Firestore durante verificarLogin:", uid);
+                            if (callback) callback(false, null);
+                            return;
+                        }
+
+                        const dadosAtualizados = doc.data();
+                        this.usuarioLogado = {
+                            uid: doc.id,
+                            ...dadosAtualizados
+                        };
+                        window.usuarioAtual = this.usuarioLogado;
+                        window.SistemaAuth.usuarioLogado = this.usuarioLogado;
+                        localStorage.setItem("usuarioLogado", JSON.stringify(this.usuarioLogado));
+                        if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.saveToLocalStorage === 'function') {
+                            const expiresAtMs = this.parseTimestampToMs(this.usuarioLogado.vip5ExpiresAt || this.usuarioLogado.vipExpiresAt);
+                            const isVip = this.usuarioLogado.vip5Active === true || this.usuarioLogado.vipActive === true;
+                            if (isVip && expiresAtMs && expiresAtMs > Date.now()) {
+                                window.Vip5ExpirationManager.saveToLocalStorage(this.usuarioLogado.vip5Code || '', expiresAtMs);
+                            }
+                        }
+                        if (callback) callback(true, this.usuarioLogado);
+                    })
+                    .catch(error => {
+                        console.warn("Erro ao buscar usuário do Firestore durante verificarLogin:", error);
+                        if (callback) callback(false, null);
+                    });
+            });
+
+            return true;
         }
 
         if (callback) callback(false, null);

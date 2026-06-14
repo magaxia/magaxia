@@ -167,14 +167,21 @@ const Vip5UsuarioPage = {
     this.activeLevel = this.getHighestLevel(this.levels);
     this.renderHeader();
 
-    // Verificar expiração do VIP antes de carregar dashboard
-    if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.checkExpiration === 'function') {
-      window.Vip5ExpirationManager.checkExpiration().then(() => {
-        this.loadDashboard();
-      }).catch(e => {
-        console.error('Erro ao verificar expiração:', e);
-        this.loadDashboard(); // Continuar mesmo se falhar
-      });
+    // Verificar expiração do VIP e sincronizar com Firestore antes de carregar dashboard
+    const runDashboard = () => this.loadDashboard();
+    if (window.Vip5ExpirationManager) {
+      const promises = [];
+      if (typeof window.Vip5ExpirationManager.syncWithFirestore === 'function') {
+        promises.push(window.Vip5ExpirationManager.syncWithFirestore().catch(e => {
+          console.error('Erro ao sincronizar VIP com Firestore:', e);
+        }));
+      }
+      if (typeof window.Vip5ExpirationManager.checkExpiration === 'function') {
+        promises.push(window.Vip5ExpirationManager.checkExpiration().catch(e => {
+          console.error('Erro ao verificar expiração:', e);
+        }));
+      }
+      Promise.all(promises).then(runDashboard).catch(() => runDashboard());
     } else {
       this.loadDashboard();
     }

@@ -52,7 +52,8 @@ const Vip5Activation = {
           const expiresAtMs = result.data?.expiresAt?.toDate?.().getTime?.() || 
                              (typeof result.data?.expiresAt?.toMillis === 'function' ? result.data.expiresAt.toMillis() : 
                              (typeof result.data?.expiresAt === 'number' ? result.data.expiresAt : Date.now() + 30 * 24 * 60 * 60 * 1000));
-          window.Vip5ExpirationManager.saveToLocalStorage(result.code, expiresAtMs);
+          const uid = this.user?.uid || window.SistemaAuth?.usuarioLogado?.uid || window.auth?.currentUser?.uid || null;
+          window.Vip5ExpirationManager.saveToLocalStorage(result.code, expiresAtMs, uid);
         }
 
         this.showMessage("✅ Convite ativado com sucesso. Redirecionando para a área VIP...", "success");

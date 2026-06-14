@@ -14,6 +14,7 @@ window.Vip5ExpirationManager = (() => {
   const STORAGE_KEY_ACTIVE = 'vip5_active';
   const STORAGE_KEY_EXPIRES = 'vip5_expires_at';
   const STORAGE_KEY_CODE = 'vip5_code';
+  const STORAGE_KEY_UID = 'vip5_uid';
   const STORAGE_KEY_TIMESTAMP = 'vip5_check_timestamp';
   const CHECK_INTERVAL = 10 * 1000; // Verifica a cada 10 segundos
   const FIRESTORE_SYNC_INTERVAL = 60 * 1000; // Sincroniza a cada 1 minuto
@@ -74,6 +75,15 @@ window.Vip5ExpirationManager = (() => {
     }
   }
 
+  function getLocalStorageUid() {
+    try {
+      return localStorage.getItem(STORAGE_KEY_UID) || null;
+    } catch (e) {
+      console.warn('Erro ao ler UID do localStorage:', e);
+      return null;
+    }
+  }
+
   /**
    * Verifica se VIP está ativo no localStorage
    */
@@ -89,6 +99,14 @@ window.Vip5ExpirationManager = (() => {
         return false;
       }
 
+      const storedUid = getLocalStorageUid();
+      const currentUid = getCurrentUserUid();
+      if (currentUid && storedUid && currentUid !== storedUid) {
+        console.warn('UID de VIP local não corresponde ao usuário autenticado. Limpeza local.');
+        clearLocalStorage();
+        return false;
+      }
+
       return isVipActive(expiresMs);
     } catch (e) {
       console.warn('Erro ao verificar VIP local:', e);
@@ -99,7 +117,7 @@ window.Vip5ExpirationManager = (() => {
   /**
    * Salva estado VIP no localStorage
    */
-  function saveToLocalStorage(code, expiresAtMs) {
+  function saveToLocalStorage(code, expiresAtMs, uid) {
     try {
       if (!Number.isFinite(expiresAtMs)) {
         throw new Error('expiresAtMs deve ser um número válido');
@@ -107,6 +125,9 @@ window.Vip5ExpirationManager = (() => {
       localStorage.setItem(STORAGE_KEY_ACTIVE, 'true');
       localStorage.setItem(STORAGE_KEY_EXPIRES, String(expiresAtMs));
       localStorage.setItem(STORAGE_KEY_CODE, code || '');
+      if (uid) {
+        localStorage.setItem(STORAGE_KEY_UID, uid);
+      }
       localStorage.setItem(STORAGE_KEY_TIMESTAMP, String(Date.now()));
       console.log('✅ Estado VIP salvo no localStorage. Expira em:', new Date(expiresAtMs).toISOString());
     } catch (e) {
@@ -122,6 +143,7 @@ window.Vip5ExpirationManager = (() => {
       localStorage.removeItem(STORAGE_KEY_ACTIVE);
       localStorage.removeItem(STORAGE_KEY_EXPIRES);
       localStorage.removeItem(STORAGE_KEY_CODE);
+      localStorage.removeItem(STORAGE_KEY_UID);
       localStorage.removeItem(STORAGE_KEY_TIMESTAMP);
       console.log('✅ Estado VIP removido do localStorage');
     } catch (e) {
@@ -159,10 +181,46 @@ window.Vip5ExpirationManager = (() => {
     if (window.SistemaAuth && window.SistemaAuth.auth && window.SistemaAuth.auth.currentUser) {
       return window.SistemaAuth.auth.currentUser.uid;
     }
+    if (window.SistemaAuth && window.SistemaAuth.usuarioLogado && window.SistemaAuth.usuarioLogado.uid) {
+      return window.SistemaAuth.usuarioLogado.uid;
+    }
     if (window.usuarioAtual && window.usuarioAtual.uid) {
       return window.usuarioAtual.uid;
     }
     return null;
+  }
+
+  /**
+   * Aguarda o Firebase Auth carregar o usuário atual antes de sincronizar
+   */
+  function waitForAuthUser(timeoutMs = 3000) {
+    return new Promise((resolve) => {
+      const uid = getCurrentUserUid();
+      if (uid) {
+        resolve(uid);
+        return;
+      }
+
+      if (window.auth && typeof window.auth.onAuthStateChanged === 'function') {
+        let handled = false;
+        const unsubscribe = window.auth.onAuthStateChanged((user) => {
+          if (handled) return;
+          handled = true;
+          unsubscribe();
+          resolve(user ? user.uid : null);
+        });
+
+        setTimeout(() => {
+          if (handled) return;
+          handled = true;
+          unsubscribe();
+          resolve(getCurrentUserUid());
+        }, timeoutMs);
+        return;
+      }
+
+      resolve(null);
+    });
   }
 
   /**
@@ -182,9 +240,10 @@ window.Vip5ExpirationManager = (() => {
         return;
       }
 
-      const firebaseVip5Active = userData.vip5Active === true;
-      const firebaseExpiresAtMs = normalizeTimestamp(userData.vip5ExpiresAt);
+      const firebaseVip5Active = userData.vip5Active === true || userData.vipActive === true;
+      const firebaseExpiresAtMs = normalizeTimestamp(userData.vip5ExpiresAt || userData.vipExpiresAt || userData.vipExpiracao);
       const localExpiresAtMs = getLocalStorageExpiration();
+      const localUid = getLocalStorageUid();
 
       console.log('🔄 Sincronizando VIP:', {
         firebaseActive: firebaseVip5Active,
@@ -200,7 +259,7 @@ window.Vip5ExpirationManager = (() => {
 
       // Se há expiração no Firestore, atualizar localStorage
       if (firebaseVip5Active && firebaseExpiresAtMs) {
-        saveToLocalStorage(userData.vip5Code || '', firebaseExpiresAtMs);
+        saveToLocalStorage(userData.vip5Code || '', firebaseExpiresAtMs, uid);
         return;
       }
 
@@ -325,11 +384,27 @@ window.Vip5ExpirationManager = (() => {
     try {
       console.log('🚀 Inicializando Vip5ExpirationManager...');
 
-      // Verificação inicial
+      // Verificação inicial de expiração local
       await checkExpiration();
 
-      // Sincronizar com Firestore se autenticado
-      const uid = getCurrentUserUid();
+      // Aguarda o estado de autenticação do Firebase e sincroniza com Firestore
+      let uid = getCurrentUserUid();
+      if (!uid) {
+        uid = await waitForAuthUser(5000);
+      }
+      if (!uid && window.SistemaAuth && typeof window.SistemaAuth.verificarLogin === 'function') {
+        uid = await new Promise((resolve) => {
+          window.SistemaAuth.verificarLogin((authenticated, usuario) => {
+            if (authenticated && usuario && usuario.uid) {
+              resolve(usuario.uid);
+            } else {
+              resolve(getCurrentUserUid());
+            }
+          });
+          setTimeout(() => resolve(getCurrentUserUid()), 5000);
+        });
+      }
+
       if (uid) {
         await syncWithFirestore();
       }
