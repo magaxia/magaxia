@@ -166,7 +166,18 @@ const Vip5UsuarioPage = {
     this.levels = window.SistemaConfig?.getUsuarioNiveisVip?.(this.user) || [];
     this.activeLevel = this.getHighestLevel(this.levels);
     this.renderHeader();
-    this.loadDashboard();
+
+    // Verificar expiração do VIP antes de carregar dashboard
+    if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.checkExpiration === 'function') {
+      window.Vip5ExpirationManager.checkExpiration().then(() => {
+        this.loadDashboard();
+      }).catch(e => {
+        console.error('Erro ao verificar expiração:', e);
+        this.loadDashboard(); // Continuar mesmo se falhar
+      });
+    } else {
+      this.loadDashboard();
+    }
   },
 
   renderHeader() {

@@ -272,10 +272,13 @@ const Vip5Storage = (() => {
         transaction.update(codeRef, updatePayload);
 
         if (userRef && userDoc && userDoc.exists) {
+          // IMPORTANTE: Salvar a data de expiração do código VIP no usuário
+          // Isso permite verificar expiração mesmo após logout/novo login
           transaction.update(userRef, {
             vip5Active: true,
             vip5ActivatedAt: now,
             vip5Code: data.code,
+            vip5ExpiresAt: data.expiresAt, // ← NOVO: Persistir expiração
           });
         }
       });

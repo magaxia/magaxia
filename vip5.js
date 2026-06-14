@@ -47,6 +47,14 @@ const Vip5Activation = {
     try {
       const result = await Vip5Storage.activateVipCode(code, this.user?.uid || null, this.user?.email || null);
       if (result.success) {
+        // Salvar estado VIP no localStorage para acesso offline
+        if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.saveToLocalStorage === 'function') {
+          const expiresAtMs = result.data?.expiresAt?.toDate?.().getTime?.() || 
+                             (typeof result.data?.expiresAt?.toMillis === 'function' ? result.data.expiresAt.toMillis() : 
+                             (typeof result.data?.expiresAt === 'number' ? result.data.expiresAt : Date.now() + 30 * 24 * 60 * 60 * 1000));
+          window.Vip5ExpirationManager.saveToLocalStorage(result.code, expiresAtMs);
+        }
+
         this.showMessage("✅ Convite ativado com sucesso. Redirecionando para a área VIP...", "success");
         const benefitsEl = document.getElementById("vip5-benefits");
         if (benefitsEl) benefitsEl.classList.add("show");

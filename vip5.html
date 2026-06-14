@@ -34,9 +34,19 @@
         }
       });
     }
+
+    // Inicializar gerenciador de expiração VIP
+    setTimeout(() => {
+      if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.initialize === 'function') {
+        window.Vip5ExpirationManager.initialize().catch(e => {
+          console.error('Erro ao inicializar gerenciador de expiração:', e);
+        });
+      }
+    }, 500);
   });
 </script>
 <script src="vip5-storage.js"></script>
+<script src="vip5-expiration-manager.js"></script>
 <script src="vip5.js"></script>
 </head>
 <body>
