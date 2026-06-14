@@ -243,67 +243,90 @@ const Vip5Storage = (() => {
       },
     };
 
-    try {
-      await database.runTransaction(async (transaction) => {
-        const codeRef = getCodesCollection().doc(codeRecord.id);
-        const codeSnap = await transaction.get(codeRef);
-        if (!codeSnap.exists) {
-          throw new Error("missing");
-        }
+    // Alguns erros de transação podem ser temporários (quota, contention).
+    // Tentamos a transação algumas vezes com backoff exponencial antes de falhar.
+    const MAX_TX_RETRIES = 3;
+    let attempt = 0;
+    while (true) {
+      try {
+        await database.runTransaction(async (transaction) => {
+          const codeRef = getCodesCollection().doc(codeRecord.id);
+          const codeSnap = await transaction.get(codeRef);
+          if (!codeSnap.exists) {
+            throw new Error("missing");
+          }
 
-        const currentData = codeSnap.data();
-        if (currentData.status === "used") {
-          throw new Error("already_used");
-        }
-        if (currentData.status === "revoked") {
-          throw new Error("revoked");
-        }
-        if (currentData.expiresAt && currentData.expiresAt.toDate && currentData.expiresAt.toDate() < new Date()) {
-          throw new Error("expired");
-        }
+          const currentData = codeSnap.data();
+          if (currentData.status === "used") {
+            throw new Error("already_used");
+          }
+          if (currentData.status === "revoked") {
+            throw new Error("revoked");
+          }
+          if (currentData.expiresAt && currentData.expiresAt.toDate && currentData.expiresAt.toDate() < new Date()) {
+            throw new Error("expired");
+          }
 
-        let userRef = null;
-        let userDoc = null;
-        if (activatorUid) {
-          userRef = getUsersCollection().doc(activatorUid);
-          userDoc = await transaction.get(userRef);
-        }
+          let userRef = null;
+          let userDoc = null;
+          if (activatorUid) {
+            userRef = getUsersCollection().doc(activatorUid);
+            userDoc = await transaction.get(userRef);
+          }
 
-        transaction.update(codeRef, updatePayload);
+          transaction.update(codeRef, updatePayload);
 
-        if (userRef && userDoc && userDoc.exists) {
-          // IMPORTANTE: Salvar a data de expiração do código VIP no usuário
-          // Isso permite verificar expiração mesmo após logout/novo login
-          transaction.update(userRef, {
-            vip5Active: true,
-            vip5ActivatedAt: now,
-            vip5Code: data.code,
-            vip5ExpiresAt: data.expiresAt, // ← NOVO: Persistir expiração
-          });
-        }
-      });
-    } catch (transactionError) {
-      if (transactionError.message === "already_used") {
-        return { success: false, reason: "already_used", message: "Código já utilizado." };
-      }
-      if (transactionError.message === "revoked") {
-        return { success: false, reason: "revoked", message: "Código revogado." };
-      }
-      if (transactionError.message === "expired") {
-        await getCodesCollection().doc(codeRecord.id).update({ status: "expired" });
-        await registerLog({
-          action: "activate_attempt",
-          codeId: codeRecord.id,
-          code: data.code,
-          actorUid: activatorUid,
-          actorEmail: normalizeIdentifier(activatorEmail),
-          targetUid: data.boundTo.uid,
-          status: "expired",
-          message: "Tentativa de ativação de código expirado.",
+          if (userRef && userDoc && userDoc.exists) {
+            transaction.update(userRef, {
+              vip5Active: true,
+              vip5ActivatedAt: now,
+              vip5Code: data.code,
+              vip5ExpiresAt: data.expiresAt,
+            });
+          }
         });
-        return { success: false, reason: "expired", message: "Código expirado." };
+        break; // sucesso
+      } catch (transactionError) {
+        // Erros esperados e tratados
+        if (transactionError && transactionError.message === "already_used") {
+          return { success: false, reason: "already_used", message: "Código já utilizado." };
+        }
+        if (transactionError && transactionError.message === "revoked") {
+          return { success: false, reason: "revoked", message: "Código revogado." };
+        }
+        if (transactionError && transactionError.message === "expired") {
+          try {
+            await getCodesCollection().doc(codeRecord.id).update({ status: "expired" });
+            await registerLog({
+              action: "activate_attempt",
+              codeId: codeRecord.id,
+              code: data.code,
+              actorUid: activatorUid,
+              actorEmail: normalizeIdentifier(activatorEmail),
+              targetUid: data.boundTo.uid,
+              status: "expired",
+              message: "Tentativa de ativação de código expirado.",
+            });
+          } catch (e) {
+            console.warn('Erro ao marcar código como expirado após transação:', e);
+          }
+          return { success: false, reason: "expired", message: "Código expirado." };
+        }
+
+        attempt++;
+        const isTransient = /quota|exceeded|resource-exhausted|internal|unavailable|timeout|try again/i.test(
+          (transactionError && (transactionError.message || transactionError.code || '')).toString()
+        );
+        if (attempt >= MAX_TX_RETRIES || !isTransient) {
+          // Não é transitório ou excedeu tentativas: repassa o erro
+          throw transactionError;
+        }
+
+        // Backoff exponencial (100ms, 200ms, 400ms...)
+        const delayMs = 100 * Math.pow(2, attempt - 1);
+        await new Promise((res) => setTimeout(res, delayMs));
+        // tenta novamente
       }
-      throw transactionError;
     }
 
     await registerLog({
@@ -478,6 +501,20 @@ const Vip5Storage = (() => {
     const database = ensureDb();
     const now = firebase.firestore.Timestamp.now();
     const limit = Number(options.limit) || 50; // keep small by default
+
+    // Evita que clientes executem este procedimento com muita frequência
+    try {
+      const nowMs = Date.now();
+      const lastRun = Number(localStorage.getItem('vip5_updateExpiredCodes_last') || 0);
+      const minInterval = Number(options.minIntervalMs) || 5 * 60 * 1000; // 5 minutos por padrão
+      if (nowMs - lastRun < minInterval) {
+        return; // já rodou recentemente, ignora
+      }
+      localStorage.setItem('vip5_updateExpiredCodes_last', nowMs);
+    } catch (e) {
+      // se localStorage não estiver disponível, continua — mas sem proteção de frequência
+      console.warn('updateExpiredCodes: não foi possível acessar localStorage para rate-limit:', e);
+    }
 
     // Only read a limited set to avoid large client-side scans
     const snapshot = await getCodesCollection()
