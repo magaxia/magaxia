@@ -157,6 +157,10 @@ const Vip5Storage = (() => {
     return null;
   }
 
+  function getSafeBrowserOrigin() {
+    return (window.location.origin && window.location.origin !== 'null') ? window.location.origin : null;
+  }
+
   function getFunctionsHttpEndpoint() {
     const projectId = window.firebase?.app?.()?.options?.projectId || 'vastbitloud-2872a';
     const region = window.vip5FunctionsRegion || 'us-central1';
@@ -165,7 +169,7 @@ const Vip5Storage = (() => {
 
   async function activateWithHttpFallback(normalized, activatorUid, activatorEmail) {
     const url = getFunctionsHttpEndpoint();
-    console.log('Origin:', window.location.origin || 'null');
+    console.log('Origin:', getSafeBrowserOrigin() || 'null');
     console.log('UID:', activatorUid || window.auth?.currentUser?.uid || null);
 
     try {
@@ -205,8 +209,8 @@ const Vip5Storage = (() => {
   }
 
   async function activateWithServerFunction(normalized, activatorUid, activatorEmail) {
-    if (window.location.protocol === 'file:') {
-      console.log('Usando fallback HTTP para file://');
+    if (window.location.protocol === 'file:' || getSafeBrowserOrigin() === null) {
+      console.log('Usando fallback HTTP para file:// ou origin null');
       return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
     }
 
@@ -216,6 +220,9 @@ const Vip5Storage = (() => {
 
     const functionsService = resolveFunctionsService();
     if (!functionsService || typeof functionsService.httpsCallable !== 'function') {
+      if (window.location.protocol === 'file:' || getSafeBrowserOrigin() === null) {
+        return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
+      }
       return { success: false, reason: 'unavailable', message: 'Funções do Firebase não estão disponíveis. Atualize a página ou contate o suporte.' };
     }
 
@@ -228,7 +235,7 @@ const Vip5Storage = (() => {
     }
 
     try {
-      console.log('Origin:', window.location.origin || 'null');
+      console.log('Origin:', getSafeBrowserOrigin() || 'null');
       console.log('UID:', activatorUid || window.auth?.currentUser?.uid || null);
       try { localStorage.setItem(`vip5_activate_last_${normalized}`, String(Date.now())); } catch (e) {}
       const res = await fn({ code: normalized, activatorUid: activatorUid || null, activatorEmail: activatorEmail || null });
@@ -241,9 +248,9 @@ const Vip5Storage = (() => {
     } catch (err) {
       console.error('vip5Activate function error:', err);
       const message = err && (err.message || err.code || '').toString();
-      const isFallbackCandidate = /CORS|Origin\s*:\s*null|Blocked by CORS|Failed to fetch|NetworkError|internal|unavailable/i.test(message) || window.location.protocol === 'file:';
+      const isFallbackCandidate = /CORS|Origin\s*:\s*null|Blocked by CORS|Failed to fetch|NetworkError|internal|unavailable/i.test(message) || window.location.protocol === 'file:' || getSafeBrowserOrigin() === null;
       if (isFallbackCandidate) {
-        console.warn('Tentando fallback HTTP para vip5ActivateHttp devido a erro de função ou file://', message);
+        console.warn('Tentando fallback HTTP para vip5ActivateHttp devido a erro de função ou file:// ou origin null', message);
         return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
       }
       const isTransient = /quota|exceeded|resource-exhausted|unavailable|internal|timeout|deadline|transient|try again/i.test(message);

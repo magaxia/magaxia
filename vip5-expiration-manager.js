@@ -332,9 +332,8 @@ window.Vip5ExpirationManager = (() => {
    */
   function redirectToVipActivation() {
     console.log('🔀 Redirecionando para vip5.html...');
-    const base = (window.location.origin && window.location.origin !== 'null')
-      ? window.location.origin
-      : window.location.href.replace(/\/[^\/]*$/, '/');
+    const safeOrigin = (window.location.origin && window.location.origin !== 'null') ? window.location.origin : null;
+    const base = safeOrigin || window.location.href.replace(/\/[^\/]*$/, '/');
     const vip5Url = new URL('vip5.html', base);
     window.location.href = vip5Url.href;
   }
