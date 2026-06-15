@@ -332,7 +332,10 @@ window.Vip5ExpirationManager = (() => {
    */
   function redirectToVipActivation() {
     console.log('🔀 Redirecionando para vip5.html...');
-    const vip5Url = new URL('vip5.html', window.location.origin);
+    const base = (window.location.origin && window.location.origin !== 'null')
+      ? window.location.origin
+      : window.location.href.replace(/\/[^\/]*$/, '/');
+    const vip5Url = new URL('vip5.html', base);
     window.location.href = vip5Url.href;
   }
 
@@ -354,21 +357,9 @@ window.Vip5ExpirationManager = (() => {
    * Inicia verificação periódica
    */
   function startPeriodicCheck() {
-    if (checkIntervalId) return; // Já está rodando
-
-    // Verifica expiração a cada 10 segundos
-    checkIntervalId = setInterval(() => {
-      checkExpiration().catch(e => console.error('Erro em verificação periódica:', e));
-    }, CHECK_INTERVAL);
-
-    // Sincroniza com Firestore a cada 1 minuto (apenas se autenticado)
-    firestoreSyncIntervalId = setInterval(() => {
-      if (getCurrentUserUid()) {
-        syncWithFirestore().catch(e => console.error('Erro em sincronização Firestore:', e));
-      }
-    }, FIRESTORE_SYNC_INTERVAL);
-
-    console.log('✅ Verificação periódica iniciada');
+    // A verificação periódica foi desativada para evitar leituras Firestore em excesso.
+    // O gerenciamento de expiração agora depende exclusivamente de localStorage e de uma checagem inicial.
+    console.log('ℹ️ Verificação periódica desativada para reduzir uso de Firestore.');
   }
 
   /**
@@ -406,11 +397,11 @@ window.Vip5ExpirationManager = (() => {
       }
 
       if (uid) {
+        // Apenas sincroniza uma vez no carregamento para reduzir leituras constantes do Firestore.
         await syncWithFirestore();
       }
 
-      // Iniciar verificações periódicas
-      startPeriodicCheck();
+      // Não iniciar verificações periódicas para evitar leituras constantes.
 
       isInitialized = true;
       console.log('✅ Vip5ExpirationManager inicializado com sucesso');

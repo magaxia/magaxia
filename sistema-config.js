@@ -18,7 +18,9 @@ window.SistemaConfig = {
   },
 
   // URLs e endpoints
-  baseUrl: window.location.origin,
+  baseUrl: (window.location.origin && window.location.origin !== 'null')
+    ? window.location.origin
+    : window.location.href.replace(/\/[^\/]*$/, ''),
 
   // Configurações de auditoria
   auditoria: {

@@ -1,5 +1,6 @@
 const Vip5Activation = {
   user: null,
+  isActivating: false,
 
   init() {
     const form = document.getElementById("vip5-activate-form");
@@ -38,20 +39,37 @@ const Vip5Activation = {
   async handleSubmit(event) {
     event.preventDefault();
 
+    if (this.isActivating) {
+      this.showMessage("Ativação em andamento. Aguarde alguns segundos antes de tentar novamente.", "error");
+      return;
+    }
+
+    const formEl = event && event.target ? (event.target.closest ? event.target.closest('form') : null) : null;
+    const submitBtn = (formEl && formEl.querySelector('button[type="submit"]')) || document.querySelector('.btn-save');
+
+    const disableSubmit = (disable) => {
+      if (submitBtn) {
+        submitBtn.disabled = disable;
+      }
+    };
+
     const code = document.getElementById("vip5-code-input").value.trim();
     if (!code) {
       this.showMessage("Digite um código VIP válido.", "error");
+      this.isActivating = false;
+      disableSubmit(false);
       return;
     }
+
+    this.isActivating = true;
+    disableSubmit(true);
 
     try {
       const result = await Vip5Storage.activateVipCode(code, this.user?.uid || null, this.user?.email || null);
       if (result.success) {
         // Salvar estado VIP no localStorage para acesso offline
         if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.saveToLocalStorage === 'function') {
-          const expiresAtMs = result.data?.expiresAt?.toDate?.().getTime?.() || 
-                             (typeof result.data?.expiresAt?.toMillis === 'function' ? result.data.expiresAt.toMillis() : 
-                             (typeof result.data?.expiresAt === 'number' ? result.data.expiresAt : Date.now() + 30 * 24 * 60 * 60 * 1000));
+          const expiresAtMs = result.codeRecord?.expiresAt ? Date.parse(result.codeRecord.expiresAt) : Date.now() + 30 * 24 * 60 * 60 * 1000;
           const uid = this.user?.uid || window.SistemaAuth?.usuarioLogado?.uid || window.auth?.currentUser?.uid || null;
           window.Vip5ExpirationManager.saveToLocalStorage(result.code, expiresAtMs, uid);
         }
@@ -90,6 +108,9 @@ const Vip5Activation = {
       } else {
         this.showMessage(error.message || "Erro inesperado durante a ativação.", "error");
       }
+    } finally {
+      this.isActivating = false;
+      disableSubmit(false);
     }
   },
 

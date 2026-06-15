@@ -129,6 +129,132 @@ const Vip5Storage = (() => {
     return snapshot.empty ? null : { id: snapshot.docs[0].id, data: snapshot.docs[0].data() };
   }
 
+  function resolveFunctionsService() {
+    if (!window.firebase) return null;
+
+    if (typeof window.firebase.functions === 'function') {
+      try {
+        if (window.firebase.apps && window.firebase.apps.length === 0 && window.FirebaseHelper && typeof window.FirebaseHelper.initializeFirebase === 'function') {
+          window.FirebaseHelper.initializeFirebase();
+        }
+        return window.firebase.functions();
+      } catch (e) {
+        console.warn('Falha ao inicializar firebase.functions():', e);
+      }
+    }
+
+    if (typeof window.firebase.getFunctions === 'function') {
+      try {
+        if (window.firebase.apps && window.firebase.apps.length === 0 && window.FirebaseHelper && typeof window.FirebaseHelper.initializeFirebase === 'function') {
+          window.FirebaseHelper.initializeFirebase();
+        }
+        return window.firebase.getFunctions();
+      } catch (e) {
+        console.warn('Falha ao inicializar firebase.getFunctions():', e);
+      }
+    }
+
+    return null;
+  }
+
+  function getFunctionsHttpEndpoint() {
+    const projectId = window.firebase?.app?.()?.options?.projectId || 'vastbitloud-2872a';
+    const region = window.vip5FunctionsRegion || 'us-central1';
+    return `https://${region}-${projectId}.cloudfunctions.net/vip5ActivateHttp`;
+  }
+
+  async function activateWithHttpFallback(normalized, activatorUid, activatorEmail) {
+    const url = getFunctionsHttpEndpoint();
+    console.log('Origin:', window.location.origin || 'null');
+    console.log('UID:', activatorUid || window.auth?.currentUser?.uid || null);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-store',
+        credentials: 'omit',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: normalized, activatorUid: activatorUid || null, activatorEmail: activatorEmail || null }),
+      });
+
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (parseError) {
+        console.error('vip5Activate HTTP fallback JSON parse failed:', parseError, 'responseText:', text);
+        return { success: false, reason: 'transient', message: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' };
+      }
+
+      if (!response.ok) {
+        console.warn('vip5Activate HTTP fallback retornou status não-ok:', response.status, data);
+        return data || { success: false, reason: 'transient', message: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' };
+      }
+
+      if (!data || typeof data.success === 'undefined') {
+        return { success: false, reason: 'transient', message: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' };
+      }
+      return data;
+    } catch (error) {
+      console.error('vip5Activate HTTP fallback error:', error);
+      return { success: false, reason: 'transient', message: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' };
+    }
+  }
+
+  async function activateWithServerFunction(normalized, activatorUid, activatorEmail) {
+    if (window.location.protocol === 'file:') {
+      console.log('Usando fallback HTTP para file://');
+      return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
+    }
+
+    if (!(window.firebase && (typeof window.firebase.functions === 'function' || typeof window.firebase.getFunctions === 'function'))) {
+      return { success: false, reason: 'unavailable', message: 'Funções do Firebase não estão disponíveis. Atualize a página ou contate o suporte.' };
+    }
+
+    const functionsService = resolveFunctionsService();
+    if (!functionsService || typeof functionsService.httpsCallable !== 'function') {
+      return { success: false, reason: 'unavailable', message: 'Funções do Firebase não estão disponíveis. Atualize a página ou contate o suporte.' };
+    }
+
+    const fn = functionsService.httpsCallable('vip5Activate');
+    if (!fn) {
+      if (window.location.protocol === 'file:') {
+        return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
+      }
+      return { success: false, reason: 'unavailable', message: 'Funções do Firebase não estão disponíveis. Atualize a página ou contate o suporte.' };
+    }
+
+    try {
+      console.log('Origin:', window.location.origin || 'null');
+      console.log('UID:', activatorUid || window.auth?.currentUser?.uid || null);
+      try { localStorage.setItem(`vip5_activate_last_${normalized}`, String(Date.now())); } catch (e) {}
+      const res = await fn({ code: normalized, activatorUid: activatorUid || null, activatorEmail: activatorEmail || null });
+      const data = res && res.data ? res.data : res;
+      if (!data || typeof data.success === 'undefined') {
+        return { success: false, reason: 'transient', message: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' };
+      }
+      console.log('Function called successfully');
+      return data;
+    } catch (err) {
+      console.error('vip5Activate function error:', err);
+      const message = err && (err.message || err.code || '').toString();
+      const isFallbackCandidate = /CORS|Origin\s*:\s*null|Blocked by CORS|Failed to fetch|NetworkError|internal|unavailable/i.test(message) || window.location.protocol === 'file:';
+      if (isFallbackCandidate) {
+        console.warn('Tentando fallback HTTP para vip5ActivateHttp devido a erro de função ou file://', message);
+        return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
+      }
+      const isTransient = /quota|exceeded|resource-exhausted|unavailable|internal|timeout|deadline|transient|try again/i.test(message);
+      return {
+        success: false,
+        reason: isTransient ? 'transient' : 'failed',
+        message: isTransient ? 'Serviço temporariamente indisponível. Tente novamente mais tarde.' : 'Erro ao ativar via servidor. Tente novamente.',
+      };
+    }
+  }
+
   async function createVipCode(targetIdentifier, notes, validityDays, adminUser) {
     const database = ensureDb();
     if (!targetIdentifier || typeof targetIdentifier !== "string") {
@@ -184,163 +310,24 @@ const Vip5Storage = (() => {
   }
 
   async function activateVipCode(code, activatorUid, activatorEmail) {
-    const database = ensureDb();
     const normalized = normalizeCode(code);
     if (!normalized) {
       return { success: false, reason: "invalid", message: "Código inválido." };
     }
 
-    const codeRecord = await findCodeByValue(normalized);
-    if (!codeRecord) {
-      return { success: false, reason: "invalid", message: "Código inválido." };
-    }
-
-    const data = codeRecord.data;
-    const now = firebase.firestore.Timestamp.now();
-    const expiresAt = data.expiresAt;
-
-    if (data.status === "used") {
-      return { success: false, reason: "already_used", message: "Código já utilizado." };
-    }
-
-    if (data.status === "revoked") {
-      return { success: false, reason: "revoked", message: "Código revogado." };
-    }
-
-    if (expiresAt && expiresAt.toDate && expiresAt.toDate() < new Date()) {
-      await getCodesCollection().doc(codeRecord.id).update({ status: "expired" });
-      await registerLog({
-        action: "activate_attempt",
-        codeId: codeRecord.id,
-        code: data.code,
-        actorUid: activatorUid,
-        actorEmail: normalizeIdentifier(activatorEmail),
-        targetUid: data.boundTo.uid,
-        status: "expired",
-        message: "Tentativa de ativação de código expirado.",
-      });
-      return { success: false, reason: "expired", message: "Código expirado." };
-    }
-
-    if (data.boundTo.uid && data.boundTo.uid !== activatorUid) {
-      return { success: false, reason: "mismatch", message: "Este código pertence a outro usuário." };
-    }
-
-    if (data.boundTo.email) {
-      const normalizedActivatorEmail = normalizeIdentifier(activatorEmail);
-      if (!normalizedActivatorEmail || data.boundTo.email !== normalizedActivatorEmail) {
-        return { success: false, reason: "mismatch", message: "Este código pertence a outro usuário." };
+    // cooldown por código (evita repetir tentativas após erro de quota)
+    try {
+      const lastAttempt = Number(localStorage.getItem(`vip5_activate_last_${normalized}`) || 0);
+      const cooldownMs = 30 * 1000; // 30s entre tentativas do mesmo cliente
+      if (Date.now() - lastAttempt < cooldownMs) {
+        return { success: false, reason: "cooldown", message: "Já tentou recentemente. Aguarde alguns segundos." };
       }
+    } catch (e) {
+      // ignore
     }
 
-    const updatePayload = {
-      status: "used",
-      usedAt: now,
-      usedBy: { uid: activatorUid || null, email: normalizeIdentifier(activatorEmail) || null },
-      activationLog: {
-        activatedAt: now,
-        activatedBy: { uid: activatorUid || null, email: normalizeIdentifier(activatorEmail) || null },
-      },
-    };
-
-    // Alguns erros de transação podem ser temporários (quota, contention).
-    // Tentamos a transação algumas vezes com backoff exponencial antes de falhar.
-    const MAX_TX_RETRIES = 3;
-    let attempt = 0;
-    while (true) {
-      try {
-        await database.runTransaction(async (transaction) => {
-          const codeRef = getCodesCollection().doc(codeRecord.id);
-          const codeSnap = await transaction.get(codeRef);
-          if (!codeSnap.exists) {
-            throw new Error("missing");
-          }
-
-          const currentData = codeSnap.data();
-          if (currentData.status === "used") {
-            throw new Error("already_used");
-          }
-          if (currentData.status === "revoked") {
-            throw new Error("revoked");
-          }
-          if (currentData.expiresAt && currentData.expiresAt.toDate && currentData.expiresAt.toDate() < new Date()) {
-            throw new Error("expired");
-          }
-
-          let userRef = null;
-          let userDoc = null;
-          if (activatorUid) {
-            userRef = getUsersCollection().doc(activatorUid);
-            userDoc = await transaction.get(userRef);
-          }
-
-          transaction.update(codeRef, updatePayload);
-
-          if (userRef && userDoc && userDoc.exists) {
-            transaction.update(userRef, {
-              vip5Active: true,
-              vip5ActivatedAt: now,
-              vip5Code: data.code,
-              vip5ExpiresAt: data.expiresAt,
-            });
-          }
-        });
-        break; // sucesso
-      } catch (transactionError) {
-        // Erros esperados e tratados
-        if (transactionError && transactionError.message === "already_used") {
-          return { success: false, reason: "already_used", message: "Código já utilizado." };
-        }
-        if (transactionError && transactionError.message === "revoked") {
-          return { success: false, reason: "revoked", message: "Código revogado." };
-        }
-        if (transactionError && transactionError.message === "expired") {
-          try {
-            await getCodesCollection().doc(codeRecord.id).update({ status: "expired" });
-            await registerLog({
-              action: "activate_attempt",
-              codeId: codeRecord.id,
-              code: data.code,
-              actorUid: activatorUid,
-              actorEmail: normalizeIdentifier(activatorEmail),
-              targetUid: data.boundTo.uid,
-              status: "expired",
-              message: "Tentativa de ativação de código expirado.",
-            });
-          } catch (e) {
-            console.warn('Erro ao marcar código como expirado após transação:', e);
-          }
-          return { success: false, reason: "expired", message: "Código expirado." };
-        }
-
-        attempt++;
-        const isTransient = /quota|exceeded|resource-exhausted|internal|unavailable|timeout|try again/i.test(
-          (transactionError && (transactionError.message || transactionError.code || '')).toString()
-        );
-        if (attempt >= MAX_TX_RETRIES || !isTransient) {
-          // Não é transitório ou excedeu tentativas: repassa o erro
-          throw transactionError;
-        }
-
-        // Backoff exponencial (100ms, 200ms, 400ms...)
-        const delayMs = 100 * Math.pow(2, attempt - 1);
-        await new Promise((res) => setTimeout(res, delayMs));
-        // tenta novamente
-      }
-    }
-
-    await registerLog({
-      action: "activate",
-      codeId: codeRecord.id,
-      code: data.code,
-      actorUid: activatorUid,
-      actorEmail: normalizeIdentifier(activatorEmail),
-      targetUid: data.boundTo.uid,
-      status: "used",
-      message: "Código VIP ativado com sucesso.",
-    });
-
-    return { success: true, code: data.code, data: { ...data, ...updatePayload } };
+    const serverResult = await activateWithServerFunction(normalized, activatorUid, activatorEmail);
+    return serverResult;
   }
 
   async function revokeVipCode(codeId, adminUser, reason) {
@@ -594,6 +581,7 @@ const Vip5Storage = (() => {
     fetchVipStats,
     updateExpiredCodes,
     formatTimestamp,
+    getFunctionsHttpEndpoint,
   };
 })();
 
