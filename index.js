@@ -22,9 +22,8 @@ function formatCodeRecord(doc, dataDoc) {
   };
 }
 
-async function ensureUserDocument(tx, usersCol, uid, email, now, code, expiresAt) {
+function ensureUserDocument(tx, usersCol, userSnap, uid, email, now, code, expiresAt) {
   const userRef = usersCol.doc(uid);
-  const userSnap = await tx.get(userRef);
   const userPayload = {
     uid,
     email: email || null,
@@ -114,6 +113,12 @@ async function processVip5Activation(data, authContext, requestOrigin) {
         throw new functions.https.HttpsError('failed-precondition', 'expired');
       }
 
+      let userSnap = null;
+      if (effectiveUid) {
+        const userRef = usersCol.doc(effectiveUid);
+        userSnap = await tx.get(userRef);
+      }
+
       const codeUpdate = {
         status: 'used',
         usedAt: now,
@@ -123,7 +128,7 @@ async function processVip5Activation(data, authContext, requestOrigin) {
       tx.update(doc.ref, codeUpdate);
 
       if (effectiveUid) {
-        await ensureUserDocument(tx, usersCol, effectiveUid, effectiveEmail, now, dataDoc.code || code, dataDoc.expiresAt || null);
+        ensureUserDocument(tx, usersCol, userSnap, effectiveUid, effectiveEmail, now, dataDoc.code || code, dataDoc.expiresAt || null);
       }
     });
 
@@ -161,33 +166,43 @@ async function processVip5Activation(data, authContext, requestOrigin) {
   }
 }
 
-exports.vip5Activate = functions.https.onCall(async (data, context) => {
-  console.log('Origin:', context.rawRequest?.headers?.origin || null);
-  console.log('UID:', context?.auth?.uid || null);
-  const authContext = {
-    uid: context.auth?.uid || null,
-    email: context.auth?.token?.email || null,
-  };
-  return processVip5Activation(data, authContext, context.rawRequest?.headers?.origin || null);
-});
-
-exports.vip5ActivateHttp = functions.https.onRequest(async (req, res) => {
+function setCorsHeaders(req, res) {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'OPTIONS,GET,POST');
-  res.set('Access-Control-Allow-Headers', 'Content-Type,Accept');
+  res.set('Access-Control-Allow-Headers', 'Content-Type,Accept,Authorization');
+  res.set('Access-Control-Max-Age', '3600');
+  res.set('Vary', 'Origin');
+}
 
-  console.log('Origin:', req.headers.origin || null);
-  console.log('UID:', (req.method === 'GET' ? req.query?.activatorUid : req.body?.activatorUid) || null);
-
-  if (req.method === 'OPTIONS') {
-    return res.status(204).send('');
+async function getAuthContextFromRequest(req) {
+  const authorization = req.headers.authorization || '';
+  const match = authorization.match(/^Bearer (.+)$/i);
+  if (!match) {
+    return { uid: null, email: null };
   }
 
-  if (req.method !== 'POST' && req.method !== 'GET') {
-    return res.status(405).json({ success: false, reason: 'method_not_allowed', message: 'Método não permitido' });
+  try {
+    const decoded = await admin.auth().verifyIdToken(match[1]);
+    return {
+      uid: decoded.uid || null,
+      email: decoded.email || null,
+    };
+  } catch (err) {
+    console.warn('Nao foi possivel verificar token Firebase Auth:', err.message || err);
+    return { uid: null, email: null };
+  }
+}
+
+function parseVip5ActivationBody(req) {
+  if (req.method === 'GET') {
+    return req.query || {};
   }
 
-  let body = req.method === 'GET' ? req.query : req.body;
+  let body = req.body;
+  if (body && body.data && typeof body.data === 'object') {
+    return body.data;
+  }
+
   if (!body || typeof body !== 'object') {
     const raw = req.rawBody ? req.rawBody.toString() : '';
     if (raw) {
@@ -201,6 +216,42 @@ exports.vip5ActivateHttp = functions.https.onRequest(async (req, res) => {
       body = {};
     }
   }
+
+  return body && body.data && typeof body.data === 'object' ? body.data : body;
+}
+
+exports.vip5Activate = functions.https.onRequest(async (req, res) => {
+  setCorsHeaders(req, res);
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send('');
+  }
+
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ error: { status: 'METHOD_NOT_ALLOWED', message: 'Metodo nao permitido' } });
+  }
+
+  const body = parseVip5ActivationBody(req);
+  const authContext = await getAuthContextFromRequest(req);
+  const result = await processVip5Activation(body, authContext, req.headers.origin || null);
+  return res.status(200).json({ result });
+});
+
+exports.vip5ActivateHttp = functions.https.onRequest(async (req, res) => {
+  setCorsHeaders(req, res);
+
+  console.log('Origin:', req.headers.origin || null);
+  console.log('UID:', (req.method === 'GET' ? req.query?.activatorUid : req.body?.activatorUid) || null);
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send('');
+  }
+
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ success: false, reason: 'method_not_allowed', message: 'Método não permitido' });
+  }
+
+  const body = parseVip5ActivationBody(req);
 
   const result = await processVip5Activation(body, { uid: body.activatorUid || null, email: body.activatorEmail || null }, req.headers.origin || null);
 

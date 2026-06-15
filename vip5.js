@@ -8,6 +8,7 @@ const Vip5Activation = {
       form.addEventListener("submit", this.handleSubmit.bind(this));
     }
     this.loadAuthState();
+    this.redirectIfAlreadyActive();
   },
 
   loadAuthState() {
@@ -32,12 +33,53 @@ const Vip5Activation = {
         userInfo.style.display = "block";
         userInfo.innerText = user ? `Você está logado como: ${user.email || user.uid}` : "Ativação sem autenticação";
       }
+      if (this.redirectIfAlreadyActive()) {
+        return;
+      }
       this.showMessage("Insira o código VIP 5 recebido e ative seu acesso exclusivo.", "success");
     });
   },
 
+  redirectIfAlreadyActive() {
+    if (!window.Vip5ExpirationManager || typeof window.Vip5ExpirationManager.isVipActive !== "function") {
+      return false;
+    }
+
+    if (!window.Vip5ExpirationManager.isVipActive()) {
+      return false;
+    }
+
+    const expiresAtMs = typeof window.Vip5ExpirationManager.getLocalStorageExpiration === "function"
+      ? window.Vip5ExpirationManager.getLocalStorageExpiration()
+      : null;
+    const expirationText = expiresAtMs
+      ? new Date(expiresAtMs).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
+      : "data valida";
+
+    this.showMessage(`VIP 5 ja esta ativo ate ${expirationText}. Redirecionando...`, "success");
+
+    const form = document.getElementById("vip5-activate-form");
+    if (form) {
+      form.style.display = "none";
+    }
+    const benefitsEl = document.getElementById("vip5-benefits");
+    if (benefitsEl) {
+      benefitsEl.classList.add("show");
+    }
+
+    setTimeout(() => {
+      window.location.href = "vip5-usuario.html";
+    }, 900);
+
+    return true;
+  },
+
   async handleSubmit(event) {
     event.preventDefault();
+
+    if (this.redirectIfAlreadyActive()) {
+      return;
+    }
 
     if (this.isActivating) {
       this.showMessage("Ativação em andamento. Aguarde alguns segundos antes de tentar novamente.", "error");

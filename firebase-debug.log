@@ -1,0 +1,75 @@
+[debug] [2026-06-15T20:14:19.567Z] ----------------------------------------------------------------------
+[debug] [2026-06-15T20:14:19.573Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions:vip5Activate,functions:vip5ActivateHttp --project vastbitloud-2872a
+[debug] [2026-06-15T20:14:19.575Z] CLI Version:   15.15.0
+[debug] [2026-06-15T20:14:19.575Z] Platform:      win32
+[debug] [2026-06-15T20:14:19.575Z] Node Version:  v25.8.2
+[debug] [2026-06-15T20:14:19.576Z] Time:          Mon Jun 15 2026 17:14:19 GMT-0300 (Horário Padrão de Brasília)
+[debug] [2026-06-15T20:14:19.576Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-15T20:14:19.580Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-06-15T20:14:23.019Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-15T20:14:23.789Z] Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
+    at GoogleAuth.getApplicationDefaultAsync (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:287:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async GoogleAuth._GoogleAuth_determineClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:834:32)
+    at async GoogleAuth.getClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:698:20)
+    at async GoogleAuth.getAccessToken (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:722:24)
+    at async autoAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:28:19)
+    at async requireAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:90:20)
+    at async requirePermissions (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requirePermissions.js:17:5)
+    at async C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\command.js:271:17
+[error] 
+[error] Error: Failed to authenticate, have you run firebase login?
+[debug] [2026-06-15T20:16:09.149Z] ----------------------------------------------------------------------
+[debug] [2026-06-15T20:16:09.155Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js logout
+[debug] [2026-06-15T20:16:09.155Z] CLI Version:   15.15.0
+[debug] [2026-06-15T20:16:09.155Z] Platform:      win32
+[debug] [2026-06-15T20:16:09.156Z] Node Version:  v25.8.2
+[debug] [2026-06-15T20:16:09.156Z] Time:          Mon Jun 15 2026 17:16:09 GMT-0300 (Horário Padrão de Brasília)
+[debug] [2026-06-15T20:16:09.156Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-15T20:16:09.160Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[info] No need to logout, not logged in
+[debug] [2026-06-15T20:16:15.923Z] Error: Timed out.
+    at Timeout._onTimeout (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:309:49)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-06-15T20:16:17.607Z] ----------------------------------------------------------------------
+[debug] [2026-06-15T20:16:17.613Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login --reauth --no-localhost
+[debug] [2026-06-15T20:16:17.613Z] CLI Version:   15.15.0
+[debug] [2026-06-15T20:16:17.613Z] Platform:      win32
+[debug] [2026-06-15T20:16:17.614Z] Node Version:  v25.8.2
+[debug] [2026-06-15T20:16:17.614Z] Time:          Mon Jun 15 2026 17:16:17 GMT-0300 (Horário Padrão de Brasília)
+[debug] [2026-06-15T20:16:17.614Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-15T20:16:17.618Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-06-15T20:16:18.063Z] >>> [apiv2][query] POST https://auth.firebase.tools/attest [none]
+[debug] [2026-06-15T20:16:18.063Z] >>> [apiv2][body] POST https://auth.firebase.tools/attest {"session_id":"08637d23-dac7-408c-b5c6-f2be1c5a0561"}
+[debug] [2026-06-15T20:16:38.985Z] *** [apiv2] error from fetch(https://firebase-public.firebaseio.com/cli.json, {"headers":{},"method":"GET"}): FetchError: request to https://firebase-public.firebaseio.com/cli.json failed, reason: 
+[warn] !  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection. 
+[debug] [2026-06-15T20:16:38.987Z] Failed to fetch MOTD FirebaseError: Failed to make request to https://firebase-public.firebaseio.com/cli.json
+[debug] [2026-06-15T20:16:43.048Z] *** [apiv2] error from fetch(https://auth.firebase.tools/attest, {"headers":{},"method":"POST","body":"{\"session_id\":\"08637d23-dac7-408c-b5c6-f2be1c5a0561\"}"}): FetchError: request to https://auth.firebase.tools/attest failed, reason: 
+[debug] [2026-06-15T20:36:03.917Z] ----------------------------------------------------------------------
+[debug] [2026-06-15T20:36:03.923Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions:vip5Activate,functions:vip5ActivateHttp --project vastbitloud-2872a
+[debug] [2026-06-15T20:36:03.923Z] CLI Version:   15.15.0
+[debug] [2026-06-15T20:36:03.924Z] Platform:      win32
+[debug] [2026-06-15T20:36:03.924Z] Node Version:  v25.8.2
+[debug] [2026-06-15T20:36:03.924Z] Time:          Mon Jun 15 2026 17:36:03 GMT-0300 (Horário Padrão de Brasília)
+[debug] [2026-06-15T20:36:03.925Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-15T20:36:03.929Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-06-15T20:36:07.148Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-15T20:36:08.161Z] Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
+    at GoogleAuth.getApplicationDefaultAsync (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:287:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async GoogleAuth._GoogleAuth_determineClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:834:32)
+    at async GoogleAuth.getClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:698:20)
+    at async GoogleAuth.getAccessToken (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:722:24)
+    at async autoAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:28:19)
+    at async requireAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:90:20)
+    at async requirePermissions (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requirePermissions.js:17:5)
+    at async C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\command.js:271:17
+[error] 
+[error] Error: Failed to authenticate, have you run firebase login?

@@ -167,6 +167,10 @@ const Vip5Storage = (() => {
     return `https://${region}-${projectId}.cloudfunctions.net/vip5ActivateHttp`;
   }
 
+  function getActivationServiceMessage() {
+    return 'Ativacao VIP indisponivel no momento. Publique as Firebase Functions vip5Activate e vip5ActivateHttp e tente novamente.';
+  }
+
   async function activateWithHttpFallback(normalized, activatorUid, activatorEmail) {
     const query = new URLSearchParams({
       code: normalized,
@@ -205,7 +209,7 @@ const Vip5Storage = (() => {
       return data;
     } catch (error) {
       console.error('vip5Activate HTTP fallback error:', error);
-      return { success: false, reason: 'transient', message: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' };
+      return { success: false, reason: 'function_unavailable', message: getActivationServiceMessage() };
     }
   }
 
@@ -258,7 +262,7 @@ const Vip5Storage = (() => {
       return {
         success: false,
         reason: isTransient ? 'transient' : 'failed',
-        message: isTransient ? 'Serviço temporariamente indisponível. Tente novamente mais tarde.' : 'Erro ao ativar via servidor. Tente novamente.',
+        message: isTransient ? getActivationServiceMessage() : 'Erro ao ativar via servidor. Tente novamente.',
       };
     }
   }
