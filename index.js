@@ -173,27 +173,32 @@ exports.vip5Activate = functions.https.onCall(async (data, context) => {
 
 exports.vip5ActivateHttp = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'OPTIONS,POST');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  res.set('Access-Control-Allow-Methods', 'OPTIONS,GET,POST');
+  res.set('Access-Control-Allow-Headers', 'Content-Type,Accept');
 
   console.log('Origin:', req.headers.origin || null);
-  console.log('UID:', (req.body && req.body.activatorUid) || null);
+  console.log('UID:', (req.method === 'GET' ? req.query?.activatorUid : req.body?.activatorUid) || null);
 
   if (req.method === 'OPTIONS') {
     return res.status(204).send('');
   }
 
-  if (req.method !== 'POST') {
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ success: false, reason: 'method_not_allowed', message: 'Método não permitido' });
   }
 
-  let body = req.body;
+  let body = req.method === 'GET' ? req.query : req.body;
   if (!body || typeof body !== 'object') {
-    try {
-      body = req.rawBody ? JSON.parse(req.rawBody.toString()) : {};
-    } catch (parseError) {
-      console.error('vip5ActivateHttp invalid JSON body:', parseError);
-      return res.status(400).json({ success: false, reason: 'invalid_json', message: 'Corpo JSON inválido.' });
+    const raw = req.rawBody ? req.rawBody.toString() : '';
+    if (raw) {
+      try {
+        body = JSON.parse(raw);
+      } catch (parseError) {
+        const params = new URLSearchParams(raw);
+        body = Object.fromEntries(params.entries());
+      }
+    } else {
+      body = {};
     }
   }
 

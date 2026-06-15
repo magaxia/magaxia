@@ -168,20 +168,21 @@ const Vip5Storage = (() => {
   }
 
   async function activateWithHttpFallback(normalized, activatorUid, activatorEmail) {
-    const url = getFunctionsHttpEndpoint();
+    const query = new URLSearchParams({
+      code: normalized,
+      activatorUid: activatorUid || '',
+      activatorEmail: activatorEmail || '',
+    });
+    const url = `${getFunctionsHttpEndpoint()}?${query.toString()}`;
     console.log('Origin:', getSafeBrowserOrigin() || 'null');
     console.log('UID:', activatorUid || window.auth?.currentUser?.uid || null);
 
     try {
       const response = await fetch(url, {
-        method: 'POST',
+        method: 'GET',
         mode: 'cors',
         cache: 'no-store',
         credentials: 'omit',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code: normalized, activatorUid: activatorUid || null, activatorEmail: activatorEmail || null }),
       });
 
       const text = await response.text();
