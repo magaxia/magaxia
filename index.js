@@ -169,9 +169,29 @@ async function processVip5Activation(data, authContext, requestOrigin) {
 function setCorsHeaders(req, res) {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'OPTIONS,GET,POST');
-  res.set('Access-Control-Allow-Headers', 'Content-Type,Accept,Authorization');
+  res.set(
+    'Access-Control-Allow-Headers',
+    req.headers['access-control-request-headers'] || 'Content-Type,Accept,Authorization,X-Firebase-AppCheck,X-Firebase-GMPID,X-Client-Version'
+  );
   res.set('Access-Control-Max-Age', '3600');
   res.set('Vary', 'Origin');
+}
+
+function buildVip5Error(err) {
+  console.error('vip5Activate handler error:', err);
+  return {
+    success: false,
+    reason: 'transient',
+    message: 'Servico temporariamente indisponivel. Tente novamente mais tarde.',
+  };
+}
+
+function sendVip5CallableError(res, err) {
+  return res.status(200).json({ result: buildVip5Error(err) });
+}
+
+function sendVip5HttpError(res, err) {
+  return res.status(200).json(buildVip5Error(err));
 }
 
 async function getAuthContextFromRequest(req) {
@@ -223,42 +243,50 @@ function parseVip5ActivationBody(req) {
 exports.vip5Activate = functions.https.onRequest(async (req, res) => {
   setCorsHeaders(req, res);
 
-  if (req.method === 'OPTIONS') {
-    return res.status(204).send('');
-  }
+  try {
+    if (req.method === 'OPTIONS') {
+      return res.status(204).send('');
+    }
 
-  if (req.method !== 'POST' && req.method !== 'GET') {
-    return res.status(405).json({ error: { status: 'METHOD_NOT_ALLOWED', message: 'Metodo nao permitido' } });
-  }
+    if (req.method !== 'POST' && req.method !== 'GET') {
+      return res.status(405).json({ error: { status: 'METHOD_NOT_ALLOWED', message: 'Metodo nao permitido' } });
+    }
 
-  const body = parseVip5ActivationBody(req);
-  const authContext = await getAuthContextFromRequest(req);
-  const result = await processVip5Activation(body, authContext, req.headers.origin || null);
-  return res.status(200).json({ result });
+    const body = parseVip5ActivationBody(req);
+    const authContext = await getAuthContextFromRequest(req);
+    const result = await processVip5Activation(body, authContext, req.headers.origin || null);
+    return res.status(200).json({ result });
+  } catch (err) {
+    return sendVip5CallableError(res, err);
+  }
 });
 
 exports.vip5ActivateHttp = functions.https.onRequest(async (req, res) => {
   setCorsHeaders(req, res);
 
-  console.log('Origin:', req.headers.origin || null);
-  console.log('UID:', (req.method === 'GET' ? req.query?.activatorUid : req.body?.activatorUid) || null);
+  try {
+    console.log('Origin:', req.headers.origin || null);
+    console.log('UID:', (req.method === 'GET' ? req.query?.activatorUid : req.body?.activatorUid) || null);
 
-  if (req.method === 'OPTIONS') {
-    return res.status(204).send('');
+    if (req.method === 'OPTIONS') {
+      return res.status(204).send('');
+    }
+
+    if (req.method !== 'POST' && req.method !== 'GET') {
+      return res.status(405).json({ success: false, reason: 'method_not_allowed', message: 'Metodo nao permitido' });
+    }
+
+    const body = parseVip5ActivationBody(req);
+
+    const result = await processVip5Activation(body, { uid: body.activatorUid || null, email: body.activatorEmail || null }, req.headers.origin || null);
+
+    console.log('Function called successfully');
+
+    const statusCode = result.success ? 200 : (result.reason === 'invalid' ? 400 : 200);
+    return res.status(statusCode).json(result);
+  } catch (err) {
+    return sendVip5HttpError(res, err);
   }
-
-  if (req.method !== 'POST' && req.method !== 'GET') {
-    return res.status(405).json({ success: false, reason: 'method_not_allowed', message: 'Método não permitido' });
-  }
-
-  const body = parseVip5ActivationBody(req);
-
-  const result = await processVip5Activation(body, { uid: body.activatorUid || null, email: body.activatorEmail || null }, req.headers.origin || null);
-
-  console.log('Function called successfully');
-
-  const statusCode = result.success ? 200 : (result.reason === 'invalid' ? 400 : 200);
-  return res.status(statusCode).json(result);
 });
 
 // Agendador para marcar códigos expirados (executar via `firebase deploy --only functions` e configurar scheduler)
