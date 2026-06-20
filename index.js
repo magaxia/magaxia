@@ -22,6 +22,25 @@ function formatCodeRecord(doc, dataDoc) {
   };
 }
 
+function normalizeEmail(email) {
+  return email && typeof email === 'string' ? email.trim().toLowerCase() : null;
+}
+
+function resolveBoundTo(dataDoc) {
+  return dataDoc && dataDoc.boundTo && typeof dataDoc.boundTo === 'object' ? dataDoc.boundTo : {};
+}
+
+function isCodeBoundToAnotherUser(dataDoc, uid, email) {
+  const boundTo = resolveBoundTo(dataDoc);
+  const boundUid = boundTo.uid || null;
+  const boundEmail = normalizeEmail(boundTo.email);
+  const currentEmail = normalizeEmail(email);
+
+  if (boundUid && uid && boundUid !== uid) return true;
+  if (!boundUid && boundEmail && currentEmail && boundEmail !== currentEmail) return true;
+  return false;
+}
+
 function ensureUserDocument(tx, usersCol, userSnap, uid, email, now, code, expiresAt) {
   const userRef = usersCol.doc(uid);
   const userPayload = {
@@ -80,6 +99,9 @@ async function processVip5Activation(data, authContext, requestOrigin) {
   if (dataDoc.status === 'revoked') {
     return { success: false, reason: 'revoked', message: 'Código revogado.' };
   }
+  if (isCodeBoundToAnotherUser(dataDoc, effectiveUid, effectiveEmail)) {
+    return { success: false, reason: 'not_owner', message: 'Este codigo VIP pertence a outro usuario.' };
+  }
   if (dataDoc.expiresAt && dataDoc.expiresAt.toDate && dataDoc.expiresAt.toDate() < new Date()) {
     await doc.ref.update({ status: 'expired' });
     await logsCol.add({
@@ -103,6 +125,13 @@ async function processVip5Activation(data, authContext, requestOrigin) {
         throw new functions.https.HttpsError('not-found', 'missing');
       }
       const current = snapshot.data();
+
+      let userSnap = null;
+      if (effectiveUid) {
+        const userRef = usersCol.doc(effectiveUid);
+        userSnap = await tx.get(userRef);
+      }
+
       if (current.status === 'used') {
         throw new functions.https.HttpsError('failed-precondition', 'already_used');
       }
@@ -111,12 +140,6 @@ async function processVip5Activation(data, authContext, requestOrigin) {
       }
       if (current.expiresAt && current.expiresAt.toDate && current.expiresAt.toDate() < new Date()) {
         throw new functions.https.HttpsError('failed-precondition', 'expired');
-      }
-
-      let userSnap = null;
-      if (effectiveUid) {
-        const userRef = usersCol.doc(effectiveUid);
-        userSnap = await tx.get(userRef);
       }
 
       const codeUpdate = {
