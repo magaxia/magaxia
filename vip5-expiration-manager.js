@@ -154,19 +154,56 @@ window.Vip5ExpirationManager = (() => {
   /**
    * Obtém dados do usuário do Firestore
    */
-  async function getUserFromFirestore(uid) {
+  function getFirestoreDb() {
+    if (window.SistemaAuth && window.SistemaAuth.db) {
+      return window.SistemaAuth.db;
+    }
+    if (window.firebase && typeof window.firebase.firestore === 'function') {
+      try {
+        return window.firebase.firestore();
+      } catch (e) {
+        console.warn('Falha ao criar instância Firestore:', e);
+      }
+    }
+    return null;
+  }
+
+  async function getRecentActiveVipCodeForCurrentUser(uid, email) {
     try {
-      if (!uid) return null;
-      if (!window.SistemaAuth || !window.SistemaAuth.db) {
+      const db = getFirestoreDb();
+      if (!db) {
         console.warn('Firestore não inicializado');
         return null;
       }
 
-      const userRef = window.SistemaAuth.db.collection('users').doc(uid);
-      const userDoc = await userRef.get();
-      return userDoc.exists ? userDoc.data() : null;
+      let query = db.collection('vip5_codes')
+        .where('status', '==', 'used')
+        .orderBy('usedAt', 'desc')
+        .limit(10);
+
+      if (uid) {
+        query = query.where('usedBy.uid', '==', uid);
+      } else if (email) {
+        query = query.where('usedBy.email', '==', email);
+      }
+
+      const snapshot = await query.get();
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const nowMs = Date.now();
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const expiresAtMs = normalizeTimestamp(data.expiresAt);
+        if (expiresAtMs && expiresAtMs > nowMs) {
+          return { id: doc.id, data, expiresAtMs };
+        }
+      }
+
+      return null;
     } catch (e) {
-      console.warn('Erro ao buscar usuário do Firestore:', e);
+      console.warn('Erro ao buscar código VIP ativo do Firestore:', e);
       return null;
     }
   }
@@ -186,6 +223,19 @@ window.Vip5ExpirationManager = (() => {
     }
     if (window.usuarioAtual && window.usuarioAtual.uid) {
       return window.usuarioAtual.uid;
+    }
+    return null;
+  }
+
+  function getCurrentUserEmail() {
+    if (window.auth && window.auth.currentUser && window.auth.currentUser.email) {
+      return String(window.auth.currentUser.email).trim().toLowerCase();
+    }
+    if (window.SistemaAuth && window.SistemaAuth.auth && window.SistemaAuth.auth.currentUser && window.SistemaAuth.auth.currentUser.email) {
+      return String(window.SistemaAuth.auth.currentUser.email).trim().toLowerCase();
+    }
+    if (window.SistemaAuth && window.SistemaAuth.usuarioLogado && window.SistemaAuth.usuarioLogado.email) {
+      return String(window.SistemaAuth.usuarioLogado.email).trim().toLowerCase();
     }
     return null;
   }
@@ -229,45 +279,21 @@ window.Vip5ExpirationManager = (() => {
   async function syncWithFirestore() {
     try {
       const uid = getCurrentUserUid();
-      if (!uid) {
+      const email = getCurrentUserEmail();
+      if (!uid && !email) {
         // Usuário não autenticado, usar apenas localStorage
         return;
       }
 
-      const userData = await getUserFromFirestore(uid);
-      if (!userData) {
-        console.warn('Usuário não encontrado no Firestore');
-        return;
-      }
-
-      const firebaseVip5Active = userData.vip5Active === true || userData.vipActive === true;
-      const firebaseExpiresAtMs = normalizeTimestamp(userData.vip5ExpiresAt || userData.vipExpiresAt || userData.vipExpiracao);
-      const localExpiresAtMs = getLocalStorageExpiration();
-      const localUid = getLocalStorageUid();
-
-      console.log('🔄 Sincronizando VIP:', {
-        firebaseActive: firebaseVip5Active,
-        firebaseExpires: firebaseExpiresAtMs ? new Date(firebaseExpiresAtMs).toISOString() : null,
-        localExpires: localExpiresAtMs ? new Date(localExpiresAtMs).toISOString() : null,
-      });
-
-      // Se não há expiração no Firestore mas há VIP ativo, usar localStorage
-      if (firebaseVip5Active && !firebaseExpiresAtMs && localExpiresAtMs) {
-        console.log('ℹ️ Usando expiração do localStorage (Firestore não sincronizado)');
-        return;
-      }
-
-      // Se há expiração no Firestore, atualizar localStorage
-      if (firebaseVip5Active && firebaseExpiresAtMs) {
-        saveToLocalStorage(userData.vip5Code || '', firebaseExpiresAtMs, uid);
-        return;
-      }
-
-      // Se Firestore diz que VIP não está ativo, limpar localStorage
-      if (!firebaseVip5Active) {
+      const activeCode = await getRecentActiveVipCodeForCurrentUser(uid, email);
+      if (!activeCode) {
         clearLocalStorage();
-        console.log('ℹ️ VIP não está ativo no Firestore, localStorage limpo');
+        console.log('ℹ️ Nenhum VIP ativo encontrado no Firestore, localStorage limpo');
+        return;
       }
+
+      saveToLocalStorage(activeCode.data.code || '', activeCode.expiresAtMs, uid || activeCode.data.usedBy?.uid || null);
+      console.log('✅ VIP sincronizado com Firestore:', activeCode.id);
     } catch (e) {
       console.error('❌ Erro ao sincronizar com Firestore:', e);
     }
@@ -292,21 +318,6 @@ window.Vip5ExpirationManager = (() => {
         });
 
         clearLocalStorage();
-
-        // Atualizar Firestore se autenticado
-        const uid = getCurrentUserUid();
-        if (uid && window.SistemaAuth && window.SistemaAuth.db) {
-          try {
-            await window.SistemaAuth.db.collection('users').doc(uid).update({
-              vip5Active: false,
-            });
-            console.log('✅ Firestore atualizado: vip5Active = false');
-          } catch (e) {
-            console.warn('Aviso ao atualizar Firestore:', e);
-          }
-        }
-
-        // Redirecionar para página de ativação
         redirectToVipActivation();
         return;
       }

@@ -89,10 +89,13 @@ const Vip5Storage = (() => {
     if (window.usuarioAtual && window.usuarioAtual.uid) {
       return window.usuarioAtual;
     }
+    if (window.SistemaAuth && window.SistemaAuth.auth && window.SistemaAuth.auth.currentUser) {
+      return window.SistemaAuth.auth.currentUser;
+    }
     if (window.auth && window.auth.currentUser) {
       return window.auth.currentUser;
     }
-    return null;
+    return window.SistemaAuth?.usuarioLogado || null;
   }
 
   async function resolveUserByIdentifier(identifier) {
@@ -122,11 +125,109 @@ const Vip5Storage = (() => {
   async function findCodeByValue(code) {
     const normalized = normalizeCode(code);
     if (!normalized) return null;
+    const docRef = getCodesCollection().doc(normalized);
+    const doc = await docRef.get();
+    if (doc.exists) {
+      return { id: doc.id, data: doc.data() };
+    }
+
     const snapshot = await getCodesCollection()
-      .where("codeSearch", "==", normalized)
+      .where('codeSearch', '==', normalized)
       .limit(1)
       .get();
     return snapshot.empty ? null : { id: snapshot.docs[0].id, data: snapshot.docs[0].data() };
+  }
+
+  async function activateWithFirestoreTransaction(normalized, activatorUid, activatorEmail) {
+    const database = ensureDb();
+
+    try {
+      const result = await database.runTransaction(async (tx) => {
+        const codeRef = getCodesCollection().doc(normalized);
+        let codeDoc = await tx.get(codeRef);
+        if (!codeDoc.exists) {
+          const fallbackQuery = getCodesCollection().where('codeSearch', '==', normalized).limit(1);
+          const querySnapshot = await tx.get(fallbackQuery);
+          if (querySnapshot.empty) {
+            return { success: false, reason: 'invalid', message: 'Código inválido.' };
+          }
+          codeDoc = querySnapshot.docs[0];
+        }
+        const codeData = codeDoc.data();
+        const now = firebase.firestore.Timestamp.now();
+        const expiresAt = codeData.expiresAt;
+
+        if (codeData.status === 'used') {
+          return { success: false, reason: 'already_used', message: 'Código já utilizado.' };
+        }
+        if (codeData.status === 'revoked') {
+          return { success: false, reason: 'revoked', message: 'Código revogado.' };
+        }
+        if (expiresAt && expiresAt.toDate && expiresAt.toDate() < new Date()) {
+          return { success: false, reason: 'expired', message: 'Código expirado.' };
+        }
+
+        const boundTo = codeData.boundTo || {};
+        const boundUid = boundTo.uid || null;
+        const boundEmail = normalizeIdentifier(boundTo.email);
+        const currentUser = getCurrentAuthUser();
+        const currentUid = activatorUid || currentUser?.uid || null;
+        const currentEmail = normalizeIdentifier(activatorEmail || currentUser?.email || window.auth?.currentUser?.email || null);
+        if (boundUid && (!currentUid || boundUid !== currentUid)) {
+          return { success: false, reason: 'not_owner', message: 'Este código VIP pertence a outro usuário.' };
+        }
+        if (boundEmail && (!currentEmail || boundEmail !== currentEmail)) {
+          return { success: false, reason: 'not_owner', message: 'Este código VIP pertence a outro usuário.' };
+        }
+
+        const codeUpdate = {
+          status: 'used',
+          usedAt: now,
+          usedBy: { uid: currentUid || null, email: currentEmail || null },
+          activationLog: {
+            activatedAt: now,
+            activatedBy: { uid: currentUid || null, email: currentEmail || null },
+          },
+        };
+
+        tx.update(codeDoc.ref, codeUpdate);
+
+        const logRef = getLogsCollection().doc();
+        tx.set(logRef, {
+          action: 'activate',
+          codeId: codeDoc.id,
+          code: codeData.code || null,
+          actorUid: currentUid || null,
+          actorEmail: currentEmail || null,
+          targetUid: boundUid || null,
+          status: 'used',
+          message: 'Código VIP ativado via Firestore transaction.',
+          metadata: { boundTo, expiresAt: expiresAt || null },
+          createdAt: now,
+        });
+
+        return {
+          success: true,
+          code: codeData.code,
+          codeRecord: {
+            id: codeDoc.id,
+            code: codeData.code,
+            status: 'used',
+            expiresAt: expiresAt && expiresAt.toDate ? expiresAt.toDate().toISOString() : null,
+            boundTo: codeData.boundTo || null,
+          },
+        };
+      });
+
+      return result;
+    } catch (error) {
+      console.error('activateWithFirestoreTransaction error:', error);
+      const message = error && (error.message || '').toString();
+      if (/quota|exceeded|resource-exhausted|unavailable|internal|timeout|deadline|transient|try again/i.test(message)) {
+        return { success: false, reason: 'transient', message: getActivationServiceMessage() };
+      }
+      return { success: false, reason: 'failed', message: 'Erro ao ativar via Firestore. Tente novamente.' };
+    }
   }
 
   function resolveFunctionsService() {
@@ -168,7 +269,7 @@ const Vip5Storage = (() => {
   }
 
   function getActivationServiceMessage() {
-    return 'Ativacao VIP indisponivel no momento. Publique as Firebase Functions vip5Activate e vip5ActivateHttp e tente novamente.';
+    return 'Ativacao VIP indisponivel no momento. Verifique sua conexão com Firestore e tente novamente.';
   }
 
   async function activateWithHttpFallback(normalized, activatorUid, activatorEmail) {
@@ -214,57 +315,8 @@ const Vip5Storage = (() => {
   }
 
   async function activateWithServerFunction(normalized, activatorUid, activatorEmail) {
-    if (window.location.protocol === 'file:' || getSafeBrowserOrigin() === null) {
-      console.log('Usando fallback HTTP para file:// ou origin null');
-      return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
-    }
-
-    if (!(window.firebase && (typeof window.firebase.functions === 'function' || typeof window.firebase.getFunctions === 'function'))) {
-      return { success: false, reason: 'unavailable', message: 'Funções do Firebase não estão disponíveis. Atualize a página ou contate o suporte.' };
-    }
-
-    const functionsService = resolveFunctionsService();
-    if (!functionsService || typeof functionsService.httpsCallable !== 'function') {
-      if (window.location.protocol === 'file:' || getSafeBrowserOrigin() === null) {
-        return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
-      }
-      return { success: false, reason: 'unavailable', message: 'Funções do Firebase não estão disponíveis. Atualize a página ou contate o suporte.' };
-    }
-
-    const fn = functionsService.httpsCallable('vip5Activate');
-    if (!fn) {
-      if (window.location.protocol === 'file:') {
-        return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
-      }
-      return { success: false, reason: 'unavailable', message: 'Funções do Firebase não estão disponíveis. Atualize a página ou contate o suporte.' };
-    }
-
-    try {
-      console.log('Origin:', getSafeBrowserOrigin() || 'null');
-      console.log('UID:', activatorUid || window.auth?.currentUser?.uid || null);
-      try { localStorage.setItem(`vip5_activate_last_${normalized}`, String(Date.now())); } catch (e) {}
-      const res = await fn({ code: normalized, activatorUid: activatorUid || null, activatorEmail: activatorEmail || null });
-      const data = res && res.data ? res.data : res;
-      if (!data || typeof data.success === 'undefined') {
-        return { success: false, reason: 'transient', message: 'Serviço temporariamente indisponível. Tente novamente mais tarde.' };
-      }
-      console.log('Function called successfully');
-      return data;
-    } catch (err) {
-      console.error('vip5Activate function error:', err);
-      const message = err && (err.message || err.code || '').toString();
-      const isFallbackCandidate = /CORS|Origin\s*:\s*null|Blocked by CORS|Failed to fetch|NetworkError|internal|unavailable/i.test(message) || window.location.protocol === 'file:' || getSafeBrowserOrigin() === null;
-      if (isFallbackCandidate) {
-        console.warn('Tentando fallback HTTP para vip5ActivateHttp devido a erro de função ou file:// ou origin null', message);
-        return await activateWithHttpFallback(normalized, activatorUid, activatorEmail);
-      }
-      const isTransient = /quota|exceeded|resource-exhausted|unavailable|internal|timeout|deadline|transient|try again/i.test(message);
-      return {
-        success: false,
-        reason: isTransient ? 'transient' : 'failed',
-        message: isTransient ? getActivationServiceMessage() : 'Erro ao ativar via servidor. Tente novamente.',
-      };
-    }
+    console.warn('activateWithServerFunction: usando Firestore transaction em vez de Cloud Functions');
+    return await activateWithFirestoreTransaction(normalized, activatorUid, activatorEmail);
   }
 
   async function createVipCode(targetIdentifier, notes, validityDays, adminUser) {
@@ -305,7 +357,13 @@ const Vip5Storage = (() => {
       activationLog: null,
     };
 
-    const docRef = await getCodesCollection().add(payload);
+    const docRef = getCodesCollection().doc(codeSearch);
+    const existingDoc = await docRef.get();
+    if (existingDoc.exists) {
+      throw new Error('Erro ao criar código VIP: código gerado já existe. Tente novamente.');
+    }
+
+    await docRef.set(payload);
     await registerLog({
       action: "create",
       codeId: docRef.id,
@@ -338,8 +396,15 @@ const Vip5Storage = (() => {
       // ignore
     }
 
-    const serverResult = await activateWithServerFunction(normalized, activatorUid, activatorEmail);
-    return serverResult;
+    const result = await activateWithFirestoreTransaction(normalized, activatorUid, activatorEmail);
+
+    try {
+      localStorage.setItem(`vip5_activate_last_${normalized}`, String(Date.now()));
+    } catch (e) {
+      console.warn('Não foi possível salvar cooldown de tentativa de ativação:', e);
+    }
+
+    return result;
   }
 
   async function revokeVipCode(codeId, adminUser, reason) {
@@ -559,6 +624,8 @@ const Vip5Storage = (() => {
       targetUid: targetUid || null,
       status: status || null,
       message: message || null,
+      module: 'vip',
+      submodule: 'usuario',
       metadata: metadata || null,
       createdAt: firebase.firestore.Timestamp.now(),
     };
@@ -594,6 +661,9 @@ const Vip5Storage = (() => {
     updateExpiredCodes,
     formatTimestamp,
     getFunctionsHttpEndpoint,
+    // legacy helpers kept for compatibility and rollback
+    activateWithServerFunction,
+    activateWithHttpFallback,
   };
 })();
 

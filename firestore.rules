@@ -124,6 +124,61 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
     }
 
+    // VIP code documents used for activation
+    match /vip5_codes/{codeId} {
+      function isBoundToCurrentUser() {
+        return request.auth != null && (
+          resource.data.boundTo.uid == request.auth.uid
+          || (resource.data.boundTo.email is string && resource.data.boundTo.email == request.auth.token.email)
+        );
+      }
+
+      function isUnboundCode() {
+        return resource.data.boundTo.uid == null && !(resource.data.boundTo.email is string);
+      }
+
+      allow get: if isAdmin() || (isUnboundCode() && request.auth == null) || (isSignedIn() && isBoundToCurrentUser());
+      allow list: if isAdmin()
+        || (isSignedIn() && request.query.where('usedBy.uid', '==', request.auth.uid) && request.query.where('status', '==', 'used'))
+        || (isSignedIn() && request.query.where('usedBy.email', '==', request.auth.token.email) && request.query.where('status', '==', 'used'));
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        resource.data.status == 'active'
+        && request.resource.data.status == 'used'
+        && request.resource.data.code == resource.data.code
+        && request.resource.data.codeSearch == resource.data.codeSearch
+        && request.resource.data.boundTo == resource.data.boundTo
+        && request.resource.data.expiresAt == resource.data.expiresAt
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.notes == resource.data.notes
+        && request.resource.data.revokedAt == resource.data.revokedAt
+        && request.resource.data.revokedBy == resource.data.revokedBy
+        && request.resource.data.revokedReason == resource.data.revokedReason
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status','usedAt','usedBy','activationLog'])
+        && (
+          (
+            isSignedIn()
+            && request.resource.data.usedBy.uid == request.auth.uid
+            && request.resource.data.usedBy.email == request.auth.token.email
+            && request.resource.data.activationLog.activatedBy.uid == request.auth.uid
+            && request.resource.data.activationLog.activatedBy.email == request.auth.token.email
+          )
+          || (
+            request.auth == null
+            && isUnboundCode()
+            && request.resource.data.usedBy.uid == null
+            && request.resource.data.usedBy.email == null
+            && request.resource.data.activationLog.activatedBy.uid == null
+            && request.resource.data.activationLog.activatedBy.email == null
+          )
+        )
+        && request.resource.data.activationLog.activatedAt is timestamp
+        && request.resource.data.usedAt is timestamp
+      );
+      allow delete: if isAdmin();
+    }
+
     // Coupon codes index - admin only
     match /vip5_coupon_codes/{docId} {
       allow read, write: if isAdmin();

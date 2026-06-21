@@ -95,7 +95,17 @@ const Vip5Activation = {
       }
     };
 
-    const code = document.getElementById("vip5-code-input").value.trim();
+    const codeInput = document.getElementById("vip5-code-input");
+    const code = codeInput ? String(codeInput.value || '').trim() : "";
+
+    const authRequired = !!window.SistemaAuth || !!window.auth;
+    if (authRequired && !this.user?.uid) {
+      this.showMessage("Você precisa estar logado para ativar o VIP 5.", "error");
+      this.isActivating = false;
+      disableSubmit(false);
+      return;
+    }
+
     if (!code) {
       this.showMessage("Digite um código VIP válido.", "error");
       this.isActivating = false;
