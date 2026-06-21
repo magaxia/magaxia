@@ -674,16 +674,26 @@ window.SistemaAuth = {
             const elemento = document.getElementById(elementoId);
             if (!elemento) return;
 
-            this.db.collection('users').doc(uid)
-                .onSnapshot(doc => {
-                    if (!doc.exists) return;
+            // Use a single read instead of a realtime listener to avoid permanent listeners
+            this.db.collection('users').doc(uid).get()
+                .then(doc => {
+                    if (!doc || !doc.exists) return;
                     const usuarioData = doc.data() || {};
-                    const saldo = usuarioData.saldo || 0;
-                    elemento.textContent = `R$ ${saldo.toFixed(2).replace('.', ',')}`;
+                    const saldo = Number(usuarioData.saldo || 0);
+                    try {
+                        elemento.textContent = `R$ ${saldo.toFixed(2).replace('.', ',')}`;
+                    } catch (e) {
+                        // Ignore DOM write errors in non-browser contexts
+                    }
                     this.usuarioLogado = { ...dados, saldo, ...usuarioData };
-                    localStorage.setItem("usuarioLogado", JSON.stringify(this.usuarioLogado));
-                }, error => {
-                    console.error("❌ Erro ao escutar saldo:", error);
+                    try {
+                        localStorage.setItem("usuarioLogado", JSON.stringify(this.usuarioLogado));
+                    } catch (e) {
+                        // ignore localStorage errors
+                    }
+                })
+                .catch(error => {
+                    console.error("❌ Erro ao carregar saldo:", error);
                 });
         });
     },

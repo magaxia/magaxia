@@ -2,10 +2,274 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+
+
+
+
+
+
+
+
+
+
+
+    // Regras para a coleção 'users'
+    match /users/{userId} {
+      // Permite leitura para o próprio usuário autenticado
+      allow read: if request.auth.uid == userId;
+
+      // Permite atualização para o próprio usuário autenticado
+      // Isso cobre tanto a ativação VIP quanto a desativação (expiração)
+      allow update: if request.auth.uid == userId && (
+        // Garante que os campos VIP (vip5Active, vip5Code, vip5ActivatedAt, vip5ExpiresAt)
+        // são do tipo correto e as datas são válidas.
+        // A lógica de ativação/expiração está no client-side com validação aqui.
+        request.resource.data.vip5Active is bool &&
+        request.resource.data.vip5Code is string || request.resource.data.vip5Code == null &&
+        request.resource.data.vip5ActivatedAt is timestamp || request.resource.data.vip5ActivatedAt == null &&
+        request.resource.data.vip5ExpiresAt is timestamp || request.resource.data.vip5ExpiresAt == null &&
+        // Outros campos do documento do usuário podem ser atualizados se necessário,
+        // mas aqui focamos nos campos VIP.
+        // As datas devem ser sensatas. Expiration > Activation.
+        (request.resource.data.vip5ExpiresAt == null || request.resource.data.vip5ActivatedAt == null || request.resource.data.vip5ExpiresAt > request.resource.data.vip5ActivatedAt)
+      );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      // Nega criação e exclusão de documentos de usuário diretamente pelo cliente
+      // (a criação é geralmente feita via Firebase Auth)
+      allow create, delete: if false;
+    }
+
+
+
+
+
     // ===== HELPER FUNCTIONS: VIP5 SYSTEM =====
     function isSignedIn() {
       return request.auth != null;
     }
+
+
+
+
+
+
+
+
+
+
 
     function isAdmin() {
       return isSignedIn() && (
@@ -14,12 +278,29 @@ service cloud.firestore {
         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
         || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true
       );
+
     }
+
+
+
 
     // get user doc data
     function userDoc(uid) {
       return get(/databases/$(database)/documents/users/$(uid)).data;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // checks whether the authenticated user has any exact level present in the provided list
     function userHasAnyExactLevel(listOfLevels) {
@@ -32,7 +313,6 @@ service cloud.firestore {
         (u.vipLevels is list && listOfLevels.hasAny(u.vipLevels))
       );
     }
-
     // ===== HELPER FUNCTIONS: PRODUCTOS SYSTEM (from firestore.rules (1)) =====
     function isAdminByEmail(email) {
       return email in [
@@ -126,57 +406,25 @@ service cloud.firestore {
 
     // VIP code documents used for activation
     match /vip5_codes/{codeId} {
-      function isBoundToCurrentUser() {
-        return request.auth != null && (
-          resource.data.boundTo.uid == request.auth.uid
-          || (resource.data.boundTo.email is string && resource.data.boundTo.email == request.auth.token.email)
-        );
-      }
+      // Nega leitura direta de códigos VIP por qualquer um
+      allow read: if false;
 
-      function isUnboundCode() {
-        return resource.data.boundTo.uid == null && !(resource.data.boundTo.email is string);
-      }
+      // Permite atualização (para marcar como usado) apenas sob condições estritas:
+      allow update: if request.auth.uid != null &&
+                        // O código deve existir e não estar ativado (campo activatedBy nulo)
+                        resource.data.activatedBy == null &&
+                        // O novo valor de activatedBy deve ser o UID do usuário atual
+                        request.resource.data.activatedBy == request.auth.uid &&
+                        // As datas de ativação e expiração devem ser timestamps válidos
+                        request.resource.data.activationDate is timestamp &&
+                        // A data de ativação deve ser igual ou anterior ao tempo atual
+                        request.resource.data.activationDate <= request.time &&
+                        // A data de expiração deve ser posterior à data de ativação
+                        request.resource.data.expirationDate > request.resource.data.activationDate;
 
-      allow get: if isAdmin() || (isUnboundCode() && request.auth == null) || (isSignedIn() && isBoundToCurrentUser());
-      allow list: if isAdmin()
-        || (isSignedIn() && request.query.where('usedBy.uid', '==', request.auth.uid) && request.query.where('status', '==', 'used'))
-        || (isSignedIn() && request.query.where('usedBy.email', '==', request.auth.token.email) && request.query.where('status', '==', 'used'));
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (
-        resource.data.status == 'active'
-        && request.resource.data.status == 'used'
-        && request.resource.data.code == resource.data.code
-        && request.resource.data.codeSearch == resource.data.codeSearch
-        && request.resource.data.boundTo == resource.data.boundTo
-        && request.resource.data.expiresAt == resource.data.expiresAt
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.notes == resource.data.notes
-        && request.resource.data.revokedAt == resource.data.revokedAt
-        && request.resource.data.revokedBy == resource.data.revokedBy
-        && request.resource.data.revokedReason == resource.data.revokedReason
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status','usedAt','usedBy','activationLog'])
-        && (
-          (
-            isSignedIn()
-            && request.resource.data.usedBy.uid == request.auth.uid
-            && request.resource.data.usedBy.email == request.auth.token.email
-            && request.resource.data.activationLog.activatedBy.uid == request.auth.uid
-            && request.resource.data.activationLog.activatedBy.email == request.auth.token.email
-          )
-          || (
-            request.auth == null
-            && isUnboundCode()
-            && request.resource.data.usedBy.uid == null
-            && request.resource.data.usedBy.email == null
-            && request.resource.data.activationLog.activatedBy.uid == null
-            && request.resource.data.activationLog.activatedBy.email == null
-          )
-        )
-        && request.resource.data.activationLog.activatedAt is timestamp
-        && request.resource.data.usedAt is timestamp
-      );
-      allow delete: if isAdmin();
+      // Nega criação e exclusão de códigos VIP pelo cliente
+      // (códigos são pré-gerados)
+      allow create, delete: if false;
     }
 
     // Coupon codes index - admin only
@@ -230,6 +478,17 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
+
+
+
+
+
+
+
+
+
+
+
     // Levels
     match /vip5_niveis/{id} {
       allow get, list: if isAdmin() || isSignedIn();
@@ -249,6 +508,8 @@ service cloud.firestore {
       );
       allow delete: if isAdmin();
     }
+
+
 
     // Fallbacks for other VIP collections - admin only
     match /vip5_{doc=**} {
