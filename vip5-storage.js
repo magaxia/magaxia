@@ -1,77 +1,71 @@
-// Use compat/global Firestore instance when module-based `firebase-config.js` is not available
+import { db } from "./vip5-firebase.js";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-function resolveDb() {
-    if (typeof window !== 'undefined') {
-        if (typeof db !== 'undefined' && db) return db;
-        if (window.FirebaseHelper && typeof window.FirebaseHelper.getDB === 'function') {
-            const helperDb = window.FirebaseHelper.getDB();
-            if (helperDb) return helperDb;
-        }
-        if (window.SistemaAuth && window.SistemaAuth.db) return window.SistemaAuth.db;
-        if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
-            try {
-                return firebase.firestore();
-            } catch (e) {
-                // fallthrough
-            }
-        }
-    }
-    throw new Error('Firestore não inicializado.');
+export async function getCode(code) {
+  console.log("[VIP5-STORAGE] Buscando código em vip5_codes/" + code);
+  const ref = doc(db, "vip5_codes", code);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    console.warn("[VIP5-STORAGE] Documento vip5_codes/" + code + " NÃO encontrado.");
+    return null;
+  }
+  const data = { id: snap.id, ...snap.data() };
+  console.log("[VIP5-STORAGE] Documento encontrado:", data);
+  return data;
 }
 
-/**
- * ATIVAÇÃO VIP (1 leitura + 1 escrita)
- */
-export async function activateVipCodeFirestore(uid, code) {
-    const database = resolveDb();
-    const vipRef = database.collection('vip5_codes').doc(code);
-    const userRef = database.collection('users').doc(uid);
-
-    const snap = await vipRef.get();
-    if (!snap.exists) {
-        return { success: false, message: 'Código inválido' };
-    }
-
-    const data = snap.data();
-    if (data && data.used) {
-        return { success: false, message: 'Código já usado' };
-    }
-
-    const now = Date.now();
-    const expiresAt = now + 30 * 24 * 60 * 60 * 1000;
-
-    await vipRef.update({ used: true, usedBy: uid, usedAt: now });
-
-    await userRef.update({
-        vip5Active: true,
-        vip5Code: code,
-        vip5ActivatedAt: now,
-        vip5ExpiresAt: expiresAt
-    });
-
-    try {
-        localStorage.setItem('vip5', JSON.stringify({ uid, code, activatedAt: now, expiresAt }));
-    } catch (e) {
-        // ignore localStorage failures
-    }
-
-    return { success: true };
+export async function markCodeUsed(code, uid) {
+  console.log("[VIP5-STORAGE] Marcando código como usado. code=" + code + " uid=" + uid);
+  const ref = doc(db, "vip5_codes", code);
+  await updateDoc(ref, {
+    used: true,
+    activatedBy: uid,
+    activatedAt: serverTimestamp()
+  });
+  console.log("[VIP5-STORAGE] Código marcado como usado com sucesso.");
 }
 
-/**
- * LER STATUS DO FIRESTORE (1 leitura)
- */
-export async function getVipStatusFromUserDocument(uid) {
-    const database = resolveDb();
-    const userRef = database.collection('users').doc(uid);
-    const snap = await userRef.get();
-    if (!snap.exists) return null;
-    return snap.data();
+export async function saveUserVip(uid, code, days) {
+  console.log("[VIP5-STORAGE] Gravando VIP em users/" + uid + " | code=" + code + " | days=" + days);
+  const now = Date.now();
+  const expiresAt = now + days * 24 * 60 * 60 * 1000;
+  const ref = doc(db, "users", uid);
+  await setDoc(
+    ref,
+    {
+      vip5Active: true,
+      vip5Code: code,
+      vip5ActivatedAt: now,
+      vip5ExpiresAt: expiresAt
+    },
+    { merge: true }
+  );
+  console.log("[VIP5-STORAGE] VIP gravado com sucesso. vip5ExpiresAt=" + new Date(expiresAt).toISOString());
+  return expiresAt;
 }
 
-/**
- * LOCAL VIP (zero Firestore)
- */
-export function getVipLocal() {
-    return JSON.parse(localStorage.getItem("vip5"));
+export async function getUserVip(uid) {
+  console.log("[VIP5-STORAGE] Lendo dados VIP de users/" + uid);
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    console.warn("[VIP5-STORAGE] Documento users/" + uid + " NÃO existe.");
+    return null;
+  }
+  const data = snap.data();
+  console.log("[VIP5-STORAGE] Dados do usuário:", data);
+  return data;
+}
+
+export async function deactivateUserVip(uid) {
+  console.log("[VIP5-STORAGE] Desativando VIP de users/" + uid);
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, { vip5Active: false });
+  console.log("[VIP5-STORAGE] VIP desativado.");
 }

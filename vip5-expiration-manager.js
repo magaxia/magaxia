@@ -1,34 +1,44 @@
-import { getVipLocal } from "./vip5-storage.js";
+import { auth } from "./vip5-firebase.js";
+import { getUserVip, deactivateUserVip } from "./vip5-storage.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/**
- * VERIFICA VIP LOCAL (zero Firestore)
- */
-export function isVipActive() {
-    const vip = getVipLocal();
-    return vip && Date.now() < vip.expiresAt;
-}
+export async function checkVipExpiration(redirectOnExpired = "vip5.html") {
+  console.log("[VIP5-EXPIRATION] Iniciando verificação de expiração VIP...");
+  return new Promise((resolve, reject) => {
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        console.warn("[VIP5-EXPIRATION] Nenhum usuário autenticado. Redirecionando para vip5.html");
+        window.location.href = "vip5.html";
+        return;
+      }
 
-/**
- * VERIFICA EXPIRAÇÃO
- */
-export function checkVip() {
-    const vip = getVipLocal();
+      console.log("[VIP5-EXPIRATION] Usuário autenticado: uid=" + user.uid);
 
-    if (!vip) return false;
+      try {
+        const data = await getUserVip(user.uid);
 
-    if (Date.now() > vip.expiresAt) {
-        localStorage.removeItem("vip5");
-        return false;
-    }
+        if (!data || !data.vip5Active) {
+          console.warn("[VIP5-EXPIRATION] VIP não ativo ou documento inexistente. Redirecionando para " + redirectOnExpired);
+          window.location.href = redirectOnExpired;
+          return;
+        }
 
-    return true;
-}
+        const now = Date.now();
+        console.log("[VIP5-EXPIRATION] now=" + now + " | vip5ExpiresAt=" + data.vip5ExpiresAt + " | expirado=" + (now >= data.vip5ExpiresAt));
 
-/**
- * REDIRECIONA SE EXPIRADO
- */
-export function redirectIfExpired() {
-    if (!checkVip()) {
-        window.location.href = "/vip5.html";
-    }
+        if (now >= data.vip5ExpiresAt) {
+          console.warn("[VIP5-EXPIRATION] VIP expirado. Desativando e redirecionando para " + redirectOnExpired);
+          await deactivateUserVip(user.uid);
+          window.location.href = redirectOnExpired;
+          return;
+        }
+
+        console.log("[VIP5-EXPIRATION] VIP válido. Acesso liberado.");
+        resolve({ user, vipData: data });
+      } catch (err) {
+        console.error("[VIP5-EXPIRATION] Erro ao verificar expiração:", err.code, err.message, err);
+        reject(err);
+      }
+    });
+  });
 }

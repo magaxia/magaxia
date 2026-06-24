@@ -2,279 +2,477 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Área VIP do Usuário - VIP5</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="vip5.css" />
-  <link rel="stylesheet" href="vip5-usuario.css" />
-  <link rel="stylesheet" href="vip5-cards-premium.css" />
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="firebase-helper.js"></script>
-  <script src="sistema-auth.js"></script>
-  <script src="sistema-config.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      if (window.FirebaseHelper && typeof window.FirebaseHelper.initializeFirebase === 'function') {
-        window.FirebaseHelper.initializeFirebase();
-      }
-      if (window.SistemaAuth && typeof window.SistemaAuth.inicializar === 'function') {
-        window.SistemaAuth.inicializar();
-      }
-      if (!window.db && window.FirebaseHelper && typeof window.FirebaseHelper.getDB === 'function') {
-        window.db = window.FirebaseHelper.getDB();
-      }
-      if (!window.auth && window.FirebaseHelper && typeof window.FirebaseHelper.getAuth === 'function') {
-        window.auth = window.FirebaseHelper.getAuth();
-      }
+  <title>Área VIP5</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-      // Inicializar gerenciador de expiração VIP
-      setTimeout(() => {
-        if (window.Vip5ExpirationManager && typeof window.Vip5ExpirationManager.initialize === 'function') {
-          window.Vip5ExpirationManager.initialize().catch(e => {
-            console.error('Erro ao inicializar gerenciador de expiração:', e);
-          });
-        }
-      }, 500);
-    });
-  </script>
-  <script src="vip5-usuario-storage.js"></script>
-  <script src="vip5-expiration-manager.js"></script>
-  <script src="vip5-usuario.js"></script>
+    body {
+      min-height: 100vh;
+      background: #0d0d0d;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    #loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      color: #888;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #222;
+      border-top-color: #f5a623;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #content {
+      display: none;
+      width: 100%;
+      max-width: 480px;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #f5a623, #f0541e);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 100px;
+    }
+
+    .badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      background: #fff;
+      border-radius: 50%;
+      opacity: 0.85;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #252525;
+      border-radius: 14px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 2px;
+    }
+
+    .info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #555;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .info-value {
+      font-size: 14px;
+      color: #ddd;
+      word-break: break-all;
+    }
+
+    .info-value.highlight {
+      color: #f5a623;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #252525;
+    }
+
+    /* Countdown */
+    .countdown-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #555;
+    }
+
+    .countdown-display {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      line-height: 1;
+    }
+
+    .cd-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .cd-number {
+      font-size: 36px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1px;
+      font-variant-numeric: tabular-nums;
+      min-width: 2ch;
+      text-align: center;
+    }
+
+    .cd-unit {
+      font-size: 10px;
+      font-weight: 600;
+      color: #555;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .cd-sep {
+      font-size: 30px;
+      font-weight: 300;
+      color: #333;
+      margin-bottom: 14px;
+    }
+
+    .countdown-expired {
+      font-size: 14px;
+      color: #e74c3c;
+      font-weight: 600;
+    }
+
+    /* Progress */
+    .progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .progress-label {
+      font-size: 12px;
+      color: #555;
+    }
+
+    .progress-pct {
+      font-size: 12px;
+      color: #555;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: #222;
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #f5a623, #f0541e);
+      transition: width 1s linear;
+    }
+
+    .btn-logout {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      color: #888;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      margin-top: 4px;
+    }
+
+    .btn-logout:hover {
+      background: #1f1f1f;
+      color: #ccc;
+      border-color: #333;
+    }
+
+    #error-msg {
+      display: none;
+      text-align: center;
+      color: #e74c3c;
+      font-size: 14px;
+      padding: 20px;
+    }
+
+    @media (max-width: 400px) {
+      h1 { font-size: 19px; }
+      .cd-number { font-size: 28px; }
+      .cd-sep { font-size: 22px; }
+    }
+  </style>
 </head>
 <body>
-  <main class="vip5-user-root">
-    <header class="vip5-user-header">
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <span>Verificando acesso VIP...</span>
+  </div>
+
+  <div id="content">
+    <div class="header">
       <div>
-        <h1>Área do Usuário VIP</h1>
-        <p>Os benefícios, cupons, sorteios e promoções são carregados automaticamente conforme seu nível VIP.</p>
+        <h1>Área VIP5</h1>
+        <p class="subtitle">Seu acesso está ativo</p>
       </div>
-      <div class="vip5-user-actions">
-        <button id="vip5-refresh-btn" class="btn-save">🔄 Atualizar</button>
-        <a class="btn-save vip5-user-link" href="vip5.html">Ativar VIP 5</a>
-        <a class="btn-save vip5-user-link secondary" href="login.html">Login</a>
+      <span class="badge">VIP5</span>
+    </div>
+
+    <div class="card">
+      <p class="card-title">Informações do acesso</p>
+
+      <div class="info-row">
+        <span class="info-label">UID do usuário</span>
+        <span class="info-value" id="uid-value">—</span>
       </div>
-    </header>
 
-    <div id="vip5-user-alert" class="alert-message"></div>
+      <div class="divider"></div>
 
-    <section class="vip5-user-dashboard">
-      <aside class="vip5-user-sidebar">
-        <div class="vip5-user-sidebar-top">
-          <div>
-            <div class="vip5-user-sidebar-label">👑 PAINEL VIP</div>
-            <p>Área profissional do usuário VIP.</p>
-          </div>
-          <button id="vip5-sidebar-toggle" class="vip5-sidebar-toggle" type="button">☰</button>
+      <div class="info-row">
+        <span class="info-label">Código VIP</span>
+        <span class="info-value highlight" id="code-value">—</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="info-row">
+        <span class="info-label">Data de ativação</span>
+        <span class="info-value" id="activated-value">—</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="info-row">
+        <span class="info-label">Data de expiração</span>
+        <span class="info-value" id="expires-value">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-title">Tempo restante</p>
+
+      <div class="countdown-display" id="countdown-display">
+        <div class="cd-block">
+          <span class="cd-number" id="cd-days">00</span>
+          <span class="cd-unit">dias</span>
         </div>
-        <nav class="vip5-user-sidebar-nav">
-          <button type="button" class="vip5-user-sidebar-link active" data-vip5-tab="promocoes">🎯 Promoções VIP</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="ocultas">🔥 Promoções Ocultas</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="ofertas">💎 Ofertas VIP</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="cupons">🎫 Cupons VIP</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="meusCupons">🎟️ Meus Cupons</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="beneficios">🎁 Benefícios</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="sorteios">🎉 Sorteios</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="notificacoes">🔔 Notificações</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="historico">📜 Histórico</button>
-          <button type="button" class="vip5-user-sidebar-link" data-vip5-tab="conta">👤 Minha Conta</button>
-        </nav>
-      </aside>
-
-      <section class="vip5-user-main-content">
-        <div class="vip5-user-panel-header">
-          <div>
-            <h2>Bem-vindo à sua central VIP</h2>
-            <p>Selecione uma aba para navegar entre promoções, cupons, sorteios e sua conta.</p>
-          </div>
-          <div class="vip5-user-panel-buttons">
-            <button id="vip5-refresh-btn-secondary" class="btn-save">🔄 Atualizar</button>
-          </div>
+        <span class="cd-sep">:</span>
+        <div class="cd-block">
+          <span class="cd-number" id="cd-hours">00</span>
+          <span class="cd-unit">horas</span>
         </div>
-
-        <div class="vip5-user-card vip5-user-account-card vip5-user-header-card">
-          <div class="vip5-user-header-grid">
-            <div>
-              <span class="vip5-user-label">Nome</span>
-              <strong id="vip5-user-name">Carregando...</strong>
-            </div>
-            <div>
-              <span class="vip5-user-label">Email</span>
-              <strong id="vip5-user-email">Carregando...</strong>
-            </div>
-            <div>
-              <span class="vip5-user-label">Status</span>
-              <strong id="vip5-user-status">Carregando...</strong>
-            </div>
-            <div>
-              <span class="vip5-user-label">Níveis</span>
-              <strong id="vip5-user-levels">Carregando...</strong>
-            </div>
-            <div>
-              <span class="vip5-user-label">Ativado em</span>
-              <strong id="vip5-user-activated-at">—</strong>
-            </div>
-            <div>
-              <span class="vip5-user-label">Expira em</span>
-              <strong id="vip5-user-expires-at">—</strong>
-            </div>
-          </div>
-          <div class="vip5-user-badges" id="vip5-user-badges"></div>
+        <span class="cd-sep">:</span>
+        <div class="cd-block">
+          <span class="cd-number" id="cd-minutes">00</span>
+          <span class="cd-unit">min</span>
         </div>
-
-        <div class="vip5-user-tab-panels">
-          <div class="vip5-user-tab-pane active" data-tab="promocoes">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>Promoções VIP</h3>
-                <p>Explore todas as promoções disponíveis para o seu nível.</p>
-              </div>
-              <div class="vip5-tab-controls">
-                <input id="vip5-promocoes-search" type="search" placeholder="Pesquisar promoções" />
-                <select id="vip5-promocoes-filter">
-                  <option value="">Todos os status</option>
-                  <option value="ativa">Ativas</option>
-                  <option value="programada">Programadas</option>
-                </select>
-              </div>
-            </div>
-            <div id="vip5-user-promocoes" class="vip5-user-list vip5-user-list-empty">Carregando promoções...</div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="ocultas">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>Promoções Ocultas</h3>
-                <p>Conteúdo exclusivo para o seu nível VIP.</p>
-              </div>
-            </div>
-            <div id="vip5-user-ocultas" class="vip5-user-list vip5-user-list-empty">Carregando promoções ocultas...</div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="ofertas">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>Ofertas VIP</h3>
-                <p>Veja as oportunidades de compra e benefícios exclusivos.</p>
-              </div>
-              <div class="vip5-tab-controls">
-                <input id="vip5-ofertas-search" type="search" placeholder="Pesquisar ofertas" />
-              </div>
-            </div>
-            <div id="vip5-user-ofertas" class="vip5-user-list vip5-user-list-empty">Carregando ofertas...</div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="cupons">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>Cupons VIP</h3>
-                <p>Confira seus cupons ativos e use-os diretamente.</p>
-              </div>
-            </div>
-            <div id="vip5-user-cupons" class="vip5-user-list vip5-user-list-empty">Carregando cupons VIP...</div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="meusCupons">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>🎟️ Meus Cupons</h3>
-                <p>Adicione, copie e marque seus cupons VIP como utilizados.</p>
-              </div>
-            </div>
-            <div class="vip5-user-card vip5-user-coupon-card">
-              <form id="vip5-coupon-validate-form" class="vip5-user-coupon-form">
-                <input id="vip5-coupon-input" type="text" placeholder="Digite o código do cupom" autocomplete="off" />
-                <button type="submit" class="btn-save">Verificar cupom</button>
-              </form>
-              <div id="vip5-coupon-result" class="vip5-user-list-empty">Use um cupom para adicioná-lo ao painel.</div>
-            </div>
-            <div id="vip5-user-meus-cupons" class="vip5-user-list vip5-user-list-empty">Carregando seus cupons...</div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="beneficios">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>🎁 Benefícios</h3>
-                <p>Confira seus benefícios ativos e condições especiais.</p>
-              </div>
-            </div>
-            <div id="vip5-user-beneficios" class="vip5-user-list vip5-user-list-empty">Carregando benefícios...</div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="sorteios">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>🎉 Sorteios</h3>
-                <p>Participe dos sorteios VIP disponíveis para seu nível.</p>
-              </div>
-            </div>
-            <div id="vip5-user-sorteios" class="vip5-user-list vip5-user-list-empty">Carregando sorteios...</div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="notificacoes">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>🔔 Notificações</h3>
-                <p>Gerencie avisos não lidos e lidos em um único lugar.</p>
-              </div>
-            </div>
-            <div class="vip5-user-notification-groups">
-              <div>
-                <h4>Não lidas</h4>
-                <div id="vip5-user-notifications" class="vip5-user-list vip5-user-list-empty">Carregando notificações...</div>
-              </div>
-              <div>
-                <h4>Lidas</h4>
-                <div id="vip5-user-notifications-read" class="vip5-user-list vip5-user-list-empty">Nenhuma notificação lida ainda.</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="historico">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>📜 Histórico</h3>
-                <p>Registros de ações, cupons usados e participações em sorteios.</p>
-              </div>
-            </div>
-            <div id="vip5-user-history" class="vip5-user-list vip5-user-list-empty">Carregando histórico...</div>
-          </div>
-
-          <div class="vip5-user-tab-pane" data-tab="conta">
-            <div class="vip5-tab-panel-header">
-              <div>
-                <h3>👤 Minha Conta</h3>
-                <p>Detalhes de usuário e estatísticas gerais do painel VIP.</p>
-              </div>
-            </div>
-            <div class="vip5-account-grid">
-              <div class="vip5-user-card vip5-user-account-card">
-                <h4>Perfil</h4>
-                <dl class="vip5-account-details">
-                  <div><dt>UID</dt><dd id="vip5-user-account-uid">—</dd></div>
-                  <div><dt>Email</dt><dd id="vip5-user-account-email">—</dd></div>
-                  <div><dt>Nível VIP</dt><dd id="vip5-user-account-level">—</dd></div>
-                  <div><dt>Ativado em</dt><dd id="vip5-user-account-activated">—</dd></div>
-                  <div><dt>Expira em</dt><dd id="vip5-user-account-expires">—</dd></div>
-                  <div><dt>Status</dt><dd id="vip5-user-account-status">—</dd></div>
-                </dl>
-              </div>
-              <div class="vip5-user-card vip5-account-summary-card">
-                <h4>Estatísticas</h4>
-                <div class="vip5-account-summary-grid">
-                  <div><span class="vip5-user-summary-value" id="vip5-user-count-promocoes">0</span><p>Promoções</p></div>
-                  <div><span class="vip5-user-summary-value" id="vip5-user-count-ofertas">0</span><p>Ofertas</p></div>
-                  <div><span class="vip5-user-summary-value" id="vip5-user-count-cupons">0</span><p>Cupons</p></div>
-                  <div><span class="vip5-user-summary-value" id="vip5-user-count-sorteios">0</span><p>Sorteios</p></div>
-                  <div><span class="vip5-user-summary-value" id="vip5-user-count-beneficios">0</span><p>Benefícios</p></div>
-                  <div><span class="vip5-user-summary-value" id="vip5-user-count-ocultas">0</span><p>Ocultas</p></div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <span class="cd-sep">:</span>
+        <div class="cd-block">
+          <span class="cd-number" id="cd-seconds">00</span>
+          <span class="cd-unit">seg</span>
         </div>
-      </section>
-    </section>
-  </main>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-header">
+          <span class="progress-label">Consumido do plano</span>
+          <span class="progress-pct" id="progress-pct">—</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-logout" id="btn-logout">Sair da conta</button>
+  </div>
+
+  <p id="error-msg"></p>
+
+  <script type="module">
+    import { auth } from "./vip5-firebase.js";
+    import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { checkVipExpiration } from "./vip5-expiration-manager.js";
+
+    console.log("[VIP5-USUARIO] Página carregada. Verificando expiração VIP...");
+
+    let countdownTimer = null;
+
+    function pad(n) {
+      return String(Math.floor(n)).padStart(2, "0");
+    }
+
+    function formatDate(ts) {
+      return new Date(ts).toLocaleString("pt-BR", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function showError(msg) {
+      console.error("[VIP5-USUARIO] Erro:", msg);
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      document.getElementById("loading").style.display = "none";
+      const errEl = document.getElementById("error-msg");
+      errEl.textContent = msg;
+      errEl.style.display = "block";
+    }
+
+    function startCountdown(expiresAt, activatedAt) {
+      const totalMs = expiresAt - activatedAt;
+
+      function tick() {
+        const now = Date.now();
+        const remainingMs = expiresAt - now;
+
+        if (remainingMs <= 0) {
+          console.warn("[VIP5-USUARIO] Contagem chegou a zero. Verificando expiração...");
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+
+          document.getElementById("cd-days").textContent    = "00";
+          document.getElementById("cd-hours").textContent   = "00";
+          document.getElementById("cd-minutes").textContent = "00";
+          document.getElementById("cd-seconds").textContent = "00";
+          document.getElementById("progress-fill").style.width = "100%";
+          document.getElementById("progress-pct").textContent = "100% consumido";
+
+          checkVipExpiration("vip5.html").catch((err) => {
+            console.error("[VIP5-USUARIO] Erro ao re-verificar expiração:", err.code, err.message, err);
+            window.location.href = "vip5.html";
+          });
+          return;
+        }
+
+        const days    = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+        const hours   = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((remainingMs % (1000 * 60)) / 1000);
+
+        document.getElementById("cd-days").textContent    = pad(days);
+        document.getElementById("cd-hours").textContent   = pad(hours);
+        document.getElementById("cd-minutes").textContent = pad(minutes);
+        document.getElementById("cd-seconds").textContent = pad(seconds);
+
+        const consumed = Math.max(0, Math.min(100, Math.round(((totalMs - remainingMs) / totalMs) * 100)));
+        const remaining = 100 - consumed;
+        document.getElementById("progress-fill").style.width = consumed + "%";
+        document.getElementById("progress-pct").textContent = consumed + "% consumido";
+      }
+
+      tick();
+      countdownTimer = setInterval(tick, 1000);
+      console.log("[VIP5-USUARIO] Contagem regressiva iniciada. Timer ID:", countdownTimer);
+    }
+
+    try {
+      const { user, vipData } = await checkVipExpiration("vip5.html");
+
+      console.log("[VIP5-USUARIO] Acesso VIP válido. uid=" + user.uid);
+      console.log("[VIP5-USUARIO] Dados VIP:", vipData);
+
+      document.getElementById("uid-value").textContent       = user.uid;
+      document.getElementById("code-value").textContent      = vipData.vip5Code || "—";
+      document.getElementById("activated-value").textContent = formatDate(vipData.vip5ActivatedAt);
+      document.getElementById("expires-value").textContent   = formatDate(vipData.vip5ExpiresAt);
+
+      document.getElementById("loading").style.display  = "none";
+      document.getElementById("content").style.display  = "flex";
+
+      startCountdown(vipData.vip5ExpiresAt, vipData.vip5ActivatedAt);
+
+      document.getElementById("btn-logout").addEventListener("click", async () => {
+        console.log("[VIP5-USUARIO] Fazendo logout...");
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          console.log("[VIP5-USUARIO] Timer limpo antes do logout.");
+        }
+        try {
+          await signOut(auth);
+          console.log("[VIP5-USUARIO] Logout realizado. Redirecionando para vip5.html");
+          window.location.href = "vip5.html";
+        } catch (err) {
+          console.error("[VIP5-USUARIO] Erro no logout:", err.code, err.message, err);
+          showError("Erro ao sair: " + err.message);
+        }
+      });
+
+    } catch (err) {
+      console.error("[VIP5-USUARIO] Erro ao verificar VIP:", err.code, err.message, err);
+      showError("Erro ao verificar acesso VIP: " + (err.message || "Tente novamente."));
+    }
+  </script>
+
 </body>
 </html>
