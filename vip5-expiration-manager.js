@@ -7,8 +7,8 @@ export async function checkVipExpiration(redirectOnExpired = "vip5.html") {
   return new Promise((resolve, reject) => {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        console.warn("[VIP5-EXPIRATION] Nenhum usuário autenticado. Redirecionando para vip5.html");
-        window.location.href = "vip5.html";
+        console.warn("[VIP5-EXPIRATION] Nenhum usuário autenticado. Redirecionando para login.html");
+        window.location.href = "login.html";
         return;
       }
 

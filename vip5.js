@@ -1,10 +1,7 @@
 console.log("[VIP5] vip5.js carregando...");
 
 import { auth } from "./vip5-firebase.js";
-import {
-  signInAnonymously,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getCode, markCodeUsed, saveUserVip, getUserVip } from "./vip5-storage.js";
 
 console.log("[VIP5] Módulos importados com sucesso.");
@@ -27,20 +24,21 @@ function setLoading(loading) {
 console.log("[VIP5] Registrando listener onAuthStateChanged...");
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    console.log("[VIP5] onAuthStateChanged: usuário já logado uid=" + user.uid + " | Verificando VIP ativo...");
+    console.log("[VIP5] onAuthStateChanged: usuário logado uid=" + user.uid + " | Verificando VIP ativo...");
     try {
       const data = await getUserVip(user.uid);
       if (data && data.vip5Active && Date.now() < data.vip5ExpiresAt) {
         console.log("[VIP5] Usuário já tem VIP ativo. Redirecionando para vip5-usuario.html");
         window.location.href = "vip5-usuario.html";
       } else {
-        console.log("[VIP5] Usuário logado mas sem VIP ativo válido. Permanece na tela.");
+        console.log("[VIP5] Usuário logado mas sem VIP ativo válido. Permanece na tela de ativação.");
       }
     } catch (err) {
       console.error("[VIP5] Erro ao verificar VIP existente:", err.code, err.message, err);
     }
   } else {
-    console.log("[VIP5] onAuthStateChanged: nenhum usuário logado.");
+    console.warn("[VIP5] Nenhum usuário autenticado. Redirecionando para login.html");
+    window.location.href = "login.html";
   }
 });
 
@@ -54,20 +52,18 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
+  const user = auth.currentUser;
+  if (!user) {
+    console.warn("[VIP5] Tentativa de ativação sem usuário autenticado. Redirecionando para login.html");
+    window.location.href = "login.html";
+    return;
+  }
+
+  console.log("[VIP5] Usuário autenticado. uid=" + user.uid);
   setLoading(true);
   showMessage("");
 
   try {
-    let user = auth.currentUser;
-    if (!user) {
-      console.log("[VIP5] Nenhum usuário logado. Iniciando login anônimo...");
-      const cred = await signInAnonymously(auth);
-      user = cred.user;
-      console.log("[VIP5] Login anônimo realizado. uid=" + user.uid);
-    } else {
-      console.log("[VIP5] Usuário já logado. uid=" + user.uid);
-    }
-
     console.log("[VIP5] Buscando código no Firestore: vip5_codes/" + code);
     const codeData = await getCode(code);
 
@@ -96,6 +92,7 @@ form.addEventListener("submit", async (e) => {
     }
 
     const days = Number(codeData.days);
+
     console.log("[VIP5] Marcando código como usado...");
     await markCodeUsed(code, user.uid);
 
