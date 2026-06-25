@@ -22,7 +22,8 @@ function setLoading(loading) {
 }
 
 console.log("[VIP5] Registrando listener onAuthStateChanged...");
-onAuthStateChanged(auth, async (user) => {
+const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  unsubscribe();
   if (user) {
     console.log("[VIP5] onAuthStateChanged: usuário logado uid=" + user.uid + " | Verificando VIP ativo...");
     try {
