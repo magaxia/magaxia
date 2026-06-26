@@ -43,7 +43,7 @@
     #content {
       display: none;
       width: 100%;
-      max-width: 480px;
+      max-width: 960px;
       flex-direction: column;
       gap: 16px;
     }
@@ -234,133 +234,409 @@
       transition: width 1s linear;
     }
 
-    /* ── Promoções ── */
-    .promos-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+    /* ═══════════════════════════════════════════════════════════════════
+       PROMOÇÕES — Design Premium SaaS
+    ═══════════════════════════════════════════════════════════════════ */
+
+    #promos-card {
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+      gap: 16px !important;
     }
 
+    .promos-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2px;
+    }
+
+    .promos-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .promos-section-title::before {
+      content: "🎁";
+      font-size: 15px;
+    }
+
+    .promos-count-badge {
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(245,166,35,0.15);
+      color: #f5a623;
+      border: 1px solid rgba(245,166,35,0.25);
+      padding: 2px 8px;
+      border-radius: 100px;
+      letter-spacing: 0.5px;
+    }
+
+    .promos-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    @media (min-width: 600px) {
+      .promos-list { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 900px) {
+      .promos-list { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* Card de promoção */
     .promo-card {
-      background: #111;
-      border: 1px solid #252525;
-      border-radius: 12px;
-      padding: 16px;
+      background: linear-gradient(145deg, #141420 0%, #0f0f1a 100%);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      transition: border-color 0.2s;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1),
+                  box-shadow 0.28s cubic-bezier(0.4,0,0.2,1),
+                  border-color 0.28s ease;
+      cursor: default;
+    }
+
+    .promo-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(180deg, #f5a623 0%, #f0541e 100%);
+      border-radius: 16px 0 0 16px;
+    }
+
+    .promo-card::after {
+      content: "";
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle, rgba(245,166,35,0.06) 0%, transparent 70%);
+      pointer-events: none;
     }
 
     .promo-card:hover {
-      border-color: #333;
+      transform: translateY(-5px);
+      border-color: rgba(245,166,35,0.28);
+      box-shadow:
+        0 20px 48px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(245,166,35,0.1),
+        0 4px 16px rgba(245,166,35,0.08);
     }
 
+    /* Cabeçalho do card */
     .promo-card-header {
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
+      flex-direction: column;
       gap: 10px;
     }
 
-    .promo-titulo {
-      font-size: 14px;
-      font-weight: 700;
-      color: #e8e8e8;
-      line-height: 1.3;
+    .promo-title-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
     }
 
-    .promo-badge {
-      display: inline-block;
-      padding: 2px 8px;
+    .promo-icon-gift {
+      font-size: 18px;
+      line-height: 1.2;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .promo-titulo {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f1f5f9;
+      line-height: 1.35;
+      flex: 1;
+    }
+
+    .promo-badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    /* Status badge */
+    .promo-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
       border-radius: 100px;
       font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
+      font-weight: 800;
+      letter-spacing: 1px;
       text-transform: uppercase;
       white-space: nowrap;
       flex-shrink: 0;
     }
 
-    .promo-badge-vip      { background: #2a1e10; color: #f5a623; }
-    .promo-badge-publica  { background: #1e2e3a; color: #3498db; }
-
-    .promo-meta {
-      font-size: 11px;
-      color: #555;
+    .badge-ativa {
+      background: rgba(16,185,129,0.14);
+      color: #10b981;
+      border: 1px solid rgba(16,185,129,0.25);
     }
 
-    .promo-info-row {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
+    .badge-programada {
+      background: rgba(59,130,246,0.14);
+      color: #60a5fa;
+      border: 1px solid rgba(59,130,246,0.25);
+    }
+
+    .badge-pausada {
+      background: rgba(245,158,11,0.14);
+      color: #fbbf24;
+      border: 1px solid rgba(245,158,11,0.25);
+    }
+
+    .badge-encerrada {
+      background: rgba(239,68,68,0.14);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    /* Acesso badge */
+    .promo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .promo-badge-vip {
+      background: rgba(245,166,35,0.14);
+      color: #f5a623;
+      border: 1px solid rgba(245,166,35,0.3);
+    }
+
+    .promo-badge-publica {
+      background: rgba(99,102,241,0.14);
+      color: #818cf8;
+      border: 1px solid rgba(99,102,241,0.25);
+    }
+
+    /* Linha divisória interna */
+    .promo-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.05);
+      margin: 0 -2px;
+    }
+
+    /* Grid de informações */
+    .promo-info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
     }
 
     .promo-info-item {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 4px;
     }
 
     .promo-info-label {
-      font-size: 10px;
-      font-weight: 600;
-      color: #444;
+      font-size: 9px;
+      font-weight: 700;
+      color: #475569;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .promo-info-icon {
+      font-size: 11px;
     }
 
     .promo-info-value {
       font-size: 12px;
-      color: #aaa;
+      font-weight: 600;
+      color: #94a3b8;
+      line-height: 1.3;
     }
 
+    .promo-info-value.urgent {
+      color: #fb923c;
+    }
+
+    /* Botão de participar */
     .btn-participar {
       width: 100%;
-      padding: 11px;
-      background: linear-gradient(135deg, #f5a623, #f0541e);
+      padding: 13px 18px;
+      background: linear-gradient(135deg, #f5a623 0%, #e8811a 50%, #f0541e 100%);
+      background-size: 200% 100%;
+      background-position: 0% 0%;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       color: #fff;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
+      letter-spacing: 0.3px;
       cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
+      transition:
+        background-position 0.4s ease,
+        transform 0.15s ease,
+        box-shadow 0.3s ease,
+        opacity 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
       margin-top: 2px;
     }
 
-    .btn-participar:hover:not(:disabled) { opacity: 0.88; }
-    .btn-participar:active:not(:disabled) { transform: scale(0.98); }
-    .btn-participar:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-      background: #333;
+    .btn-participar:hover:not(:disabled) {
+      background-position: 100% 0%;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(245,166,35,0.35);
     }
 
+    .btn-participar:active:not(:disabled) {
+      transform: scale(0.97) translateY(0);
+      box-shadow: 0 4px 12px rgba(245,166,35,0.25);
+    }
+
+    .btn-participar:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      background: #2a2a3a;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-participar.success {
+      background: linear-gradient(135deg, #059669, #10b981);
+      opacity: 1;
+      cursor: default;
+    }
+
+    .btn-participar.loading {
+      cursor: wait;
+    }
+
+    /* Spinner do botão */
+    .btn-spinner {
+      display: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .btn-participar.loading .btn-spinner {
+      display: block;
+    }
+
+    /* Feedback */
     .promo-feedback {
       font-size: 12px;
       font-weight: 600;
       text-align: center;
-      min-height: 16px;
+      min-height: 18px;
+      line-height: 1.4;
+      padding: 0 4px;
+      border-radius: 6px;
     }
 
-    .promo-feedback.ok  { color: #27ae60; }
-    .promo-feedback.err { color: #e74c3c; }
+    .promo-feedback:empty {
+      display: none;
+    }
 
+    .promo-feedback.ok {
+      color: #10b981;
+      background: rgba(16,185,129,0.08);
+      padding: 8px 10px;
+    }
+
+    .promo-feedback.err {
+      color: #fb923c;
+      background: rgba(251,146,60,0.08);
+      padding: 8px 10px;
+    }
+
+    .promo-feedback.warn {
+      color: #fbbf24;
+      background: rgba(251,191,36,0.08);
+      padding: 8px 10px;
+    }
+
+    /* Estado vazio / carregando */
     .promos-empty {
       text-align: center;
-      padding: 20px 0;
-      color: #444;
-      font-size: 13px;
+      padding: 32px 20px;
+      color: #475569;
+      font-size: 14px;
+      background: rgba(255,255,255,0.02);
+      border: 1px dashed rgba(255,255,255,0.06);
+      border-radius: 14px;
+      grid-column: 1 / -1;
+    }
+
+    .promos-empty-icon {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 10px;
+      opacity: 0.5;
     }
 
     .promos-loading {
       text-align: center;
-      padding: 20px 0;
-      color: #444;
+      padding: 32px 20px;
+      color: #475569;
       font-size: 13px;
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
+    .promos-loading-dot {
+      width: 6px; height: 6px;
+      background: #f5a623;
+      border-radius: 50%;
+      animation: pulse-dot 1.2s ease-in-out infinite;
+    }
+
+    .promos-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .promos-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse-dot {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40%            { opacity: 1;   transform: scale(1.2); }
+    }
+
+    /* Botão logout */
     .btn-logout {
       width: 100%;
       padding: 13px;
@@ -393,6 +669,7 @@
       h1 { font-size: 19px; }
       .cd-number { font-size: 28px; }
       .cd-sep { font-size: 22px; }
+      .promo-info-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -479,12 +756,19 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════ -->
-    <!-- PROMOÇÕES VIP — seção nova                                     -->
+    <!-- PROMOÇÕES VIP                                                  -->
     <!-- ══════════════════════════════════════════════════════════════ -->
     <div class="card" id="promos-card" style="display:none;flex-direction:column;gap:14px">
-      <p class="card-title">Promoções disponíveis</p>
+      <div class="promos-section-header">
+        <p class="promos-section-title">Promoções disponíveis</p>
+        <span class="promos-count-badge" id="promos-count" style="display:none"></span>
+      </div>
       <div class="promos-list" id="promos-list">
-        <p class="promos-loading">Carregando promoções...</p>
+        <div class="promos-loading">
+          <div class="promos-loading-dot"></div>
+          <div class="promos-loading-dot"></div>
+          <div class="promos-loading-dot"></div>
+        </div>
       </div>
     </div>
 
@@ -585,6 +869,7 @@
     function renderPromos(promos, uid, vipData) {
       const container = document.getElementById("promos-list");
       const card      = document.getElementById("promos-card");
+      const countEl   = document.getElementById("promos-count");
 
       if (!promos || promos.length === 0) {
         card.style.display = "none";
@@ -593,42 +878,73 @@
 
       card.style.display = "flex";
 
+      if (countEl) {
+        countEl.textContent = promos.length + (promos.length === 1 ? " disponível" : " disponíveis");
+        countEl.style.display = "inline-flex";
+      }
+
       const toDate = (v) => {
         if (!v) return null;
         if (typeof v.toDate === "function") return v.toDate();
         return v instanceof Date ? v : new Date(v);
       };
 
+      const statusMap = {
+        ativa:      { label: "ATIVA",      cls: "badge-ativa",      icon: "✅" },
+        programada: { label: "PROGRAMADA", cls: "badge-programada", icon: "⏳" },
+        pausada:    { label: "PAUSADA",    cls: "badge-pausada",    icon: "⏸" },
+        encerrada:  { label: "ENCERRADA",  cls: "badge-encerrada",  icon: "❌" },
+      };
+
       container.innerHTML = promos.map((p) => {
         const isVipEarly = p.dataVip && (!p.dataPublica || toDate(p.dataVip) <= new Date());
         const qty        = Number(p.quantidade) || 0;
         const parts      = Number(p.participacoes) || 0;
-        const vagas      = qty === 0 ? "Ilimitadas" : `${qty - parts} restantes`;
+        const restantes  = qty === 0 ? null : qty - parts;
+        const vagas      = qty === 0 ? "Ilimitadas" : `${Math.max(0, restantes)} restantes`;
+        const vagasUrgente = qty > 0 && restantes !== null && restantes <= 5;
         const dataFim    = fmtDateShort(p.dataFinal);
         const limite     = Number(p.limitePorUsuario) || 1;
 
+        const st = statusMap[p.status] || statusMap.ativa;
+        const statusBadge = `<span class="promo-status-badge ${st.cls}">${st.icon} ${st.label}</span>`;
+
         const accessBadge = isVipEarly
-          ? `<span class="promo-badge promo-badge-vip">Acesso VIP</span>`
-          : `<span class="promo-badge promo-badge-publica">Pública</span>`;
+          ? `<span class="promo-badge promo-badge-vip">⭐ Acesso VIP</span>`
+          : `<span class="promo-badge promo-badge-publica">🌐 Pública</span>`;
 
         return `
           <div class="promo-card" id="promo-${p.id}">
             <div class="promo-card-header">
-              <span class="promo-titulo">${p.titulo || "Promoção VIP"}</span>
-              ${accessBadge}
+              <div class="promo-title-row">
+                <span class="promo-icon-gift">🎁</span>
+                <span class="promo-titulo">${p.titulo || "Promoção VIP"}</span>
+              </div>
+              <div class="promo-badges-row">
+                ${statusBadge}
+                ${accessBadge}
+              </div>
             </div>
 
-            <div class="promo-info-row">
+            <div class="promo-divider"></div>
+
+            <div class="promo-info-grid">
               <div class="promo-info-item">
-                <span class="promo-info-label">Vagas</span>
-                <span class="promo-info-value">${vagas}</span>
+                <span class="promo-info-label">
+                  <span class="promo-info-icon">👥</span> Vagas
+                </span>
+                <span class="promo-info-value${vagasUrgente ? " urgent" : ""}">${vagas}</span>
               </div>
               <div class="promo-info-item">
-                <span class="promo-info-label">Limite</span>
-                <span class="promo-info-value">${limite}x por usuário</span>
+                <span class="promo-info-label">
+                  <span class="promo-info-icon">🔁</span> Limite
+                </span>
+                <span class="promo-info-value">${limite}× por usuário</span>
               </div>
               <div class="promo-info-item">
-                <span class="promo-info-label">Encerra em</span>
+                <span class="promo-info-label">
+                  <span class="promo-info-icon">📅</span> Encerra
+                </span>
                 <span class="promo-info-value">${dataFim}</span>
               </div>
             </div>
@@ -637,7 +953,10 @@
               class="btn-participar"
               id="btn-part-${p.id}"
               onclick="participar('${p.id}', this)"
-            >Participar</button>
+            >
+              <span class="btn-label">Participar</span>
+              <span class="btn-spinner"></span>
+            </button>
 
             <p class="promo-feedback" id="feedback-${p.id}"></p>
           </div>`;
@@ -656,8 +975,11 @@
       const result = await fetchVisiblePromotions({ isVip: isVipAtivo, limit: 10 });
 
       if (!result.success || result.data.items.length === 0) {
-        document.getElementById("promos-list").innerHTML =
-          `<p class="promos-empty">Nenhuma promoção disponível no momento.</p>`;
+        document.getElementById("promos-list").innerHTML = `
+          <div class="promos-empty">
+            <span class="promos-empty-icon">🎁</span>
+            Nenhuma promoção disponível no momento.
+          </div>`;
         return;
       }
 
@@ -670,10 +992,19 @@
         const fb    = document.getElementById(`feedback-${p.id}`);
         if (!btn) return;
         if (check.success && !check.data.canParticipate) {
-          btn.disabled      = true;
-          btn.textContent   = "Indisponível";
-          fb.className      = "promo-feedback err";
-          fb.textContent    = check.data.reason || "";
+          btn.disabled = true;
+          const reason = check.data.reason || "";
+          if (/limite|já partici/i.test(reason)) {
+            btn.textContent  = "✔ Já participando";
+            btn.classList.add("success");
+            if (fb) { fb.className = "promo-feedback ok"; fb.textContent = "✔ Você já está participando deste sorteio."; }
+          } else if (/vaga|esgot/i.test(reason)) {
+            btn.textContent = "⚠ Vagas esgotadas";
+            if (fb) { fb.className = "promo-feedback warn"; fb.textContent = "⚠ Todas as vagas foram preenchidas."; }
+          } else {
+            btn.textContent = "Indisponível";
+            if (fb) { fb.className = "promo-feedback err"; fb.textContent = reason; }
+          }
         }
       }));
     }
@@ -681,22 +1012,43 @@
     // ── Handler de participação ───────────────────────────────────────────────
     window.participar = async function (promoId, btn) {
       if (!_currentUser) return;
-      const fb = document.getElementById(`feedback-${promoId}`);
+      const fb      = document.getElementById(`feedback-${promoId}`);
+      const label   = btn.querySelector(".btn-label");
+      const spinner = btn.querySelector(".btn-spinner");
 
-      btn.disabled    = true;
-      btn.textContent = "Participando...";
+      btn.disabled = true;
+      btn.classList.add("loading");
+      if (label) label.textContent = "Registrando...";
       if (fb) { fb.className = "promo-feedback"; fb.textContent = ""; }
 
       const result = await registerParticipation(promoId, _currentUser.uid);
 
+      btn.classList.remove("loading");
+
       if (result.success) {
-        btn.textContent = "✓ Participando!";
-        if (fb) { fb.className = "promo-feedback ok"; fb.textContent = "Participação confirmada!"; }
+        btn.classList.add("success");
+        if (label) label.textContent = "✔ Participando!";
+        if (fb) { fb.className = "promo-feedback ok"; fb.textContent = "✅ Sua participação foi registrada com sucesso!"; }
         console.log("[VIP5-USUARIO] Participação registrada:", promoId);
       } else {
-        btn.disabled    = false;
-        btn.textContent = "Participar";
-        if (fb) { fb.className = "promo-feedback err"; fb.textContent = result.error || "Tente novamente."; }
+        btn.disabled = false;
+        if (label) label.textContent = "Participar";
+        const errMsg = result.error || "Tente novamente.";
+        let feedbackText = errMsg;
+        let feedbackCls  = "promo-feedback err";
+        if (/limite|já partici/i.test(errMsg)) {
+          feedbackText = "✔ Você já está participando deste sorteio.";
+          feedbackCls  = "promo-feedback ok";
+          btn.disabled = true;
+          btn.classList.add("success");
+          if (label) label.textContent = "✔ Já participando";
+        } else if (/vaga|esgot/i.test(errMsg)) {
+          feedbackText = "⚠ Todas as vagas foram preenchidas.";
+          feedbackCls  = "promo-feedback warn";
+          btn.disabled = true;
+          if (label) label.textContent = "⚠ Esgotado";
+        }
+        if (fb) { fb.className = feedbackCls; fb.textContent = feedbackText; }
         console.error("[VIP5-USUARIO] Erro na participação:", result.error);
       }
     };
