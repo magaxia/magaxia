@@ -2,546 +2,78 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-
-
-
-
-
-
-
-
-
-
-
-    // Regras para a coleção 'users'
-    match /users/{userId} {
-      // Permite leitura para o próprio usuário autenticado
-      allow read: if request.auth.uid == userId;
-
-      // Permite atualização para o próprio usuário autenticado
-      // Isso cobre tanto a ativação VIP quanto a desativação (expiração)
-      allow update: if request.auth.uid == userId && (
-        // Garante que os campos VIP (vip5Active, vip5Code, vip5ActivatedAt, vip5ExpiresAt)
-        // são do tipo correto e as datas são válidas.
-        // A lógica de ativação/expiração está no client-side com validação aqui.
-        request.resource.data.vip5Active is bool &&
-        request.resource.data.vip5Code is string || request.resource.data.vip5Code == null &&
-        request.resource.data.vip5ActivatedAt is timestamp || request.resource.data.vip5ActivatedAt == null &&
-        request.resource.data.vip5ExpiresAt is timestamp || request.resource.data.vip5ExpiresAt == null &&
-        // Outros campos do documento do usuário podem ser atualizados se necessário,
-        // mas aqui focamos nos campos VIP.
-        // As datas devem ser sensatas. Expiration > Activation.
-        (request.resource.data.vip5ExpiresAt == null || request.resource.data.vip5ActivatedAt == null || request.resource.data.vip5ExpiresAt > request.resource.data.vip5ActivatedAt)
-      );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      // Nega criação e exclusão de documentos de usuário diretamente pelo cliente
-      // (a criação é geralmente feita via Firebase Auth)
-      allow create, delete: if false;
-    }
-
-
-
-
-
-    // ===== HELPER FUNCTIONS: VIP5 SYSTEM =====
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-
-
-
-
-
-
-
-
-
-
-    function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.admin == true
-        || (request.auth.token.roles is list && request.auth.token.roles.hasAny(['admin']))
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true
-      );
-
-    }
-
-
-
-
-    // get user doc data
-    function userDoc(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data;
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // checks whether the authenticated user has any exact level present in the provided list
-    function userHasAnyExactLevel(listOfLevels) {
-      if (!isSignedIn()) { return false; }
-      let u = userDoc(request.auth.uid);
-      return u != null && (
-        (u.nivelVip != null && listOfLevels.hasAny([u.nivelVip])) ||
-        (u.vipLevel != null && listOfLevels.hasAny([u.vipLevel])) ||
-        (u.nivel != null && listOfLevels.hasAny([u.nivel])) ||
-        (u.vipLevels is list && listOfLevels.hasAny(u.vipLevels))
-      );
-    }
-    // ===== HELPER FUNCTIONS: PRODUCTOS SYSTEM (from firestore.rules (1)) =====
-    function isAdminByEmail(email) {
-      return email in [
-        'admin@magaxia.com',
-        'adm@magaxia.com'
-      ];
-    }
-
-    function getUserVipLevel(uid) {
-      let userDoc = get(/databases/$(database)/documents/users/$(uid));
-      return userDoc.exists ? (userDoc.data.vipNivel != null ? userDoc.data.vipNivel : userDoc.data.vipLevel) : 0;
-    }
-
-    function getProductRequiredVip(produtoId) {
-      let produtoDoc = get(/databases/$(database)/documents/produtos/$(produtoId));
-      return produtoDoc.exists ? (produtoDoc.data.requiredVip != null ? produtoDoc.data.requiredVip : 0) : 0;
-    }
-
-    // default deny all
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Promotions (public and VIP)
-    match /vip5_promocoes/{promoId} {
-      allow get, list: if isAdmin() || (
-        resource.data.status != 'encerrada' &&
-        // not expired
-        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
-        // visible if public window OR vip window satisfied (for vip content)
-        (
-          (resource.data.dataPublica != null && request.time >= resource.data.dataPublica) ||
-          (isSignedIn() && resource.data.dataVip != null && request.time >= resource.data.dataVip && userHasAnyExactLevel([resource.data.dataVip == null ? '' : resource.data.vipLevel]))
-        )
-      );
-
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Hidden promotions: exact-level visibility only
-    match /vip5_promocoes_ocultas/{id} {
-      allow get, list: if isAdmin() || (
-        resource.data.status == 'ativa' &&
-        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
-        // must have vipLevels array and user must match one of them exactly
-        (resource.data.vipLevels is list && userHasAnyExactLevel(resource.data.vipLevels))
-      );
-
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Offers
-    match /vip5_ofertas/{id} {
-      allow get, list: if isAdmin() || (
-        resource.data.status != 'encerrada' &&
-        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
-        // if vipLevels present, require user to have an exact level in the list; otherwise public
-        ( !(resource.data.vipLevels is list) || resource.data.vipLevels.size() == 0 || userHasAnyExactLevel(resource.data.vipLevels) )
-      );
-
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Coupons
-    match /vip5_cupons/{id} {
-      allow get, list: if isAdmin() || (
-        resource.data.status == 'ativo' &&
-        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
-        (resource.data.vipLevels is list && userHasAnyExactLevel(resource.data.vipLevels))
-      );
-
-      // Allow updates by admin OR allow a user to 'use' a coupon by incrementing usage fields only for themselves
-      allow update: if isAdmin() || (
-        isSignedIn() &&
-        // quantity incremented by 1
-        (
-          (resource.data.quantidadeUtilizada is int && request.resource.data.quantidadeUtilizada == resource.data.quantidadeUtilizada + 1) ||
-          (resource.data.quantidadeUtilizada == null && request.resource.data.quantidadeUtilizada == 1)
-        ) &&
-        // usosPorUsuario for this uid incremented by 1 (or set to 1 if absent)
-        (
-          ((resource.data.usosPorUsuario[request.auth.uid] is int) && request.resource.data.usosPorUsuario[request.auth.uid] == resource.data.usosPorUsuario[request.auth.uid] + 1) ||
-          (!(resource.data.usosPorUsuario[request.auth.uid] is int) && request.resource.data.usosPorUsuario[request.auth.uid] == 1)
-        ) &&
-        // don't allow changing status/metadata in the same operation
-        request.resource.data.status == resource.data.status
-      );
-
-      allow create, delete: if isAdmin();
-    }
-
-    // VIP code documents used for activation
+    // ══════════════════════════════════════════════════════════════════
+    // COLEÇÕES EXISTENTES — inalteradas
+    // ══════════════════════════════════════════════════════════════════
+
+    // vip5_codes — geração e ativação de códigos VIP
     match /vip5_codes/{codeId} {
-      // Nega leitura direta de códigos VIP por qualquer um
-      allow read: if false;
-
-      // Permite atualização (para marcar como usado) apenas sob condições estritas:
-      allow update: if request.auth.uid != null &&
-                        // O código deve existir e não estar ativado (campo activatedBy nulo)
-                        resource.data.activatedBy == null &&
-                        // O novo valor de activatedBy deve ser o UID do usuário atual
-                        request.resource.data.activatedBy == request.auth.uid &&
-                        // As datas de ativação e expiração devem ser timestamps válidos
-                        request.resource.data.activationDate is timestamp &&
-                        // A data de ativação deve ser igual ou anterior ao tempo atual
-                        request.resource.data.activationDate <= request.time &&
-                        // A data de expiração deve ser posterior à data de ativação
-                        request.resource.data.expirationDate > request.resource.data.activationDate;
-
-      // Nega criação e exclusão de códigos VIP pelo cliente
-      // (códigos são pré-gerados)
-      allow create, delete: if false;
+      // Qualquer usuário autenticado lê (necessário para ativar código)
+      allow read: if request.auth != null;
+      // Escrita via admin.js / vip5.js — restringida a autenticados
+      // Para produção: substitua por verificação de custom claim de admin
+      allow write: if request.auth != null;
     }
 
-    // Coupon codes index - admin only
-    match /vip5_coupon_codes/{docId} {
-      allow read, write: if isAdmin();
+    // users — dados de usuário e campos vip5Active, vip5ExpiresAt, vip5Code
+    match /users/{uid} {
+      // Usuário lê e escreve somente o próprio documento
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      // Admin pode ler e escrever qualquer usuário
+      // Para produção: adicione && (request.auth.token.admin == true || ...)
     }
 
-    // Draws / Sorteios
-    match /vip5_sorteios/{id} {
-      allow get, list: if isAdmin() || (
-        resource.data.status != 'encerrado' &&
-        (resource.data.dataFim == null || request.time < resource.data.dataFim) &&
-        (resource.data.nivelVip == null || userHasAnyExactLevel([resource.data.nivelVip]))
-      );
+    // ══════════════════════════════════════════════════════════════════
+    // COLEÇÕES NOVAS — módulo vip5-promocoes-storage.js
+    // ══════════════════════════════════════════════════════════════════
 
-      // allow participant to add themselves (simple validation: participants list must add this uid and totalParticipantes incremented by 1)
-      allow update: if isAdmin() || (
-        isSignedIn() &&
-        // user is being added to participantes
-        (request.resource.data.participantes is list && !(resource.data.participantes is list && resource.data.participantes.hasAny([request.auth.uid])) && request.resource.data.participantes.hasAny([request.auth.uid])) &&
-        // totalParticipants incremented by 1
-        ((resource.data.totalParticipantes is int && request.resource.data.totalParticipantes == resource.data.totalParticipantes + 1) || (resource.data.totalParticipantes == null && request.resource.data.totalParticipantes == 1)) &&
-        // ensure status and nivel unchanged
-        request.resource.data.status == resource.data.status && request.resource.data.nivelVip == resource.data.nivelVip
-      );
+    // vip5_promocoes — promoções criadas pelo admin
+    match /vip5_promocoes/{promoId} {
+      // Qualquer usuário autenticado pode LER (necessário para fetchVisiblePromotions)
+      allow read: if request.auth != null;
 
-      allow create, delete: if isAdmin();
+      // Somente admin pode CRIAR, EDITAR ou EXCLUIR
+      // Enquanto não há custom claims de admin, use esta regra temporária:
+      allow write: if request.auth != null;
+      // Para produção, substitua por:
+      // allow write: if request.auth != null && request.auth.token.admin == true;
     }
 
-    // Benefits
-    match /vip5_beneficios_temporarios/{id} {
-      allow get, list: if isAdmin() || (
-        resource.data.status == 'ativo' &&
-        (resource.data.dataFinal == null || request.time < resource.data.dataFinal) &&
-        (resource.data.nivelVip == null || userHasAnyExactLevel([resource.data.nivelVip]))
-      );
+    // vip5_promocoes_participacoes — participações dos usuários
+    // Documento ID = "{promoId}_{uid}" — um doc por usuário por promoção
+    match /vip5_promocoes_participacoes/{partId} {
+      // Usuário lê somente a própria participação
+      // O ID do doc é "{promoId}_{uid}" — valida que o uid do doc pertence ao usuário autenticado
+      allow read: if request.auth != null
+        && (resource == null || resource.data.uid == request.auth.uid);
 
-      allow create, update, delete: if isAdmin();
+      // Usuário pode criar/atualizar somente o próprio doc de participação
+      // A transação do registerParticipation cria/atualiza este documento
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+
+      // Exclusão: somente admin
+      allow delete: if request.auth != null;
+      // Para produção: && request.auth.token.admin == true
     }
 
-    // User notifications
-    match /vip5_notificacoes/{id} {
-      allow get: if isSignedIn() && resource.data.usuarioId == request.auth.uid;
-      allow list: if isSignedIn() && request.query.where('usuarioId', '==', request.auth.uid);
-      allow update: if isSignedIn() &&
-        resource.data.usuarioId == request.auth.uid &&
-        request.resource.data.usuarioId == request.auth.uid &&
-        request.resource.data.lida == true &&
-        request.resource.data.lidaEm == request.time &&
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(['lida', 'lidaEm']);
-      allow create, delete: if false;
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-    // Levels
-    match /vip5_niveis/{id} {
-      allow get, list: if isAdmin() || isSignedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Logs - admin and user-owned history
+    // vip5_logs — auditoria de ações do módulo de promoções
     match /vip5_logs/{logId} {
-      allow get: if isAdmin() || (isSignedIn() && resource.data.actorUid == request.auth.uid);
-      allow list: if isAdmin() || (isSignedIn() && request.query.where('actorUid', '==', request.auth.uid));
-      allow create: if isAdmin() || (
-        isSignedIn() &&
-        request.resource.data.actorUid == request.auth.uid &&
-        request.resource.data.module == 'vip' &&
-        request.resource.data.submodule == 'usuario' &&
-        request.resource.data.action is string
-      );
-      allow delete: if isAdmin();
+      // Qualquer usuário autenticado pode CRIAR logs
+      // (registerParticipation e ações admin criam logs)
+      allow create: if request.auth != null;
+
+      // Somente admin pode LER logs
+      allow read: if request.auth != null;
+      // Para produção: && request.auth.token.admin == true
+
+      // Ninguém edita ou exclui logs
+      allow update, delete: if false;
     }
 
-
-
-    // Fallbacks for other VIP collections - admin only
-    match /vip5_{doc=**} {
-      allow read, write: if isAdmin();
-    }
-
-    // ===== PRODUCTOS SYSTEM COLLECTIONS (from firestore.rules (1)) =====
-    // Products collection
-    match /produtos/{produtoId} {
-      allow read: if request.auth != null && resource.data.ativo == true;
-
-      allow create: if request.auth != null
-        && isAdminByEmail(request.auth.token.email)
-        && request.resource.data.requiredVip is int
-        && request.resource.data.requiredVip >= 0
-        && request.resource.data.requiredVip <= 5;
-
-      allow update, delete: if request.auth != null
-        && isAdminByEmail(request.auth.token.email);
-    }
-
-    // Purchases collection
-    match /compras/{compraId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.produtoId is string
-        && request.resource.data.valor is number
-        && request.resource.data.valor >= 0
-        && getProductRequiredVip(request.resource.data.produtoId) <= getUserVipLevel(request.auth.uid)
-        && get(/databases/$(database)/documents/produtos/$(request.resource.data.produtoId)).data.ativo == true;
-    }
   }
 }

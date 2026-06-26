@@ -234,6 +234,133 @@
       transition: width 1s linear;
     }
 
+    /* ── Promoções ── */
+    .promos-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .promo-card {
+      background: #111;
+      border: 1px solid #252525;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.2s;
+    }
+
+    .promo-card:hover {
+      border-color: #333;
+    }
+
+    .promo-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .promo-titulo {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e8e8e8;
+      line-height: 1.3;
+    }
+
+    .promo-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .promo-badge-vip      { background: #2a1e10; color: #f5a623; }
+    .promo-badge-publica  { background: #1e2e3a; color: #3498db; }
+
+    .promo-meta {
+      font-size: 11px;
+      color: #555;
+    }
+
+    .promo-info-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .promo-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .promo-info-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .promo-info-value {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .btn-participar {
+      width: 100%;
+      padding: 11px;
+      background: linear-gradient(135deg, #f5a623, #f0541e);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-top: 2px;
+    }
+
+    .btn-participar:hover:not(:disabled) { opacity: 0.88; }
+    .btn-participar:active:not(:disabled) { transform: scale(0.98); }
+    .btn-participar:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      background: #333;
+    }
+
+    .promo-feedback {
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      min-height: 16px;
+    }
+
+    .promo-feedback.ok  { color: #27ae60; }
+    .promo-feedback.err { color: #e74c3c; }
+
+    .promos-empty {
+      text-align: center;
+      padding: 20px 0;
+      color: #444;
+      font-size: 13px;
+    }
+
+    .promos-loading {
+      text-align: center;
+      padding: 20px 0;
+      color: #444;
+      font-size: 13px;
+    }
+
     .btn-logout {
       width: 100%;
       padding: 13px;
@@ -351,6 +478,16 @@
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- PROMOÇÕES VIP — seção nova                                     -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <div class="card" id="promos-card" style="display:none;flex-direction:column;gap:14px">
+      <p class="card-title">Promoções disponíveis</p>
+      <div class="promos-list" id="promos-list">
+        <p class="promos-loading">Carregando promoções...</p>
+      </div>
+    </div>
+
     <button class="btn-logout" id="btn-logout">Sair da conta</button>
   </div>
 
@@ -360,10 +497,17 @@
     import { auth } from "./vip5-firebase.js";
     import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { checkVipExpiration } from "./vip5-expiration-manager.js";
+    import {
+      fetchVisiblePromotions,
+      canParticipate,
+      registerParticipation,
+    } from "./vip5-promocoes-storage.js";
 
     console.log("[VIP5-USUARIO] Página carregada. Verificando expiração VIP...");
 
     let countdownTimer = null;
+    let _currentUser   = null;
+    let _currentVip    = null;
 
     function pad(n) {
       return String(Math.floor(n)).padStart(2, "0");
@@ -376,12 +520,15 @@
       });
     }
 
+    function fmtDateShort(v) {
+      if (!v) return "—";
+      const d = typeof v.toDate === "function" ? v.toDate() : (v instanceof Date ? v : new Date(v));
+      return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+
     function showError(msg) {
       console.error("[VIP5-USUARIO] Erro:", msg);
-      if (countdownTimer) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
-      }
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
       document.getElementById("loading").style.display = "none";
       const errEl = document.getElementById("error-msg");
       errEl.textContent = msg;
@@ -392,7 +539,7 @@
       const totalMs = expiresAt - activatedAt;
 
       function tick() {
-        const now = Date.now();
+        const now         = Date.now();
         const remainingMs = expiresAt - now;
 
         if (remainingMs <= 0) {
@@ -405,7 +552,7 @@
           document.getElementById("cd-minutes").textContent = "00";
           document.getElementById("cd-seconds").textContent = "00";
           document.getElementById("progress-fill").style.width = "100%";
-          document.getElementById("progress-pct").textContent = "100% consumido";
+          document.getElementById("progress-pct").textContent  = "100% consumido";
 
           checkVipExpiration("vip5.html").catch((err) => {
             console.error("[VIP5-USUARIO] Erro ao re-verificar expiração:", err.code, err.message, err);
@@ -424,10 +571,9 @@
         document.getElementById("cd-minutes").textContent = pad(minutes);
         document.getElementById("cd-seconds").textContent = pad(seconds);
 
-        const consumed = Math.max(0, Math.min(100, Math.round(((totalMs - remainingMs) / totalMs) * 100)));
-        const remaining = 100 - consumed;
+        const consumed  = Math.max(0, Math.min(100, Math.round(((totalMs - remainingMs) / totalMs) * 100)));
         document.getElementById("progress-fill").style.width = consumed + "%";
-        document.getElementById("progress-pct").textContent = consumed + "% consumido";
+        document.getElementById("progress-pct").textContent  = consumed + "% consumido";
       }
 
       tick();
@@ -435,8 +581,132 @@
       console.log("[VIP5-USUARIO] Contagem regressiva iniciada. Timer ID:", countdownTimer);
     }
 
+    // ── Renderiza lista de promoções disponíveis ─────────────────────────────
+    function renderPromos(promos, uid, vipData) {
+      const container = document.getElementById("promos-list");
+      const card      = document.getElementById("promos-card");
+
+      if (!promos || promos.length === 0) {
+        card.style.display = "none";
+        return;
+      }
+
+      card.style.display = "flex";
+
+      const toDate = (v) => {
+        if (!v) return null;
+        if (typeof v.toDate === "function") return v.toDate();
+        return v instanceof Date ? v : new Date(v);
+      };
+
+      container.innerHTML = promos.map((p) => {
+        const isVipEarly = p.dataVip && (!p.dataPublica || toDate(p.dataVip) <= new Date());
+        const qty        = Number(p.quantidade) || 0;
+        const parts      = Number(p.participacoes) || 0;
+        const vagas      = qty === 0 ? "Ilimitadas" : `${qty - parts} restantes`;
+        const dataFim    = fmtDateShort(p.dataFinal);
+        const limite     = Number(p.limitePorUsuario) || 1;
+
+        const accessBadge = isVipEarly
+          ? `<span class="promo-badge promo-badge-vip">Acesso VIP</span>`
+          : `<span class="promo-badge promo-badge-publica">Pública</span>`;
+
+        return `
+          <div class="promo-card" id="promo-${p.id}">
+            <div class="promo-card-header">
+              <span class="promo-titulo">${p.titulo || "Promoção VIP"}</span>
+              ${accessBadge}
+            </div>
+
+            <div class="promo-info-row">
+              <div class="promo-info-item">
+                <span class="promo-info-label">Vagas</span>
+                <span class="promo-info-value">${vagas}</span>
+              </div>
+              <div class="promo-info-item">
+                <span class="promo-info-label">Limite</span>
+                <span class="promo-info-value">${limite}x por usuário</span>
+              </div>
+              <div class="promo-info-item">
+                <span class="promo-info-label">Encerra em</span>
+                <span class="promo-info-value">${dataFim}</span>
+              </div>
+            </div>
+
+            <button
+              class="btn-participar"
+              id="btn-part-${p.id}"
+              onclick="participar('${p.id}', this)"
+            >Participar</button>
+
+            <p class="promo-feedback" id="feedback-${p.id}"></p>
+          </div>`;
+      }).join("");
+    }
+
+    // ── Carrega e exibe promoções disponíveis ────────────────────────────────
+    async function loadPromos(uid, vipData) {
+      const card = document.getElementById("promos-card");
+      card.style.display = "flex";
+
+      const isVipAtivo = vipData?.vip5Active === true
+        && (!vipData.vip5ExpiresAt || vipData.vip5ExpiresAt > Date.now());
+
+      console.log("[VIP5-USUARIO] Carregando promoções. isVip:", isVipAtivo);
+      const result = await fetchVisiblePromotions({ isVip: isVipAtivo, limit: 10 });
+
+      if (!result.success || result.data.items.length === 0) {
+        document.getElementById("promos-list").innerHTML =
+          `<p class="promos-empty">Nenhuma promoção disponível no momento.</p>`;
+        return;
+      }
+
+      renderPromos(result.data.items, uid, vipData);
+
+      // Verifica elegibilidade de cada promoção em paralelo
+      await Promise.all(result.data.items.map(async (p) => {
+        const check = await canParticipate(p.id, uid, vipData);
+        const btn   = document.getElementById(`btn-part-${p.id}`);
+        const fb    = document.getElementById(`feedback-${p.id}`);
+        if (!btn) return;
+        if (check.success && !check.data.canParticipate) {
+          btn.disabled      = true;
+          btn.textContent   = "Indisponível";
+          fb.className      = "promo-feedback err";
+          fb.textContent    = check.data.reason || "";
+        }
+      }));
+    }
+
+    // ── Handler de participação ───────────────────────────────────────────────
+    window.participar = async function (promoId, btn) {
+      if (!_currentUser) return;
+      const fb = document.getElementById(`feedback-${promoId}`);
+
+      btn.disabled    = true;
+      btn.textContent = "Participando...";
+      if (fb) { fb.className = "promo-feedback"; fb.textContent = ""; }
+
+      const result = await registerParticipation(promoId, _currentUser.uid);
+
+      if (result.success) {
+        btn.textContent = "✓ Participando!";
+        if (fb) { fb.className = "promo-feedback ok"; fb.textContent = "Participação confirmada!"; }
+        console.log("[VIP5-USUARIO] Participação registrada:", promoId);
+      } else {
+        btn.disabled    = false;
+        btn.textContent = "Participar";
+        if (fb) { fb.className = "promo-feedback err"; fb.textContent = result.error || "Tente novamente."; }
+        console.error("[VIP5-USUARIO] Erro na participação:", result.error);
+      }
+    };
+
+    // ── Inicialização ─────────────────────────────────────────────────────────
     try {
       const { user, vipData } = await checkVipExpiration("vip5.html");
+
+      _currentUser = user;
+      _currentVip  = vipData;
 
       console.log("[VIP5-USUARIO] Acesso VIP válido. uid=" + user.uid);
       console.log("[VIP5-USUARIO] Dados VIP:", vipData);
@@ -446,18 +716,19 @@
       document.getElementById("activated-value").textContent = formatDate(vipData.vip5ActivatedAt);
       document.getElementById("expires-value").textContent   = formatDate(vipData.vip5ExpiresAt);
 
-      document.getElementById("loading").style.display  = "none";
-      document.getElementById("content").style.display  = "flex";
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("content").style.display = "flex";
 
       startCountdown(vipData.vip5ExpiresAt, vipData.vip5ActivatedAt);
 
+      // Carrega promoções sem bloquear a exibição do conteúdo VIP
+      loadPromos(user.uid, vipData).catch((err) => {
+        console.error("[VIP5-USUARIO] Erro ao carregar promoções:", err.message, err);
+      });
+
       document.getElementById("btn-logout").addEventListener("click", async () => {
         console.log("[VIP5-USUARIO] Fazendo logout...");
-        if (countdownTimer) {
-          clearInterval(countdownTimer);
-          countdownTimer = null;
-          console.log("[VIP5-USUARIO] Timer limpo antes do logout.");
-        }
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
         try {
           await signOut(auth);
           console.log("[VIP5-USUARIO] Logout realizado. Redirecionando para vip5.html");
