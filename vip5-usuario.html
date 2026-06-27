@@ -5,18 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Área VIP5</title>
   <style>
+    :root {
+      --bg: #09090f;
+      --surface: rgba(255,255,255,0.04);
+      --surface-strong: rgba(255,255,255,0.08);
+      --text: #eef2ff;
+      --muted: #8391ab;
+      --muted-strong: #cbd5e1;
+      --accent: #f5a623;
+      --accent-soft: rgba(245,166,35,0.16);
+      --success: #10b981;
+      --info: #60a5fa;
+      --warning: #fbbf24;
+      --danger: #ef4444;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
 
     body {
       min-height: 100vh;
-      background: #0d0d0d;
+      background: radial-gradient(circle at top, rgba(99,102,241,0.12), transparent 22%),
+                  radial-gradient(circle at bottom right, rgba(245,166,35,0.1), transparent 18%),
+                  linear-gradient(180deg, #06060d 0%, #0f111a 100%);
+      color: var(--text);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #fff;
       display: flex;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
-      padding: 24px 16px;
+      padding: 26px 18px;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 22% 12%, rgba(99,102,241,0.16), transparent 16%),
+                  radial-gradient(circle at 82% 18%, rgba(245,166,35,0.12), transparent 14%);
+      z-index: -1;
     }
 
     #loading {
@@ -24,14 +52,17 @@
       flex-direction: column;
       align-items: center;
       gap: 16px;
-      color: #888;
+      color: var(--muted);
+      min-height: 280px;
+      width: min(100%, 780px);
+      text-align: center;
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #222;
-      border-top-color: #f5a623;
+      width: 44px;
+      height: 44px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
@@ -42,222 +73,250 @@
 
     #content {
       display: none;
-      width: 100%;
-      max-width: 960px;
+      width: min(100%, 1180px);
       flex-direction: column;
-      gap: 16px;
+      gap: 22px;
     }
 
     .header {
       display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 26px 28px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 22px;
+      box-shadow: 0 28px 72px rgba(0,0,0,0.28);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .header h1 {
+      font-size: clamp(2rem, 2.4vw, 2.7rem);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+      max-width: 760px;
+    }
+
+    .hero-copy {
+      color: var(--muted-strong);
+      max-width: 760px;
+      font-size: 1rem;
+      line-height: 1.8;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: linear-gradient(135deg, #f5a623, #f0541e);
+      background: linear-gradient(135deg, rgba(245,166,35,0.18), rgba(245,166,35,0.28));
       color: #fff;
       font-size: 12px;
       font-weight: 700;
       letter-spacing: 1.5px;
       text-transform: uppercase;
-      padding: 5px 14px;
-      border-radius: 100px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(245,166,35,0.25);
     }
 
     .badge::before {
       content: "";
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       background: #fff;
       border-radius: 50%;
-      opacity: 0.85;
+      opacity: 0.9;
     }
 
-    h1 {
-      font-size: 22px;
+    .status-pill {
+      display: inline-flex;
+      padding: 10px 16px;
+      color: #9bb7ff;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 999px;
+      font-size: 0.82rem;
       font-weight: 700;
-      color: #fff;
-      margin-bottom: 2px;
+      letter-spacing: 0.08em;
     }
 
-    .subtitle {
-      font-size: 13px;
-      color: #666;
-    }
-
-    .card {
-      background: #1a1a1a;
-      border: 1px solid #252525;
-      border-radius: 14px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
+    .grid-overview {
+      display: grid;
       gap: 18px;
     }
 
+    @media (min-width: 860px) {
+      .grid-overview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.20);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 48%);
+      pointer-events: none;
+    }
+
+    .card > * { position: relative; z-index: 1; }
+
     .card-title {
-      font-size: 11px;
+      font-size: 0.82rem;
       font-weight: 700;
-      letter-spacing: 1.2px;
+      letter-spacing: 1.4px;
       text-transform: uppercase;
-      color: #555;
-      margin-bottom: 2px;
+      color: var(--muted);
+      margin-bottom: 18px;
     }
 
     .info-row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      display: grid;
+      gap: 8px;
     }
 
     .info-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: #555;
-      letter-spacing: 0.5px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
     .info-value {
-      font-size: 14px;
-      color: #ddd;
-      word-break: break-all;
+      font-size: 1rem;
+      color: var(--text);
+      word-break: break-word;
     }
 
     .info-value.highlight {
-      color: #f5a623;
+      color: #fff;
       font-weight: 700;
-      font-size: 16px;
+      font-size: 1.05rem;
     }
 
     .divider {
       height: 1px;
-      background: #252525;
-    }
-
-    /* Countdown */
-    .countdown-label {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-      color: #555;
+      background: rgba(255,255,255,0.08);
+      margin: 8px 0;
     }
 
     .countdown-display {
-      display: flex;
-      align-items: baseline;
-      flex-wrap: wrap;
-      gap: 6px 14px;
-      line-height: 1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
     }
 
     .cd-block {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 10px;
+      padding: 18px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
     }
 
     .cd-number {
-      font-size: 36px;
+      font-size: 1.9rem;
       font-weight: 800;
       color: #fff;
-      letter-spacing: -1px;
+      letter-spacing: -0.04em;
       font-variant-numeric: tabular-nums;
       min-width: 2ch;
       text-align: center;
     }
 
     .cd-unit {
-      font-size: 10px;
-      font-weight: 600;
-      color: #555;
-      letter-spacing: 1px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.12em;
       text-transform: uppercase;
     }
 
-    .cd-sep {
-      font-size: 30px;
-      font-weight: 300;
-      color: #333;
-      margin-bottom: 14px;
-    }
-
-    .countdown-expired {
-      font-size: 14px;
-      color: #e74c3c;
-      font-weight: 600;
-    }
-
-    /* Progress */
     .progress-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      display: grid;
+      gap: 14px;
     }
 
     .progress-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 16px;
     }
 
-    .progress-label {
-      font-size: 12px;
-      color: #555;
-    }
-
+    .progress-label,
     .progress-pct {
-      font-size: 12px;
-      color: #555;
-      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+      color: var(--muted);
     }
 
     .progress-bar-bg {
       width: 100%;
-      height: 6px;
-      background: #222;
-      border-radius: 100px;
+      height: 10px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
       overflow: hidden;
     }
 
     .progress-bar-fill {
       height: 100%;
-      border-radius: 100px;
+      border-radius: 999px;
       background: linear-gradient(90deg, #f5a623, #f0541e);
       transition: width 1s linear;
     }
 
-    /* ═══════════════════════════════════════════════════════════════════
-       PROMOÇÕES — Design Premium SaaS
-    ═══════════════════════════════════════════════════════════════════ */
-
     #promos-card {
-      background: transparent !important;
-      border: none !important;
-      padding: 0 !important;
-      gap: 16px !important;
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      padding: 22px;
     }
 
     .promos-section-header {
       display: flex;
-      align-items: center;
+      flex-wrap: wrap;
       justify-content: space-between;
-      padding: 0 2px;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
     }
 
     .promos-section-title {
-      font-size: 13px;
+      font-size: 0.85rem;
       font-weight: 700;
-      letter-spacing: 1.4px;
+      letter-spacing: 1.45px;
       text-transform: uppercase;
-      color: #666;
+      color: var(--muted);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -265,365 +324,287 @@
 
     .promos-section-title::before {
       content: "🎁";
-      font-size: 15px;
+      font-size: 1rem;
     }
 
     .promos-count-badge {
-      font-size: 10px;
+      font-size: 0.78rem;
       font-weight: 700;
-      background: rgba(245,166,35,0.15);
-      color: #f5a623;
-      border: 1px solid rgba(245,166,35,0.25);
-      padding: 2px 8px;
-      border-radius: 100px;
-      letter-spacing: 0.5px;
+      background: rgba(245,166,35,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(245,166,35,0.22);
+      padding: 8px 14px;
+      border-radius: 999px;
+      letter-spacing: 0.08em;
     }
 
     .promos-list {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 14px;
+      gap: 16px;
+      grid-auto-rows: 1fr;
+      align-items: stretch;
     }
 
     @media (min-width: 600px) {
       .promos-list { grid-template-columns: repeat(2, 1fr); }
     }
 
-    @media (min-width: 900px) {
+    @media (min-width: 960px) {
       .promos-list { grid-template-columns: repeat(3, 1fr); }
     }
 
-    /* Card de promoção */
     .promo-card {
-      background: linear-gradient(145deg, #141420 0%, #0f0f1a 100%);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 16px;
-      padding: 20px;
+      background: linear-gradient(145deg, #11121f 0%, #0d1021 100%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 22px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 18px;
+      min-height: 360px;
       position: relative;
       overflow: hidden;
       transition: transform 0.28s cubic-bezier(0.4,0,0.2,1),
                   box-shadow 0.28s cubic-bezier(0.4,0,0.2,1),
                   border-color 0.28s ease;
-      cursor: default;
     }
 
     .promo-card::before {
       content: "";
       position: absolute;
-      top: 0; left: 0;
-      width: 3px;
+      top: 0;
+      left: 0;
+      width: 4px;
       height: 100%;
       background: linear-gradient(180deg, #f5a623 0%, #f0541e 100%);
-      border-radius: 16px 0 0 16px;
+      border-radius: 20px 0 0 20px;
     }
 
     .promo-card::after {
       content: "";
       position: absolute;
-      top: -60px; right: -60px;
-      width: 120px; height: 120px;
-      background: radial-gradient(circle, rgba(245,166,35,0.06) 0%, transparent 70%);
+      top: -50px;
+      right: -50px;
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(245,166,35,0.08) 0%, transparent 70%);
       pointer-events: none;
     }
 
     .promo-card:hover {
       transform: translateY(-5px);
-      border-color: rgba(245,166,35,0.28);
-      box-shadow:
-        0 20px 48px rgba(0,0,0,0.5),
-        0 0 0 1px rgba(245,166,35,0.1),
-        0 4px 16px rgba(245,166,35,0.08);
+      border-color: rgba(245,166,35,0.22);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.26),
+                  0 0 0 1px rgba(245,166,35,0.08),
+                  0 5px 16px rgba(245,166,35,0.08);
     }
 
-    /* Cabeçalho do card */
     .promo-card-header {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
 
     .promo-title-row {
       display: flex;
       align-items: flex-start;
-      gap: 8px;
+      gap: 10px;
     }
 
     .promo-icon-gift {
-      font-size: 18px;
-      line-height: 1.2;
+      font-size: 1.2rem;
+      line-height: 1;
       flex-shrink: 0;
-      margin-top: 1px;
+      margin-top: 2px;
     }
 
     .promo-titulo {
-      font-size: 15px;
-      font-weight: 700;
-      color: #f1f5f9;
-      line-height: 1.35;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.25;
       flex: 1;
     }
 
     .promo-badges-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
     }
 
-    /* Status badge */
-    .promo-status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 10px;
-      border-radius: 100px;
-      font-size: 9px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .badge-ativa {
-      background: rgba(16,185,129,0.14);
-      color: #10b981;
-      border: 1px solid rgba(16,185,129,0.25);
-    }
-
-    .badge-programada {
-      background: rgba(59,130,246,0.14);
-      color: #60a5fa;
-      border: 1px solid rgba(59,130,246,0.25);
-    }
-
-    .badge-pausada {
-      background: rgba(245,158,11,0.14);
-      color: #fbbf24;
-      border: 1px solid rgba(245,158,11,0.25);
-    }
-
-    .badge-encerrada {
-      background: rgba(239,68,68,0.14);
-      color: #f87171;
-      border: 1px solid rgba(239,68,68,0.25);
-    }
-
-    /* Acesso badge */
+    .promo-status-badge,
     .promo-badge {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 3px 10px;
-      border-radius: 100px;
-      font-size: 9px;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.72rem;
       font-weight: 800;
-      letter-spacing: 1px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       white-space: nowrap;
       flex-shrink: 0;
     }
 
-    .promo-badge-vip {
-      background: rgba(245,166,35,0.14);
-      color: #f5a623;
-      border: 1px solid rgba(245,166,35,0.3);
-    }
+    .badge-ativa { background: rgba(16,185,129,0.14); color: #10b981; border: 1px solid rgba(16,185,129,0.22); }
+    .badge-programada { background: rgba(59,130,246,0.14); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+    .badge-pausada { background: rgba(245,158,11,0.14); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .badge-encerrada { background: rgba(239,68,68,0.14); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+    .promo-badge-vip { background: rgba(245,166,35,0.14); color: #f5a623; border: 1px solid rgba(245,166,35,0.3); }
+    .promo-badge-publica { background: rgba(99,102,241,0.14); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
 
-    .promo-badge-publica {
-      background: rgba(99,102,241,0.14);
-      color: #818cf8;
-      border: 1px solid rgba(99,102,241,0.25);
-    }
-
-    /* Linha divisória interna */
     .promo-divider {
       height: 1px;
       background: rgba(255,255,255,0.05);
       margin: 0 -2px;
     }
 
-    /* Grid de informações */
     .promo-info-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      gap: 12px;
     }
 
     .promo-info-item {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
     }
 
     .promo-info-label {
-      font-size: 9px;
+      font-size: 0.72rem;
       font-weight: 700;
-      color: #475569;
+      color: #64748b;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.1em;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
     }
 
-    .promo-info-icon {
-      font-size: 11px;
-    }
+    .promo-info-icon { font-size: 0.95rem; }
+    .promo-info-value { font-size: 0.96rem; font-weight: 700; color: #e2e8f0; }
+    .promo-info-value.urgent { color: #fb923c; }
 
-    .promo-info-value {
-      font-size: 12px;
-      font-weight: 600;
-      color: #94a3b8;
-      line-height: 1.3;
-    }
-
-    .promo-info-value.urgent {
-      color: #fb923c;
-    }
-
-    /* Botão de participar */
     .btn-participar {
       width: 100%;
-      padding: 13px 18px;
-      background: linear-gradient(135deg, #f5a623 0%, #e8811a 50%, #f0541e 100%);
+      padding: 14px 18px;
+      background: linear-gradient(135deg, #f5a623 0%, #e8811a 48%, #f0541e 100%);
       background-size: 200% 100%;
       background-position: 0% 0%;
       border: none;
-      border-radius: 10px;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
+      border-radius: 14px;
+      color: #0b0b0b;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
       cursor: pointer;
-      transition:
-        background-position 0.4s ease,
-        transform 0.15s ease,
-        box-shadow 0.3s ease,
-        opacity 0.2s ease;
+      transition: background-position 0.4s ease, transform 0.2s ease, box-shadow 0.25s ease, opacity 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
       position: relative;
       overflow: hidden;
-      margin-top: 2px;
     }
 
     .btn-participar:hover:not(:disabled) {
       background-position: 100% 0%;
       transform: translateY(-1px);
-      box-shadow: 0 8px 24px rgba(245,166,35,0.35);
+      box-shadow: 0 12px 26px rgba(245,166,35,0.26);
+    }
+
+    .btn-participar:focus-visible,
+    .btn-logout:focus-visible {
+      outline: 3px solid rgba(245,166,35,0.7);
+      outline-offset: 4px;
     }
 
     .btn-participar:active:not(:disabled) {
-      transform: scale(0.97) translateY(0);
-      box-shadow: 0 4px 12px rgba(245,166,35,0.25);
+      transform: scale(0.98) translateY(0);
+      box-shadow: 0 8px 18px rgba(245,166,35,0.22);
     }
 
     .btn-participar:disabled {
-      opacity: 0.45;
+      opacity: 0.55;
       cursor: not-allowed;
-      background: #2a2a3a;
+      background: #232634;
       box-shadow: none;
+      color: #8b97ae;
       transform: none;
     }
 
-    .btn-participar.success {
-      background: linear-gradient(135deg, #059669, #10b981);
-      opacity: 1;
-      cursor: default;
-    }
+    .btn-participar.success { background: linear-gradient(135deg, #059669, #10b981); color: #fff; }
+    .btn-participar.loading { cursor: wait; }
 
-    .btn-participar.loading {
-      cursor: wait;
-    }
-
-    /* Spinner do botão */
     .btn-spinner {
       display: none;
       width: 14px;
       height: 14px;
-      border: 2px solid rgba(255,255,255,0.35);
+      border: 2px solid rgba(255,255,255,0.4);
       border-top-color: #fff;
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       flex-shrink: 0;
     }
 
-    .btn-participar.loading .btn-spinner {
-      display: block;
-    }
+    .btn-participar.loading .btn-spinner { display: block; }
 
-    /* Feedback */
     .promo-feedback {
-      font-size: 12px;
-      font-weight: 600;
-      text-align: center;
-      min-height: 18px;
+      min-height: 42px;
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-size: 0.92rem;
+      font-weight: 700;
       line-height: 1.4;
-      padding: 0 4px;
-      border-radius: 6px;
+      text-align: center;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     }
 
-    .promo-feedback:empty {
-      display: none;
-    }
+    .promo-feedback:empty { display: none; }
+    .promo-feedback.ok { color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.18); }
+    .promo-feedback.err { color: #fb923c; background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.18); }
+    .promo-feedback.warn { color: #fbbf24; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.18); }
 
-    .promo-feedback.ok {
-      color: #10b981;
-      background: rgba(16,185,129,0.08);
-      padding: 8px 10px;
-    }
-
-    .promo-feedback.err {
-      color: #fb923c;
-      background: rgba(251,146,60,0.08);
-      padding: 8px 10px;
-    }
-
-    .promo-feedback.warn {
-      color: #fbbf24;
-      background: rgba(251,191,36,0.08);
-      padding: 8px 10px;
-    }
-
-    /* Estado vazio / carregando */
     .promos-empty {
       text-align: center;
       padding: 32px 20px;
-      color: #475569;
+      color: #94a3b8;
       font-size: 14px;
-      background: rgba(255,255,255,0.02);
-      border: 1px dashed rgba(255,255,255,0.06);
-      border-radius: 14px;
+      background: rgba(255,255,255,0.025);
+      border: 1px dashed rgba(255,255,255,0.08);
+      border-radius: 18px;
       grid-column: 1 / -1;
     }
 
     .promos-empty-icon {
-      font-size: 32px;
+      font-size: 1.8rem;
       display: block;
-      margin-bottom: 10px;
-      opacity: 0.5;
+      margin-bottom: 12px;
+      opacity: 0.75;
     }
 
     .promos-loading {
       text-align: center;
-      padding: 32px 20px;
-      color: #475569;
+      padding: 28px 20px;
+      color: #94a3b8;
       font-size: 13px;
       grid-column: 1 / -1;
       display: flex;
-      align-items: center;
       justify-content: center;
-      gap: 10px;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.02);
+      border: 1px dashed rgba(255,255,255,0.08);
+      border-radius: 18px;
     }
 
     .promos-loading-dot {
-      width: 6px; height: 6px;
-      background: #f5a623;
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
       border-radius: 50%;
       animation: pulse-dot 1.2s ease-in-out infinite;
     }
@@ -633,43 +614,57 @@
 
     @keyframes pulse-dot {
       0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-      40%            { opacity: 1;   transform: scale(1.2); }
+      40% { opacity: 1; transform: scale(1.2); }
     }
 
-    /* Botão logout */
     .btn-logout {
       width: 100%;
-      padding: 13px;
+      padding: 14px 18px;
       background: transparent;
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      color: #888;
-      font-size: 14px;
-      font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      color: var(--muted-strong);
+      font-size: 0.95rem;
+      font-weight: 700;
       cursor: pointer;
-      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
       margin-top: 4px;
     }
 
     .btn-logout:hover {
-      background: #1f1f1f;
-      color: #ccc;
-      border-color: #333;
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    .btn-logout:focus-visible {
+      outline: 3px solid rgba(99,102,241,0.7);
+      outline-offset: 4px;
     }
 
     #error-msg {
       display: none;
       text-align: center;
-      color: #e74c3c;
-      font-size: 14px;
-      padding: 20px;
+      color: #f87171;
+      font-size: 0.95rem;
+      padding: 18px 0;
     }
 
-    @media (max-width: 400px) {
-      h1 { font-size: 19px; }
-      .cd-number { font-size: 28px; }
-      .cd-sep { font-size: 22px; }
-      .promo-info-grid { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 780px) {
+      .header { padding: 22px; }
+      .grid-overview { gap: 16px; }
+      .countdown-display { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .promo-info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 18px 12px; }
+      .header { padding: 18px; }
+      .countdown-display { grid-template-columns: 1fr; }
+      .cd-block { padding: 16px; }
+      .promo-info-grid { grid-template-columns: 1fr; }
+      .btn-participar { padding: 13px 14px; }
+      .promos-section-header { flex-direction: column; align-items: stretch; }
     }
   </style>
 </head>
@@ -683,82 +678,82 @@
   <div id="content">
     <div class="header">
       <div>
-        <h1>Área VIP5</h1>
-        <p class="subtitle">Seu acesso está ativo</p>
+        <p class="eyebrow">🎁 Promoções Exclusivas</p>
+        <h1>Participe dos disponíveis para clientes VIP.</h1>
+        <p class="hero-copy">Acesse promoções premium com vagas limitadas, prêmios exclusivos e prioridade para usuários VIP.</p>
       </div>
-      <span class="badge">VIP5</span>
-    </div>
-
-    <div class="card">
-      <p class="card-title">Informações do acesso</p>
-
-      <div class="info-row">
-        <span class="info-label">UID do usuário</span>
-        <span class="info-value" id="uid-value">—</span>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="info-row">
-        <span class="info-label">Código VIP</span>
-        <span class="info-value highlight" id="code-value">—</span>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="info-row">
-        <span class="info-label">Data de ativação</span>
-        <span class="info-value" id="activated-value">—</span>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="info-row">
-        <span class="info-label">Data de expiração</span>
-        <span class="info-value" id="expires-value">—</span>
+      <div class="header-meta">
+        <span class="badge">VIP5</span>
+        <span class="status-pill">Acesso ativo</span>
       </div>
     </div>
 
-    <div class="card">
-      <p class="card-title">Tempo restante</p>
+    <div class="grid-overview">
+      <div class="card">
+        <p class="card-title">Informações do acesso</p>
 
-      <div class="countdown-display" id="countdown-display">
-        <div class="cd-block">
-          <span class="cd-number" id="cd-days">00</span>
-          <span class="cd-unit">dias</span>
+        <div class="info-row">
+          <span class="info-label">UID do usuário</span>
+          <span class="info-value" id="uid-value">—</span>
         </div>
-        <span class="cd-sep">:</span>
-        <div class="cd-block">
-          <span class="cd-number" id="cd-hours">00</span>
-          <span class="cd-unit">horas</span>
+
+        <div class="divider"></div>
+
+        <div class="info-row">
+          <span class="info-label">Código VIP</span>
+          <span class="info-value highlight" id="code-value">—</span>
         </div>
-        <span class="cd-sep">:</span>
-        <div class="cd-block">
-          <span class="cd-number" id="cd-minutes">00</span>
-          <span class="cd-unit">min</span>
+
+        <div class="divider"></div>
+
+        <div class="info-row">
+          <span class="info-label">Data de ativação</span>
+          <span class="info-value" id="activated-value">—</span>
         </div>
-        <span class="cd-sep">:</span>
-        <div class="cd-block">
-          <span class="cd-number" id="cd-seconds">00</span>
-          <span class="cd-unit">seg</span>
+
+        <div class="divider"></div>
+
+        <div class="info-row">
+          <span class="info-label">Data de expiração</span>
+          <span class="info-value" id="expires-value">—</span>
         </div>
       </div>
 
-      <div class="progress-wrap">
-        <div class="progress-header">
-          <span class="progress-label">Consumido do plano</span>
-          <span class="progress-pct" id="progress-pct">—</span>
+      <div class="card">
+        <p class="card-title">Tempo restante</p>
+
+        <div class="countdown-display" id="countdown-display">
+          <div class="cd-block">
+            <span class="cd-number" id="cd-days">00</span>
+            <span class="cd-unit">dias</span>
+          </div>
+          <div class="cd-block">
+            <span class="cd-number" id="cd-hours">00</span>
+            <span class="cd-unit">horas</span>
+          </div>
+          <div class="cd-block">
+            <span class="cd-number" id="cd-minutes">00</span>
+            <span class="cd-unit">min</span>
+          </div>
+          <div class="cd-block">
+            <span class="cd-number" id="cd-seconds">00</span>
+            <span class="cd-unit">seg</span>
+          </div>
         </div>
-        <div class="progress-bar-bg">
-          <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+
+        <div class="progress-wrap">
+          <div class="progress-header">
+            <span class="progress-label">Consumido do plano</span>
+            <span class="progress-pct" id="progress-pct">—</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════════ -->
-    <!-- PROMOÇÕES VIP                                                  -->
-    <!-- ══════════════════════════════════════════════════════════════ -->
-    <div class="card" id="promos-card" style="display:none;flex-direction:column;gap:14px">
+    <div class="card" id="promos-card">
       <div class="promos-section-header">
         <p class="promos-section-title">Promoções disponíveis</p>
         <span class="promos-count-badge" id="promos-count" style="display:none"></span>
@@ -779,23 +774,13 @@
 
   <script type="module">
     import { auth } from "./vip5-firebase.js";
-    import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { checkVipExpiration } from "./vip5-expiration-manager.js";
-    import {
-      fetchVisiblePromotions,
-      canParticipate,
-      registerParticipation,
-    } from "./vip5-promocoes-storage.js";
-
-    console.log("[VIP5-USUARIO] Página carregada. Verificando expiração VIP...");
+    import { fetchVisiblePromotions, canParticipate, registerParticipation } from "./vip5-promocoes-storage.js";
+    import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     let countdownTimer = null;
-    let _currentUser   = null;
-    let _currentVip    = null;
-
-    function pad(n) {
-      return String(Math.floor(n)).padStart(2, "0");
-    }
+    let _currentUser = null;
+    let _currentVip = null;
 
     function formatDate(ts) {
       return new Date(ts).toLocaleString("pt-BR", {
@@ -808,6 +793,10 @@
       if (!v) return "—";
       const d = typeof v.toDate === "function" ? v.toDate() : (v instanceof Date ? v : new Date(v));
       return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+
+    function pad(value) {
+      return String(value).padStart(2, "0");
     }
 
     function showError(msg) {
