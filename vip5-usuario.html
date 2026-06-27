@@ -775,7 +775,7 @@
   <script type="module">
     import { auth } from "./vip5-firebase.js";
     import { checkVipExpiration } from "./vip5-expiration-manager.js";
-    import { fetchVisiblePromotions, canParticipate, registerParticipation } from "./vip5-promocoes-storage.js";
+    import { fetchVisibleSorteios, canParticipate, registerParticipation } from "./vip5-sorteios-storage.js";
     import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     let countdownTimer = null;
@@ -961,7 +961,7 @@
         && (!vipData.vip5ExpiresAt || vipData.vip5ExpiresAt > Date.now());
 
       console.log("[VIP5-USUARIO] Carregando promoções. isVip:", isVipAtivo);
-      const result = await fetchVisiblePromotions({ isVip: isVipAtivo, limit: 10 });
+      const result = await fetchVisibleSorteios({ isVip: isVipAtivo, limit: 10 });
 
       if (!result.success || result.data.items.length === 0) {
         document.getElementById("promos-list").innerHTML = `
