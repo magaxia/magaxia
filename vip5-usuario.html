@@ -1009,6 +1009,37 @@
       </div>
     </div>
 
+    <div class="card" id="produtos-antecipados-card" style="display:none;flex-direction:column;gap:16px">
+      <div class="promos-section-header">
+        <p class="promos-section-title">Produtos Antecipados</p>
+        <span class="promos-count-badge" id="produtos-count" style="display:none"></span>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+        <div style="display:flex;flex:1;min-width:220px;gap:8px;align-items:center;">
+          <span class="subtitle">Pesquisar</span>
+          <input id="produtos-search-input" type="text" placeholder="Pesquisar produto..." style="flex:1;padding:10px 12px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:transparent;color:inherit;min-width:180px" />
+        </div>
+        <div style="display:flex;flex:1;min-width:220px;gap:8px;align-items:center;">
+          <span class="subtitle">Categoria</span>
+          <select id="produtos-category-filter" style="flex:1;padding:10px 12px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;background:transparent;color:inherit;cursor:pointer;min-width:160px">
+            <option value="">Todas</option>
+            <option value="lancamentos">Lançamentos</option>
+            <option value="exclusivos">Exclusivos</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+        <button class="btn-participar" type="button" onclick="pesquisarProdutosAntecipadosUsuario()" style="min-width:160px">Buscar produtos</button>
+      </div>
+
+      <div class="promos-list" id="produtos-list">
+        <div class="promos-empty">
+          <span class="promos-empty-icon">🛍️</span>
+          Nenhum produto disponível.
+        </div>
+      </div>
+    </div>
+
     <!-- Logout -->
     <button class="btn-logout" id="btn-logout">Sair da conta</button>
   </div>
@@ -1042,6 +1073,7 @@
 
     // Mapeia id → tipo ("promocao" | "sorteio") para despacho no participar()
     const _tipoMap = new Map();
+    let produtosAntecipadosUsuario = [];
 
     // ── Utilitários ───────────────────────────────────────────────────────────
     function pad(n) {
@@ -1313,6 +1345,72 @@
       }));
     }
 
+    async function carregarProdutosAntecipadosUsuario(uid) {
+      console.log("[VIP5-USUARIO] carregarProdutosAntecipadosUsuario: carregando lista de produtos antecipados para ", uid);
+      // Futuramente adicionar consultas ao Firestore para buscar os produtos do usuário.
+      produtosAntecipadosUsuario = [];
+      renderizarProdutosAntecipadosUsuario();
+    }
+
+    function renderizarProdutosAntecipadosUsuario() {
+      const card = document.getElementById("produtos-antecipados-card");
+      const list = document.getElementById("produtos-list");
+      const count = document.getElementById("produtos-count");
+
+      if (!card || !list || !count) return;
+      card.style.display = "flex";
+
+      if (!produtosAntecipadosUsuario.length) {
+        count.style.display = "none";
+        list.innerHTML = `
+          <div class="promos-empty">
+            <span class="promos-empty-icon">🛍️</span>
+            Nenhum produto disponível.
+          </div>
+        `;
+        return;
+      }
+
+      count.textContent = produtosAntecipadosUsuario.length + (produtosAntecipadosUsuario.length === 1 ? " disponível" : " disponíveis");
+      count.style.display = "inline-flex";
+      list.innerHTML = produtosAntecipadosUsuario.map(item => `
+        <div class="promo-card">
+          <div class="promo-card-header">
+            <div class="promo-title-row">
+              <span class="promo-icon-gift">🛍️</span>
+              <span class="promo-titulo">${item.nome || "Produto antecipado"}</span>
+            </div>
+          </div>
+          <div class="promo-divider"></div>
+          <div class="promo-info-grid">
+            <div class="promo-info-item">
+              <span class="promo-info-label">Categoria</span>
+              <span class="promo-info-value">${item.categoria || "—"}</span>
+            </div>
+            <div class="promo-info-item">
+              <span class="promo-info-label">Status</span>
+              <span class="promo-info-value">${item.status || "Pendente"}</span>
+            </div>
+            <div class="promo-info-item">
+              <span class="promo-info-label">Preço</span>
+              <span class="promo-info-value">${item.preco || "—"}</span>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function pesquisarProdutosAntecipadosUsuario() {
+      const input = document.getElementById("produtos-search-input");
+      const category = document.getElementById("produtos-category-filter");
+      const query = input ? input.value.trim().toLowerCase() : "";
+      const filtroCategoria = category ? category.value : "";
+
+      console.log("[VIP5-USUARIO] pesquisarProdutosAntecipadosUsuario:", { query, filtroCategoria });
+      // Futuramente implementar o filtro local/Firestore com base em query e filtro de categoria.
+      renderizarProdutosAntecipadosUsuario();
+    }
+
     // ── Handler de participação ───────────────────────────────────────────────
     window.participar = async function (itemId, btn) {
       if (!_currentUser) return;
@@ -1383,6 +1481,10 @@
       // Carrega promoções + sorteios sem bloquear a exibição do conteúdo VIP
       loadPromos(user.uid, vipData).catch((err) => {
         console.error("[VIP5-USUARIO] Erro ao carregar itens:", err.message, err);
+      });
+
+      carregarProdutosAntecipadosUsuario(user.uid).catch((err) => {
+        console.error("[VIP5-USUARIO] Erro ao carregar produtos antecipados:", err.message, err);
       });
 
       document.getElementById("btn-logout").addEventListener("click", async () => {
