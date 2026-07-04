@@ -1356,20 +1356,11 @@
         produtosAntecipadosUsuario = snap.docs
           .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
           .filter((item) => {
-            if (item.ativo === false) return false;
-            if (item.exclusivoVip5 === true && _currentVip?.vip5Active !== true) return false;
-            const requiredVip = Number(item.nivelVip ?? item.requiredVip ?? 0);
-            const vipOpeningAt = _toMs(item.aberturaVip);
-            const publicOpeningAt = _toMs(item.aberturaPublica);
-            const expiresAt = _toMs(item.encerramento);
-            if (vipOpeningAt && vipOpeningAt > now) return false;
+            if (item.ativo === false || item.status === "inativo" || item.status === "desativado") return false;
+
+            const expiresAt = _toMs(item.encerramento ?? item.dataExpiracao ?? item.dataEncerramento);
             if (expiresAt && expiresAt < now) return false;
-            if (publicOpeningAt && publicOpeningAt > now) {
-              return requiredVip <= vipLevel;
-            }
-            if (requiredVip > vipLevel) return false;
-            const publishedAt = _toMs(item.dataPublicacao);
-            if (publishedAt && publishedAt > now) return false;
+
             return true;
           })
           .sort((a, b) => {
