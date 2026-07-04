@@ -1047,8 +1047,9 @@
   <p id="error-msg"></p>
 
   <script type="module">
-    import { auth } from "./vip5-firebase.js";
+    import { auth, db } from "./vip5-firebase.js";
     import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { checkVipExpiration } from "./vip5-expiration-manager.js";
 
     // ── Promoções (coleção vip5_promocoes) ───────────────────────────────────
@@ -1347,9 +1348,45 @@
 
     async function carregarProdutosAntecipadosUsuario(uid) {
       console.log("[VIP5-USUARIO] carregarProdutosAntecipadosUsuario: carregando lista de produtos antecipados para ", uid);
-      // Futuramente adicionar consultas ao Firestore para buscar os produtos do usuário.
-      produtosAntecipadosUsuario = [];
-      renderizarProdutosAntecipadosUsuario();
+      try {
+        const snap = await getDocs(collection(db, "produtos_antecipados"));
+        const vipLevel = Number(_currentVip?.vipLevel ?? _currentVip?.nivelVip ?? _currentVip?.level ?? 0);
+        const now = Date.now();
+
+        produtosAntecipadosUsuario = snap.docs
+          .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+          .filter((item) => {
+            if (item.ativo === false) return false;
+            if (item.exclusivoVip5 === true && _currentVip?.vip5Active !== true) return false;
+            const requiredVip = Number(item.nivelVip ?? item.requiredVip ?? 0);
+            const vipOpeningAt = _toMs(item.aberturaVip);
+            const publicOpeningAt = _toMs(item.aberturaPublica);
+            const expiresAt = _toMs(item.encerramento);
+            if (vipOpeningAt && vipOpeningAt > now) return false;
+            if (expiresAt && expiresAt < now) return false;
+            if (publicOpeningAt && publicOpeningAt > now) {
+              return requiredVip <= vipLevel;
+            }
+            if (requiredVip > vipLevel) return false;
+            const publishedAt = _toMs(item.dataPublicacao);
+            if (publishedAt && publishedAt > now) return false;
+            return true;
+          })
+          .sort((a, b) => {
+            const ordemA = Number(a.ordem ?? 0);
+            const ordemB = Number(b.ordem ?? 0);
+            if (ordemB !== ordemA) return ordemB - ordemA;
+            const criadoA = _toMs(a.criadoEm);
+            const criadoB = _toMs(b.criadoEm);
+            return criadoB - criadoA;
+          });
+
+        renderizarProdutosAntecipadosUsuario();
+      } catch (err) {
+        console.error("[VIP5-USUARIO] Erro ao carregar produtos antecipados:", err.message, err);
+        produtosAntecipadosUsuario = [];
+        renderizarProdutosAntecipadosUsuario();
+      }
     }
 
     function renderizarProdutosAntecipadosUsuario() {
@@ -1360,7 +1397,18 @@
       if (!card || !list || !count) return;
       card.style.display = "flex";
 
-      if (!produtosAntecipadosUsuario.length) {
+      const input = document.getElementById("produtos-search-input");
+      const category = document.getElementById("produtos-category-filter");
+      const query = input ? input.value.trim().toLowerCase() : "";
+      const filtroCategoria = category ? category.value : "";
+
+      const visibleItems = produtosAntecipadosUsuario.filter((item) => {
+        const matchesQuery = !query || String(item.nome || "").toLowerCase().includes(query) || String(item.categoria || "").toLowerCase().includes(query) || String(item.abaProduto || item.aba || "").toLowerCase().includes(query);
+        const matchesCategory = !filtroCategoria || String(item.categoria || "").toLowerCase().includes(filtroCategoria) || String(item.abaProduto || item.aba || "").toLowerCase().includes(filtroCategoria);
+        return matchesQuery && matchesCategory;
+      });
+
+      if (!visibleItems.length) {
         count.style.display = "none";
         list.innerHTML = `
           <div class="promos-empty">
@@ -1371,9 +1419,9 @@
         return;
       }
 
-      count.textContent = produtosAntecipadosUsuario.length + (produtosAntecipadosUsuario.length === 1 ? " disponível" : " disponíveis");
+      count.textContent = visibleItems.length + (visibleItems.length === 1 ? " disponível" : " disponíveis");
       count.style.display = "inline-flex";
-      list.innerHTML = produtosAntecipadosUsuario.map(item => `
+      list.innerHTML = visibleItems.map((item) => `
         <div class="promo-card">
           <div class="promo-card-header">
             <div class="promo-title-row">
@@ -1389,13 +1437,14 @@
             </div>
             <div class="promo-info-item">
               <span class="promo-info-label">Status</span>
-              <span class="promo-info-value">${item.status || "Pendente"}</span>
+              <span class="promo-info-value">${item.ativo ? "Ativo" : "Inativo"}</span>
             </div>
             <div class="promo-info-item">
               <span class="promo-info-label">Preço</span>
-              <span class="promo-info-value">${item.preco || "—"}</span>
+              <span class="promo-info-value">${item.preco != null ? Number(item.preco).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}</span>
             </div>
           </div>
+          ${item.imagemPrincipal ? `<img src="${item.imagemPrincipal}" alt="${item.nome}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-top:8px" onerror="this.src='https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80'">` : ""}
         </div>
       `).join("");
     }
@@ -1407,7 +1456,6 @@
       const filtroCategoria = category ? category.value : "";
 
       console.log("[VIP5-USUARIO] pesquisarProdutosAntecipadosUsuario:", { query, filtroCategoria });
-      // Futuramente implementar o filtro local/Firestore com base em query e filtro de categoria.
       renderizarProdutosAntecipadosUsuario();
     }
 
