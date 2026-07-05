@@ -907,9 +907,11 @@ function carregarNivelVIP() {
       const data = doc.data();
       usuarioVipNivel = Number(data.vipNivel || data.vipLevel || 0);
       console.log("👑 Nível VIP do usuário atualizado:", usuarioVipNivel);
+      renderizarProdutos();
     }, error => {
       console.error("❌ Erro ao carregar VIP:", error);
       usuarioVipNivel = 0;
+      renderizarProdutos();
     });
 }
 
@@ -1124,22 +1126,21 @@ async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
 }
 
 // 📦 CARREGAR PRODUTOS PARA USUÁRIOS
+let produtosCache = [];
+let produtosAntecipadosCache = [];
+
 function carregarProdutos(){
   console.log("🔄 Iniciando carregamento de produtos...");
-  const eventos = document.getElementById('produtosEventos');
-  const vip = document.getElementById('produtosVip');
-  const diario = document.getElementById('produtosDiario');
-  const fixo = document.getElementById('produtosFixo');
 
-  eventos.innerHTML = "";
-  vip.innerHTML = "";
-  diario.innerHTML = "";
-  fixo.innerHTML = "";
+  if (!window.SistemaAuth || !window.SistemaAuth.db) {
+    console.warn("⚠️ Aguardando SistemaAuth.db para carregar produtos...");
+    return;
+  }
 
   window.SistemaAuth.db.collection("produtos")
     .where("ativo", "==", true)
     .onSnapshot(async (snapshot) => {
-      console.log("📦 Snapshot recebida, documentos:", snapshot.size);
+      console.log("📦 Snapshot produtos recebida, documentos:", snapshot.size);
 
       if(snapshot.empty) {
         console.log("📦 Nenhum produto encontrado, criando produtos de exemplo...");
@@ -1147,111 +1148,20 @@ function carregarProdutos(){
         return;
       }
 
-      // Ordenar produtos por categoria na ordem correta
-      const ordem = {
-        diario: 1,
-        vip: 2,
-        fixo: 3,
-        eventos: 4
-      };
-
-      const produtosOrdenados = snapshot.docs
-        .map((doc) => ({ id: doc.id, data: doc.data() }))
-        .sort((a, b) => {
-          const tipoA = a.data.tipo || "eventos";
-          const tipoB = b.data.tipo || "eventos";
-          const ordemA = ordem[tipoA] || 4;
-          const ordemB = ordem[tipoB] || 4;
-          
-          if (ordemA !== ordemB) {
-            return ordemA - ordemB;
-          }
-          
-          const aTs = a.data.criadoEm ? (typeof a.data.criadoEm.toMillis === 'function' ? a.data.criadoEm.toMillis() : new Date(a.data.criadoEm).getTime()) : 0;
-          const bTs = b.data.criadoEm ? (typeof b.data.criadoEm.toMillis === 'function' ? b.data.criadoEm.toMillis() : new Date(b.data.criadoEm).getTime()) : 0;
-          return aTs - bTs;
-        });
-
-      for (const produto of produtosOrdenados) {
-        const docId = produto.id;
-        const p = produto.data;
-        const tipoNormalizado = String(p.tipo || p.abaProduto || p.categoria || 'eventos').toLowerCase();
-        const tipo = ['diario', 'vip', 'fixo', 'eventos'].includes(tipoNormalizado) ? tipoNormalizado : 'eventos';
-        console.log("Produto:", p.nome, "Tipo:", tipo);
-
-        // 👑 VERIFICAR RESTRIÇÃO VIP
-        const vipNecessario = Number((p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? getVipProduto(p.nome)) || 0);
-        console.log("  - VIP necessário:", vipNecessario, "| Usuário VIP:", usuarioVipNivel);
-
-        const podeComprarPorVIP = usuarioVipNivel >= vipNecessario;
-        const bloqueadoPorVIP = vipNecessario > 0 && !podeComprarPorVIP;
-
-        const card = document.createElement('div');
-        card.className = 'card' + (bloqueadoPorVIP ? ' bloqueado' : '');
-
-        // Verificar se produto VIP já foi comprado
-        let textoBot = '🛒 Comprar Agora';
-        let avisoVip = '';
-        let botaoAtributos = '';
-        let botaoClass = '';
-
-        if (bloqueadoPorVIP) {
-          textoBot = `🔒 Bloqueado`;
-          avisoVip = `<div class="vip-alert">🔒 Necessário VIP ${vipNecessario}</div>`;
-          botaoAtributos = ' disabled';
-          botaoClass = 'bloqueado';
-        }
-
-        if (!bloqueadoPorVIP && tipo === 'vip') {
-          const jaComprou = await verificarJaComprou(docId);
-          if (jaComprou) {
-            textoBot = '✓ Já Comprado';
-            avisoVip = '<div class="info" style="background: #e8f5e9; color: #2e7d32; padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 10px;">✓ Você já comprou este produto</div>';
-            botaoAtributos = ' disabled';
-            botaoClass = 'bloqueado';
-            card.className = 'card bloqueado';
-            console.log("  ✓ Produto VIP já comprado por este usuário");
-          }
-        }
-
-        const preco = Number(p.preco ?? p.valor ?? 0);
-        const ciclo = Number(p.ciclo ?? p.cicloDias ?? 0);
-        const rendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? 0);
-        const labelRendimento = (p.tipoRendimento || p.tipoRetorno) === 'lucro' ? 'Lucro' : 'Renda Diária';
-        const totalRendimento = rendimento * ciclo;
-        const corTipo = getCorTipo(tipo);
-        const gradienteTipo = getGradienteTipo(tipo);
-        const imagemProduto = p.imagem || p.imagemPrincipal || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto';
-
-        card.innerHTML = `
-          <img src="${imagemProduto}" alt="${p.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
-          <div class="chip" style="background: ${gradienteTipo}; color: ${tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${p.nome}</div>
-          <div class="valor" style="color: ${corTipo};">R$ ${preco.toFixed(2)}</div>
-          <div class="info">💰 ${labelRendimento}: <span class="destaque" style="color: ${corTipo};">R$ ${rendimento.toFixed(2)}</span></div>
-          <div class="info">⏰ Ciclo: ${ciclo} dias</div>
-          <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
-          ${avisoVip}
-          <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${docId}', '${p.nome}', ${preco}, ${rendimento}, ${ciclo}, '${tipo}', ${vipNecessario})"${botaoAtributos}>
-            ${textoBot}
-          </button>
-        `;
-
-        if(tipo === 'vip') {
-          vip.appendChild(card);
-        } else if(tipo === 'diario') {
-          diario.appendChild(card);
-        } else if(tipo === 'fixo') {
-          fixo.appendChild(card);
-        } else {
-          eventos.appendChild(card);
-        }
-      }
+      produtosCache = snapshot.docs.map((doc) => normalizeProduto(doc, 'produtos'));
+      console.log("📦 Produtos legacy normalizados:", produtosCache.length);
+      await renderizarProdutos();
     }, (error) => {
       console.error("Erro ao carregar produtos:", error);
-      eventos.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
-      vip.innerHTML = eventos.innerHTML;
-      diario.innerHTML = eventos.innerHTML;
-      fixo.innerHTML = eventos.innerHTML;
+      const eventos = document.getElementById('produtosEventos');
+      const vip = document.getElementById('produtosVip');
+      const diario = document.getElementById('produtosDiario');
+      const fixo = document.getElementById('produtosFixo');
+      const mensagemErro = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao carregar produtos</div>";
+      eventos.innerHTML = mensagemErro;
+      vip.innerHTML = mensagemErro;
+      diario.innerHTML = mensagemErro;
+      fixo.innerHTML = mensagemErro;
     });
 }
 
@@ -1267,130 +1177,214 @@ function _toMs(value) {
   return new Date(value).getTime() || 0;
 }
 
-// 📦 CARREGAR PRODUTOS ANTECIPADOS (VIP)
+function normalizeProduto(doc, origem) {
+  const p = doc.data() || {};
+  const tipoNormalizado = String(p.tipo || p.abaProduto || p.categoria || 'eventos').toLowerCase();
+  const tipo = ['diario', 'vip', 'fixo', 'eventos'].includes(tipoNormalizado) ? tipoNormalizado : 'eventos';
+  const nome = String(p.nome || p.titulo || 'Produto');
+
+  const categoria = String(p.categoria || p.abaProduto || p.tipo || '').toLowerCase();
+
+  return {
+    id: `${origem}_${doc.id}`,
+    docId: doc.id,
+    origem,
+    tipo,
+    categoria,
+    nome,
+    preco: Number(p.preco ?? p.valor ?? 0),
+    ciclo: Number(p.ciclo ?? p.cicloDias ?? 0),
+    rendaDiaria: Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? 0),
+    tipoRendimento: p.tipoRendimento || p.tipoRetorno || null,
+    imagem: p.imagem || p.imagemPrincipal || p.imagemUrl || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto',
+    requiredVip: Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? 0),
+    exclusivoVip5: p.exclusivoVip5 === true,
+    ativo: p.ativo !== false,
+    status: String(p.status || '').toLowerCase(),
+    statusInativo: ['inativo', 'desativado'].includes(String(p.status || '').toLowerCase()),
+    aberturaVip: _toMs(p.aberturaVip),
+    aberturaPublica: _toMs(p.aberturaPublica),
+    encerramento: _toMs(p.encerramento ?? p.dataExpiracao ?? p.dataEncerramento),
+    criadoEm: _toMs(p.criadoEm ?? p.createdAt ?? p.dataCriacao),
+    ordem: Number(p.ordem ?? 0),
+    raw: p
+  };
+}
+
+function shouldRenderAntecipado(produto) {
+  const now = Date.now();
+
+  if (!produto.ativo || produto.statusInativo) {
+    console.log(`  ❌ [INATIVO] "${produto.nome}" descartado (ativo=${produto.ativo}, status=${produto.status})`);
+    return false;
+  }
+
+  if (produto.encerramento && produto.encerramento < now) {
+    console.log(`  ❌ [EXPIRADO] "${produto.nome}" descartado (expirou em ${new Date(produto.encerramento).toLocaleString()})`);
+    return false;
+  }
+
+  if (produto.exclusivoVip5 && usuarioVipNivel === 0) {
+    console.log(`  ❌ [VIP EXCLUSIVO] "${produto.nome}" bloqueado (exclusivoVip5=true, usuário não é VIP)`);
+    return false;
+  }
+
+  if (produto.requiredVip > 0 && usuarioVipNivel < produto.requiredVip) {
+    console.log(`  ❌ [VIP REQUERIDO] "${produto.nome}" bloqueado (requer VIP ${produto.requiredVip}, usuário tem ${usuarioVipNivel})`);
+    return false;
+  }
+
+  if (produto.aberturaPublica && now < produto.aberturaPublica) {
+    if (produto.aberturaVip && usuarioVipNivel > 0 && now >= produto.aberturaVip) {
+      console.log(`  ✅ [PERÍODO VIP] "${produto.nome}" permitido (período VIP exclusivo)`);
+      return true;
+    }
+    console.log(`  ❌ [NÃO ABERTO] "${produto.nome}" bloqueado (abre em ${new Date(produto.aberturaPublica).toLocaleString()})`);
+    return false;
+  }
+
+  console.log(`  ✅ [OK] "${produto.nome}" permitido (passou todas as verificações)`);
+  return true;
+}
+
+// 📦 CARREGAR PRODUTOS ANTECIPADOS (VIP e Público)
 function carregarProdutosAntecipados(){
   console.log("🔄 Iniciando carregamento de produtos antecipados...");
   if (!window.SistemaAuth || !window.SistemaAuth.db) {
-    console.log("Aguardando SistemaAuth...");
+    console.log("⚠️ Aguardando SistemaAuth para carregar antecipados...");
     return;
   }
 
-  const db = window.SistemaAuth.db;
-  const query = window.firebase.firestore().collection('produtos_antecipados');
+  const query = window.SistemaAuth.db.collection('produtos_antecipados');
+
+  query.onSnapshot(async (snapshot) => {
+    console.log("📦 [ANTECIPADOS] Snapshot recebida, documentos encontrados:", snapshot.size);
+
+    if (snapshot.empty) {
+      produtosAntecipadosCache = [];
+      console.log("📦 [ANTECIPADOS] Nenhum produto antecipado encontrado na collection");
+      await renderizarProdutos();
+      return;
+    }
+
+    produtosAntecipadosCache = snapshot.docs.map((doc) => normalizeProduto(doc, 'produtos_antecipados'));
+    console.log(`📦 [ANTECIPADOS] Produtos normalizados: ${produtosAntecipadosCache.length}`);
+    console.log(`📦 [ANTECIPADOS] Atualizando renderização com cache bruto de antecipados`);
+
+    await renderizarProdutos();
+  }, (error) => {
+    console.error("❌ Erro ao carregar produtos antecipados:", error);
+  });
+}
+
+async function renderizarProdutos() {
   const eventos = document.getElementById('produtosEventos');
   const vip = document.getElementById('produtosVip');
   const diario = document.getElementById('produtosDiario');
   const fixo = document.getElementById('produtosFixo');
-  const now = Date.now();
 
-  query.onSnapshot(async (snapshot) => {
-    console.log("📦 Snapshot de antecipados recebida, documentos:", snapshot.size);
+  eventos.innerHTML = "";
+  vip.innerHTML = "";
+  diario.innerHTML = "";
+  fixo.innerHTML = "";
 
-    if (snapshot.empty) {
-      console.log("📦 Nenhum produto antecipado encontrado");
-      return;
-    }
+  const produtosUnidos = [...produtosCache, ...produtosAntecipadosCache];
+  console.log('Produtos Legacy:', produtosCache.length);
+  console.log('Produtos Antecipados:', produtosAntecipadosCache.length);
+  console.log('Produtos Unificados (antes do filtro de antecipados):', produtosUnidos.length);
 
-    const produtosAntecipados = snapshot.docs
-      .map((doc) => ({ id: doc.id, data: doc.data() }))
-      .filter((item) => {
-        const p = item.data;
-
-        // 1️⃣ Remover inativos
-        if (p.ativo === false || p.status === 'inativo' || p.status === 'desativado') {
-          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: inativo`);
-          return false;
-        }
-
-        // 2️⃣ Remover expirados
-        const expiresAt = _toMs(p.encerramento ?? p.dataExpiracao ?? p.dataEncerramento);
-        if (expiresAt && expiresAt < now) {
-          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: expirado`);
-          return false;
-        }
-
-        // 3️⃣ Verificar VIP
-        const requiredVip = Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? 0);
-        const exclusivoVip = p.exclusivoVip5 === true;
-        
-        if (exclusivoVip && usuarioVipNivel === 0) {
-          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: exclusivo VIP5`);
-          return false;
-        }
-        
-        if (requiredVip > 0 && usuarioVipNivel < requiredVip) {
-          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: requer VIP ${requiredVip}`);
-          return false;
-        }
-
-        // 4️⃣ Verificar datas de abertura
-        const aberturaVip = _toMs(p.aberturaVip);
-        const aberturaPublica = _toMs(p.aberturaPublica);
-
-        if (aberturaPublica && now < aberturaPublica) {
-          // Se há abertura VIP e usuário é VIP, permitir durante período VIP
-          if (aberturaVip && usuarioVipNivel > 0 && now >= aberturaVip) {
-            console.log(`[ANTECIPADO FILTER] ${p.nome} permitido: período VIP exclusivo`);
-            return true;
-          }
-          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: ainda não abriu ao público`);
-          return false;
-        }
-
-        console.log(`[ANTECIPADO FILTER] ${p.nome} permitido`);
-        return true;
-      });
-
-    // Ordenar por ordem DESC, depois criadoEm DESC
-    produtosAntecipados.sort((a, b) => {
-      const ordemA = a.data.ordem ?? 0;
-      const ordemB = b.data.ordem ?? 0;
-      if (ordemA !== ordemB) return ordemB - ordemA;
-
-      const aTs = _toMs(a.data.criadoEm);
-      const bTs = _toMs(b.data.criadoEm);
-      return bTs - aTs;
-    });
-
-    // Renderizar produtos antecipados
-    for (const produto of produtosAntecipados) {
-      const docId = produto.id;
-      const p = produto.data;
-      const tipoNormalizado = String(p.tipo ?? p.abaProduto ?? p.categoria ?? 'eventos').toLowerCase();
-      const tipo = ['diario', 'vip', 'fixo', 'eventos'].includes(tipoNormalizado) ? tipoNormalizado : 'eventos';
-      
-      console.log("Produto Antecipado:", p.nome, "Tipo:", tipo);
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.id = 'card_' + docId;
-      card.style.cursor = 'pointer';
-
-      const preco = (p.preco ?? p.valor ?? 0).toFixed(2);
-      const rendaDiaria = (p.rendaDiaria ?? p.valorRendimento ?? 0).toFixed(2);
-      const ciclo = p.ciclo ?? p.cicloDias ?? 'N/A';
-      const imagem = p.imagem ?? "https://via.placeholder.com/300x200/999/fff?text=" + encodeURIComponent(p.nome);
-
-      card.innerHTML = `
-        <img src="${imagem}" alt="${p.nome}" style="width: 100%; height: 180px; object-fit: cover; border-radius: 8px;">
-        <h3>${p.nome}</h3>
-        <p><strong>Preço:</strong> R$ ${preco}</p>
-        <p><strong>Renda Diária:</strong> R$ ${rendaDiaria}</p>
-        <p><strong>Ciclo:</strong> ${ciclo} dias</p>
-        ${p.requiredVip > 0 ? `<p style="color: gold;"><strong>⭐ Requer VIP Nível ${p.requiredVip}</strong></p>` : ''}
-        ${p.exclusivoVip5 ? `<p style="color: #ff6b9d;"><strong>🔒 Exclusivo VIP5</strong></p>` : ''}
-      `;
-
-      card.onclick = () => comprarProduto(docId, preco);
-
-      if (tipo === 'diario') diario.appendChild(card);
-      else if (tipo === 'vip') vip.appendChild(card);
-      else if (tipo === 'fixo') fixo.appendChild(card);
-      else eventos.appendChild(card);
-    }
-  }, (error) => {
-    console.error("Erro ao carregar produtos antecipados:", error);
+  const produtosVisiveis = produtosUnidos.filter((produto) => {
+    if (produto.origem !== 'produtos_antecipados') return true;
+    return shouldRenderAntecipado(produto);
   });
+
+  console.log('Produtos Unificados (após filtro de antecipados):', produtosVisiveis.length);
+  console.table(produtosVisiveis.map(p => ({ id: p.id, origem: p.origem, nome: p.nome, tipo: p.tipo, categoria: p.categoria })));
+
+  if (!produtosVisiveis.length) {
+    return;
+  }
+
+  const ordemTipo = { diario: 1, vip: 2, fixo: 3, eventos: 4 };
+  produtosVisiveis.sort((a, b) => {
+    const ordemA = ordemTipo[a.tipo] || 4;
+    const ordemB = ordemTipo[b.tipo] || 4;
+    if (ordemA !== ordemB) return ordemA - ordemB;
+    if (a.ordem !== b.ordem) return b.ordem - a.ordem;
+    if (a.origem !== b.origem) return a.origem === 'produtos_antecipados' ? -1 : 1;
+    return a.criadoEm - b.criadoEm;
+  });
+
+  const renderizados = new Set();
+
+  for (const produto of produtosVisiveis) {
+    if (renderizados.has(produto.id)) continue;
+    renderizados.add(produto.id);
+
+    const bloqueadoPorVIP = produto.requiredVip > 0 && usuarioVipNivel < produto.requiredVip;
+    let textoBot = '🛒 Comprar Agora';
+    let avisoVip = '';
+    let botaoAtributos = '';
+    let botaoClass = '';
+
+    if (produto.exclusivoVip5 && usuarioVipNivel === 0) {
+      textoBot = '🔒 Bloqueado';
+      avisoVip = `<div class="vip-alert">🔒 Exclusivo VIP5</div>`;
+      botaoAtributos = ' disabled';
+      botaoClass = 'bloqueado';
+    }
+
+    if (bloqueadoPorVIP) {
+      textoBot = `🔒 Bloqueado`;
+      avisoVip = `<div class="vip-alert">🔒 Necessário VIP ${produto.requiredVip}</div>`;
+      botaoAtributos = ' disabled';
+      botaoClass = 'bloqueado';
+    }
+
+    if (!bloqueadoPorVIP && produto.tipo === 'vip' && !(produto.exclusivoVip5 && usuarioVipNivel === 0)) {
+      const jaComprou = await verificarJaComprou(produto.docId);
+      if (jaComprou) {
+        textoBot = '✓ Já Comprado';
+        avisoVip = '<div class="info" style="background: #e8f5e9; color: #2e7d32; padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 10px;">✓ Você já comprou este produto</div>';
+        botaoAtributos = ' disabled';
+        botaoClass = 'bloqueado';
+      }
+    }
+
+    const totalRendimento = produto.rendaDiaria * produto.ciclo;
+    const corTipo = getCorTipo(produto.tipo);
+    const gradienteTipo = getGradienteTipo(produto.tipo);
+    const nomeSeguro = produto.nome.replace(/'/g, "\\'");
+
+    const card = document.createElement('div');
+    card.className = 'card' + (botaoClass ? ' bloqueado' : '');
+    card.id = 'card_' + produto.id;
+
+    card.innerHTML = `
+      <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+      <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
+      <div class="valor" style="color: ${corTipo};">R$ ${produto.preco.toFixed(2)}</div>
+      <div class="info">💰 ${produto.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária'}: <span class="destaque" style="color: ${corTipo};">R$ ${produto.rendaDiaria.toFixed(2)}</span></div>
+      <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
+      <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
+      ${avisoVip}
+      <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${produto.rendaDiaria}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})"${botaoAtributos}>
+        ${textoBot}
+      </button>
+    `;
+
+    if(produto.tipo === 'vip') {
+      vip.appendChild(card);
+    } else if(produto.tipo === 'diario') {
+      diario.appendChild(card);
+    } else if(produto.tipo === 'fixo') {
+      fixo.appendChild(card);
+    } else {
+      eventos.appendChild(card);
+    }
+  }
+
+  console.log(`✅ Renderização completa: ${renderizados.size} produtos exibidos`);
 }
 
 // 📦 CRIAR PRODUTOS DE EXEMPLO
@@ -1462,10 +1456,15 @@ async function criarProdutosExemplo() {
 
   } catch (error) {
     console.error("❌ Erro ao criar produtos de exemplo:", error);
-    const container = document.getElementById('produtosContainer');
-    if (container) {
-      container.innerHTML = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao criar produtos de exemplo</div>";
-    }
+    const eventos = document.getElementById('produtosEventos');
+    const vip = document.getElementById('produtosVip');
+    const diario = document.getElementById('produtosDiario');
+    const fixo = document.getElementById('produtosFixo');
+    const mensagemErro = "<div style='text-align: center; color: white; font-size: 1.2rem; margin-top: 50px;'>Erro ao criar produtos de exemplo</div>";
+    if (eventos) eventos.innerHTML = mensagemErro;
+    if (vip) vip.innerHTML = mensagemErro;
+    if (diario) diario.innerHTML = mensagemErro;
+    if (fixo) fixo.innerHTML = mensagemErro;
   }
 }
 
