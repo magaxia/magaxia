@@ -1351,16 +1351,58 @@
       try {
         const snap = await getDocs(collection(db, "produtos_antecipados"));
         const vipLevel = Number(_currentVip?.vipLevel ?? _currentVip?.nivelVip ?? _currentVip?.level ?? 0);
+        const vipAtivo = _currentVip?.vip5Active === true && (!_currentVip?.vip5ExpiresAt || _currentVip.vip5ExpiresAt > Date.now());
         const now = Date.now();
+
+        console.log("[VIP5-USUARIO] VIP do usuário: nível", vipLevel, '| ativo:', vipAtivo);
 
         produtosAntecipadosUsuario = snap.docs
           .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
           .filter((item) => {
-            if (item.ativo === false || item.status === "inativo" || item.status === "desativado") return false;
+            // 1️⃣ REMOVER INATIVOS
+            if (item.ativo === false || item.status === "inativo" || item.status === "desativado") {
+              console.log(`[FILTER] "${item.nome}" descartado: inativo`);
+              return false;
+            }
 
+            // 2️⃣ REMOVER EXPIRADOS
             const expiresAt = _toMs(item.encerramento ?? item.dataExpiracao ?? item.dataEncerramento);
-            if (expiresAt && expiresAt < now) return false;
+            if (expiresAt && expiresAt < now) {
+              console.log(`[FILTER] "${item.nome}" descartado: expirado em ${new Date(expiresAt).toLocaleString()}`);
+              return false;
+            }
 
+            // 3️⃣ VERIFICAR VIP (REQUERIDO vs EXCLUSIVO)
+            const requiredVip = Number(item.requiredVip ?? item.nivelVip ?? 0);
+            const exclusivoVip = item.exclusivoVip5 === true;
+
+            if (exclusivoVip && !vipAtivo) {
+              console.log(`[FILTER] "${item.nome}" descartado: exclusivo VIP5 ativo (usuário sem VIP)`);
+              return false;
+            }
+
+            if (requiredVip > 0 && vipLevel < requiredVip) {
+              console.log(`[FILTER] "${item.nome}" descartado: requer VIP ${requiredVip} (usuário tem ${vipLevel})`);
+              return false;
+            }
+
+            // 4️⃣ VERIFICAR DISPONIBILIDADE POR DATAS
+            const aberturaVip = _toMs(item.aberturaVip);
+            const aberturaPublica = _toMs(item.aberturaPublica);
+
+            // Se há abertura pública definida e ainda não chegou, bloquear
+            if (aberturaPublica && now < aberturaPublica) {
+              // Mas se há abertura VIP e usuário é VIP e já passou a abertura VIP, permitir
+              if (aberturaVip && vipAtivo && now >= aberturaVip) {
+                console.log(`[FILTER] "${item.nome}" permitido: período VIP exclusivo (VIP ativo)`);
+                return true;
+              }
+              console.log(`[FILTER] "${item.nome}" descartado: produto ainda não está aberto (abre em ${new Date(aberturaPublica).toLocaleString()})`);
+              return false;
+            }
+
+            // Se passou da abertura pública, permitir para todos
+            console.log(`[FILTER] "${item.nome}" permitido: passou todas as verificações`);
             return true;
           })
           .sort((a, b) => {
@@ -1372,6 +1414,7 @@
             return criadoB - criadoA;
           });
 
+        console.log("[VIP5-USUARIO] Total produtos após filtro:", produtosAntecipadosUsuario.length);
         renderizarProdutosAntecipadosUsuario();
       } catch (err) {
         console.error("[VIP5-USUARIO] Erro ao carregar produtos antecipados:", err.message, err);

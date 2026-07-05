@@ -879,6 +879,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar saldos
     carregarSaldoTotal();
     carregarProdutos();
+    carregarProdutosAntecipados();
 
     // Tornar body visível
     document.body.style.visibility = "visible";
@@ -1254,6 +1255,144 @@ function carregarProdutos(){
     });
 }
 
+// 📦 CONVERTER TIMESTAMP FIRESTORE
+function _toMs(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.toDate === 'function') return value.toDate().getTime();
+  if (typeof value === 'number') return value;
+  if (typeof value === 'object' && typeof value.seconds === 'number') {
+    return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
+  }
+  return new Date(value).getTime() || 0;
+}
+
+// 📦 CARREGAR PRODUTOS ANTECIPADOS (VIP)
+function carregarProdutosAntecipados(){
+  console.log("🔄 Iniciando carregamento de produtos antecipados...");
+  if (!window.SistemaAuth || !window.SistemaAuth.db) {
+    console.log("Aguardando SistemaAuth...");
+    return;
+  }
+
+  const db = window.SistemaAuth.db;
+  const query = window.firebase.firestore().collection('produtos_antecipados');
+  const eventos = document.getElementById('produtosEventos');
+  const vip = document.getElementById('produtosVip');
+  const diario = document.getElementById('produtosDiario');
+  const fixo = document.getElementById('produtosFixo');
+  const now = Date.now();
+
+  query.onSnapshot(async (snapshot) => {
+    console.log("📦 Snapshot de antecipados recebida, documentos:", snapshot.size);
+
+    if (snapshot.empty) {
+      console.log("📦 Nenhum produto antecipado encontrado");
+      return;
+    }
+
+    const produtosAntecipados = snapshot.docs
+      .map((doc) => ({ id: doc.id, data: doc.data() }))
+      .filter((item) => {
+        const p = item.data;
+
+        // 1️⃣ Remover inativos
+        if (p.ativo === false || p.status === 'inativo' || p.status === 'desativado') {
+          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: inativo`);
+          return false;
+        }
+
+        // 2️⃣ Remover expirados
+        const expiresAt = _toMs(p.encerramento ?? p.dataExpiracao ?? p.dataEncerramento);
+        if (expiresAt && expiresAt < now) {
+          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: expirado`);
+          return false;
+        }
+
+        // 3️⃣ Verificar VIP
+        const requiredVip = Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? 0);
+        const exclusivoVip = p.exclusivoVip5 === true;
+        
+        if (exclusivoVip && usuarioVipNivel === 0) {
+          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: exclusivo VIP5`);
+          return false;
+        }
+        
+        if (requiredVip > 0 && usuarioVipNivel < requiredVip) {
+          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: requer VIP ${requiredVip}`);
+          return false;
+        }
+
+        // 4️⃣ Verificar datas de abertura
+        const aberturaVip = _toMs(p.aberturaVip);
+        const aberturaPublica = _toMs(p.aberturaPublica);
+
+        if (aberturaPublica && now < aberturaPublica) {
+          // Se há abertura VIP e usuário é VIP, permitir durante período VIP
+          if (aberturaVip && usuarioVipNivel > 0 && now >= aberturaVip) {
+            console.log(`[ANTECIPADO FILTER] ${p.nome} permitido: período VIP exclusivo`);
+            return true;
+          }
+          console.log(`[ANTECIPADO FILTER] ${p.nome} bloqueado: ainda não abriu ao público`);
+          return false;
+        }
+
+        console.log(`[ANTECIPADO FILTER] ${p.nome} permitido`);
+        return true;
+      });
+
+    // Ordenar por ordem DESC, depois criadoEm DESC
+    produtosAntecipados.sort((a, b) => {
+      const ordemA = a.data.ordem ?? 0;
+      const ordemB = b.data.ordem ?? 0;
+      if (ordemA !== ordemB) return ordemB - ordemA;
+
+      const aTs = _toMs(a.data.criadoEm);
+      const bTs = _toMs(b.data.criadoEm);
+      return bTs - aTs;
+    });
+
+    // Renderizar produtos antecipados
+    for (const produto of produtosAntecipados) {
+      const docId = produto.id;
+      const p = produto.data;
+      const tipoNormalizado = String(p.tipo ?? p.abaProduto ?? p.categoria ?? 'eventos').toLowerCase();
+      const tipo = ['diario', 'vip', 'fixo', 'eventos'].includes(tipoNormalizado) ? tipoNormalizado : 'eventos';
+      
+      console.log("Produto Antecipado:", p.nome, "Tipo:", tipo);
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = 'card_' + docId;
+      card.style.cursor = 'pointer';
+
+      const preco = (p.preco ?? p.valor ?? 0).toFixed(2);
+      const rendaDiaria = (p.rendaDiaria ?? p.valorRendimento ?? 0).toFixed(2);
+      const ciclo = p.ciclo ?? p.cicloDias ?? 'N/A';
+      const imagem = p.imagem ?? "https://via.placeholder.com/300x200/999/fff?text=" + encodeURIComponent(p.nome);
+
+      card.innerHTML = `
+        <img src="${imagem}" alt="${p.nome}" style="width: 100%; height: 180px; object-fit: cover; border-radius: 8px;">
+        <h3>${p.nome}</h3>
+        <p><strong>Preço:</strong> R$ ${preco}</p>
+        <p><strong>Renda Diária:</strong> R$ ${rendaDiaria}</p>
+        <p><strong>Ciclo:</strong> ${ciclo} dias</p>
+        ${p.requiredVip > 0 ? `<p style="color: gold;"><strong>⭐ Requer VIP Nível ${p.requiredVip}</strong></p>` : ''}
+        ${p.exclusivoVip5 ? `<p style="color: #ff6b9d;"><strong>🔒 Exclusivo VIP5</strong></p>` : ''}
+      `;
+
+      card.onclick = () => comprarProduto(docId, preco);
+
+      if (tipo === 'diario') diario.appendChild(card);
+      else if (tipo === 'vip') vip.appendChild(card);
+      else if (tipo === 'fixo') fixo.appendChild(card);
+      else eventos.appendChild(card);
+    }
+  }, (error) => {
+    console.error("Erro ao carregar produtos antecipados:", error);
+  });
+}
+
 // 📦 CRIAR PRODUTOS DE EXEMPLO
 async function criarProdutosExemplo() {
   console.log("🏗️ Criando produtos de exemplo...");
@@ -1318,6 +1457,7 @@ async function criarProdutosExemplo() {
     // Recarregar produtos após criar os exemplos
     setTimeout(() => {
       carregarProdutos();
+      carregarProdutosAntecipados();
     }, 1000);
 
   } catch (error) {
