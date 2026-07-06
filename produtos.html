@@ -907,10 +907,12 @@ function carregarNivelVIP() {
       const data = doc.data();
       usuarioVipNivel = Number(data.vipNivel || data.vipLevel || 0);
       console.log("👑 Nível VIP do usuário atualizado:", usuarioVipNivel);
+      console.log('renderizarProdutos() chamada por carregarNivelVIP()');
       renderizarProdutos();
     }, error => {
       console.error("❌ Erro ao carregar VIP:", error);
       usuarioVipNivel = 0;
+      console.log('renderizarProdutos() chamada por carregarNivelVIP() [erro]');
       renderizarProdutos();
     });
 }
@@ -1130,6 +1132,8 @@ let produtosCache = [];
 let produtosAntecipadosCache = [];
 
 function carregarProdutos(){
+  console.count("carregarProdutos()");
+  window.carregarProdutosCallCount = (window.carregarProdutosCallCount || 0) + 1;
   console.log("🔄 Iniciando carregamento de produtos...");
 
   if (!window.SistemaAuth || !window.SistemaAuth.db) {
@@ -1137,21 +1141,30 @@ function carregarProdutos(){
     return;
   }
 
-  window.SistemaAuth.db.collection("produtos")
-    .where("ativo", "==", true)
-    .onSnapshot(async (snapshot) => {
-      console.log("📦 Snapshot produtos recebida, documentos:", snapshot.size);
+  if (typeof window.produtosUnsubscribe === 'function') {
+    window.produtosUnsubscribe();
+    window.produtosUnsubscribe = null;
+    console.log('🔁 unsubscribe anterior de produtos executado');
+  }
 
-      if(snapshot.empty) {
-        console.log("📦 Nenhum produto encontrado, criando produtos de exemplo...");
-        await criarProdutosExemplo();
-        return;
-      }
+  const query = window.SistemaAuth.db.collection("produtos").where("ativo", "==", true);
+  window.produtosUnsubscribe = query.onSnapshot(async (snapshot) => {
+    window.produtosSnapshotFires = (window.produtosSnapshotFires || 0) + 1;
+    console.count("produtos.onSnapshot");
+    console.log("📦 Snapshot produtos recebida, documentos:", snapshot.size);
 
-      produtosCache = snapshot.docs.map((doc) => normalizeProduto(doc, 'produtos'));
-      console.log("📦 Produtos legacy normalizados:", produtosCache.length);
-      await renderizarProdutos();
-    }, (error) => {
+    if(snapshot.empty) {
+      console.log("📦 Nenhum produto encontrado, criando produtos de exemplo...");
+      produtosCache = [];
+      await criarProdutosExemplo();
+      return;
+    }
+
+    produtosCache = snapshot.docs.map((doc) => normalizeProduto(doc, 'produtos'));
+    console.log("📦 Produtos legacy normalizados:", produtosCache.length);
+    console.log('renderizarProdutos() chamada por carregarProdutos()');
+    await renderizarProdutos();
+  }, (error) => {
       console.error("Erro ao carregar produtos:", error);
       const eventos = document.getElementById('produtosEventos');
       const vip = document.getElementById('produtosVip');
@@ -1184,6 +1197,20 @@ function normalizeProduto(doc, origem) {
   const nome = String(p.nome || p.titulo || 'Produto');
 
   const categoria = String(p.categoria || p.abaProduto || p.tipo || '').toLowerCase();
+  const preco = Number(p.preco ?? p.valor ?? 0);
+  const ciclo = Number(p.ciclo ?? p.cicloDias ?? 0);
+  const rendaDiaria = Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? 0);
+  const valorRendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? p.renda ?? 0);
+  const renda = rendaDiaria;
+  const total = Number(p.total ?? (rendaDiaria * ciclo));
+  const tipoRendimento = p.tipoRendimento || p.tipoRetorno || null;
+
+  window.normalizeProdutoAudit = window.normalizeProdutoAudit || { produtos: 0, produtos_antecipados: 0 };
+  if (window.normalizeProdutoAudit[origem] < 3) {
+    console.log(`normalizeProduto audit (${origem}) docId=${doc.id}`,
+      { raw: p, ciclo, rendaDiaria, valorRendimento, total, tipoRendimento });
+    window.normalizeProdutoAudit[origem] += 1;
+  }
 
   return {
     id: `${origem}_${doc.id}`,
@@ -1192,10 +1219,14 @@ function normalizeProduto(doc, origem) {
     tipo,
     categoria,
     nome,
-    preco: Number(p.preco ?? p.valor ?? 0),
-    ciclo: Number(p.ciclo ?? p.cicloDias ?? 0),
-    rendaDiaria: Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? 0),
-    tipoRendimento: p.tipoRendimento || p.tipoRetorno || null,
+    preco,
+    valor: preco,
+    ciclo,
+    rendaDiaria,
+    valorRendimento,
+    renda,
+    total,
+    tipoRendimento,
     imagem: p.imagem || p.imagemPrincipal || p.imagemUrl || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto',
     requiredVip: Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? 0),
     exclusivoVip5: p.exclusivoVip5 === true,
@@ -1249,6 +1280,8 @@ function shouldRenderAntecipado(produto) {
 
 // 📦 CARREGAR PRODUTOS ANTECIPADOS (VIP e Público)
 function carregarProdutosAntecipados(){
+  console.count("carregarProdutosAntecipados()");
+  window.carregarProdutosAntecipadosCallCount = (window.carregarProdutosAntecipadosCallCount || 0) + 1;
   console.log("🔄 Iniciando carregamento de produtos antecipados...");
   if (!window.SistemaAuth || !window.SistemaAuth.db) {
     console.log("⚠️ Aguardando SistemaAuth para carregar antecipados...");
@@ -1257,7 +1290,15 @@ function carregarProdutosAntecipados(){
 
   const query = window.SistemaAuth.db.collection('produtos_antecipados');
 
-  query.onSnapshot(async (snapshot) => {
+  if (typeof window.produtosAntecipadosUnsubscribe === 'function') {
+    window.produtosAntecipadosUnsubscribe();
+    window.produtosAntecipadosUnsubscribe = null;
+    console.log('🔁 unsubscribe anterior de produtos antecipados executado');
+  }
+
+  window.produtosAntecipadosUnsubscribe = query.onSnapshot(async (snapshot) => {
+    window.produtosAntecipadosSnapshotFires = (window.produtosAntecipadosSnapshotFires || 0) + 1;
+    console.count("produtosAntecipados.onSnapshot");
     console.log("📦 [ANTECIPADOS] Snapshot recebida, documentos encontrados:", snapshot.size);
 
     if (snapshot.empty) {
@@ -1270,6 +1311,7 @@ function carregarProdutosAntecipados(){
     produtosAntecipadosCache = snapshot.docs.map((doc) => normalizeProduto(doc, 'produtos_antecipados'));
     console.log(`📦 [ANTECIPADOS] Produtos normalizados: ${produtosAntecipadosCache.length}`);
     console.log(`📦 [ANTECIPADOS] Atualizando renderização com cache bruto de antecipados`);
+    console.log('renderizarProdutos() chamada por carregarProdutosAntecipados()');
 
     await renderizarProdutos();
   }, (error) => {
@@ -1288,10 +1330,30 @@ async function renderizarProdutos() {
   diario.innerHTML = "";
   fixo.innerHTML = "";
 
+  console.count("renderizarProdutos()");
+  window.renderizarProdutosCallCount = (window.renderizarProdutosCallCount || 0) + 1;
+  console.log(`renderizarProdutos() chamada #${window.renderizarProdutosCallCount}`);
+
   const produtosUnidos = [...produtosCache, ...produtosAntecipadosCache];
   console.log('Produtos Legacy:', produtosCache.length);
+  console.log('produtosCache docIds:', produtosCache.map(p => p.docId));
   console.log('Produtos Antecipados:', produtosAntecipadosCache.length);
+  console.log('produtosAntecipadosCache docIds:', produtosAntecipadosCache.map(p => p.docId));
   console.log('Produtos Unificados (antes do filtro de antecipados):', produtosUnidos.length);
+  console.table(produtosUnidos.map(p => ({ id: p.id, docId: p.docId, origem: p.origem, nome: p.nome })));
+
+  const ids = new Set();
+  const duplicateIds = [];
+  const docs = new Set();
+  const duplicateDocIds = [];
+  for (const p of produtosUnidos) {
+    if (ids.has(p.id)) duplicateIds.push(p);
+    if (docs.has(p.docId)) duplicateDocIds.push(p);
+    ids.add(p.id);
+    docs.add(p.docId);
+  }
+  console.log('duplicateIds:', duplicateIds.map(p => ({ id: p.id, docId: p.docId, origem: p.origem, nome: p.nome })));
+  console.log('duplicateDocIds:', duplicateDocIds.map(p => ({ id: p.id, docId: p.docId, origem: p.origem, nome: p.nome })));
 
   const produtosVisiveis = produtosUnidos.filter((produto) => {
     if (produto.origem !== 'produtos_antecipados') return true;
@@ -1305,6 +1367,8 @@ async function renderizarProdutos() {
     return;
   }
 
+  const totalRenderizados = produtosVisiveis.length;
+
   const ordemTipo = { diario: 1, vip: 2, fixo: 3, eventos: 4 };
   produtosVisiveis.sort((a, b) => {
     const ordemA = ordemTipo[a.tipo] || 4;
@@ -1315,11 +1379,7 @@ async function renderizarProdutos() {
     return a.criadoEm - b.criadoEm;
   });
 
-  const renderizados = new Set();
-
   for (const produto of produtosVisiveis) {
-    if (renderizados.has(produto.id)) continue;
-    renderizados.add(produto.id);
 
     const bloqueadoPorVIP = produto.requiredVip > 0 && usuarioVipNivel < produto.requiredVip;
     let textoBot = '🛒 Comprar Agora';
@@ -1364,11 +1424,11 @@ async function renderizarProdutos() {
       <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
       <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
       <div class="valor" style="color: ${corTipo};">R$ ${produto.preco.toFixed(2)}</div>
-      <div class="info">💰 ${produto.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária'}: <span class="destaque" style="color: ${corTipo};">R$ ${produto.rendaDiaria.toFixed(2)}</span></div>
+      <div class="info">💰 ${produto.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária'}: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
       <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
       <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
       ${avisoVip}
-      <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${produto.rendaDiaria}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})"${botaoAtributos}>
+      <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})"${botaoAtributos}>
         ${textoBot}
       </button>
     `;
@@ -1384,7 +1444,7 @@ async function renderizarProdutos() {
     }
   }
 
-  console.log(`✅ Renderização completa: ${renderizados.size} produtos exibidos`);
+  console.log(`✅ Renderização completa: ${totalRenderizados} produtos exibidos`);
 }
 
 // 📦 CRIAR PRODUTOS DE EXEMPLO
