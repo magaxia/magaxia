@@ -1411,7 +1411,8 @@ async function renderizarProdutos() {
       }
     }
 
-    const totalRendimento = produto.rendaDiaria * produto.ciclo;
+    const valorExibido = Number(produto.tipoRendimento === 'lucro' ? produto.valorRendimento : produto.rendaDiaria);
+    const totalRendimento = Number(valorExibido * produto.ciclo);
     const corTipo = getCorTipo(produto.tipo);
     const gradienteTipo = getGradienteTipo(produto.tipo);
     const nomeSeguro = produto.nome.replace(/'/g, "\\'");
