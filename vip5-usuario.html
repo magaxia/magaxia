@@ -1359,60 +1359,111 @@
         produtosAntecipadosUsuario = snap.docs
           .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
           .filter((item) => {
-            // 1️⃣ REMOVER INATIVOS
-            if (item.ativo === false || item.status === "inativo" || item.status === "desativado") {
-              console.log(`[FILTER] "${item.nome}" descartado: inativo`);
-              return false;
-            }
-
-            // 2️⃣ REMOVER EXPIRADOS
-            const expiresAt = _toMs(item.encerramento ?? item.dataExpiracao ?? item.dataEncerramento);
-            if (expiresAt && expiresAt < now) {
-              console.log(`[FILTER] "${item.nome}" descartado: expirado em ${new Date(expiresAt).toLocaleString()}`);
-              return false;
-            }
-
-            // 3️⃣ VERIFICAR VIP (REQUERIDO vs EXCLUSIVO)
-            const requiredVip = Number(item.requiredVip ?? item.nivelVip ?? 0);
-            const exclusivoVip = item.exclusivoVip5 === true;
-
-            if (exclusivoVip && !vipAtivo) {
-              console.log(`[FILTER] "${item.nome}" descartado: exclusivo VIP5 ativo (usuário sem VIP)`);
-              return false;
-            }
-
-            if (requiredVip > 0 && vipLevel < requiredVip) {
-              console.log(`[FILTER] "${item.nome}" descartado: requer VIP ${requiredVip} (usuário tem ${vipLevel})`);
-              return false;
-            }
-
-            // 4️⃣ VERIFICAR DISPONIBILIDADE POR DATAS
+            const nomeProduto = item.nome || item.titulo || '(sem nome)';
+            const docId = item.docId || item.id || '';
             const aberturaVip = _toMs(item.aberturaVip);
             const aberturaPublica = _toMs(item.aberturaPublica);
-
-            console.log({
-              produto: item.nome,
+            const encerramento = _toMs(item.encerramento ?? item.dataExpiracao ?? item.dataEncerramento);
+            const requiredVip = Number(item.requiredVip ?? item.nivelVip ?? 0);
+            const exclusivoVip = item.exclusivoVip5 === true;
+            const vip5Active = _currentVip?.vip5Active === true;
+            const vip5ExpiresAt = _currentVip?.vip5ExpiresAt;
+            const isTarget = nomeProduto === 'Golden Empire Elite #077';
+            const logBase = {
+              nome: nomeProduto,
+              docId,
               aberturaVip: item.aberturaVip,
               aberturaPublica: item.aberturaPublica,
-              requiredVip: requiredVip,
+              encerramento: item.encerramento ?? item.dataExpiracao ?? item.dataEncerramento,
+              requiredVip,
               usuarioVipNivel: vipLevel,
               vipAtivo,
+              vip5Active,
+              vip5ExpiresAt,
+              exclusivoVip5: exclusivoVip,
               now: new Date().toLocaleString()
-            });
+            };
 
-            // Se há abertura pública definida e ainda não chegou, bloquear
+            if (isTarget) {
+              console.groupCollapsed(`[AUDIT] ${nomeProduto}`);
+              console.log('[AUDIT] base', logBase);
+            }
+
+            // 1️⃣ REMOVER INATIVOS
+            if (item.ativo === false || item.status === "inativo" || item.status === "desativado") {
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 1: inativo/desativado');
+                console.log('[AUDIT] motivo: item.ativo === false || item.status === "inativo" || item.status === "desativado"');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: inativo`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+            if (isTarget) console.log('[AUDIT] PASSOU IF 1');
+
+            // 2️⃣ REMOVER EXPIRADOS
+            const expiresAt = encerramento;
+            if (expiresAt && expiresAt < now) {
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 2: expirado');
+                console.log('[AUDIT] motivo: encerramento < now');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: expirado em ${new Date(expiresAt).toLocaleString()}`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+            if (isTarget) console.log('[AUDIT] PASSOU IF 2');
+
+            // 3️⃣ VERIFICAR VIP (REQUERIDO vs EXCLUSIVO)
+            if (exclusivoVip && !vipAtivo) {
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 3: exclusivo VIP5');
+                console.log('[AUDIT] motivo: exclusivoVip && !vipAtivo');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: exclusivo VIP5 ativo (usuário sem VIP)`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+            if (isTarget) console.log('[AUDIT] PASSOU IF 3A');
+
+            if (requiredVip > 0 && vipLevel < requiredVip) {
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 3B: requiredVip');
+                console.log('[AUDIT] motivo: requiredVip > 0 && vipLevel < requiredVip');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: requer VIP ${requiredVip} (usuário tem ${vipLevel})`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+            if (isTarget) console.log('[AUDIT] PASSOU IF 3B');
+
+            // 4️⃣ VERIFICAR DISPONIBILIDADE POR DATAS
             if (aberturaPublica && now < aberturaPublica) {
-              // Mas se há abertura VIP e usuário é VIP e já passou a abertura VIP, permitir
               if (aberturaVip && vipAtivo && now >= aberturaVip) {
-                console.log(`[FILTER] "${item.nome}" permitido: período VIP exclusivo (VIP ativo)`);
+                if (isTarget) {
+                  console.log('[AUDIT] PASSOU IF 4: período VIP exclusivo');
+                }
+                console.log(`[FILTER] "${nomeProduto}" permitido: período VIP exclusivo (VIP ativo)`);
+                if (isTarget) console.groupEnd();
                 return true;
               }
-              console.log(`[FILTER] "${item.nome}" descartado: produto ainda não está aberto (abre em ${new Date(aberturaPublica).toLocaleString()})`);
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 4: abertura pública ainda não chegou');
+                console.log('[AUDIT] motivo: aberturaPublica && now < aberturaPublica');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: produto ainda não está aberto (abre em ${new Date(aberturaPublica).toLocaleString()})`);
+              if (isTarget) console.groupEnd();
               return false;
+            }
+
+            if (isTarget) {
+              console.log('[AUDIT] PASSOU IF 4: abertura pública já disponível');
+              console.log('[AUDIT] permitido: passou todas as verificações');
+              console.groupEnd();
             }
 
             // Se passou da abertura pública, permitir para todos
-            console.log(`[FILTER] "${item.nome}" permitido: passou todas as verificações`);
+            console.log(`[FILTER] "${nomeProduto}" permitido: passou todas as verificações`);
             return true;
           })
           .sort((a, b) => {
