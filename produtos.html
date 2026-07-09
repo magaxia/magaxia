@@ -1266,10 +1266,6 @@ function shouldRenderAntecipado(produto) {
   }
 
   if (produto.aberturaPublica && now < produto.aberturaPublica) {
-    if (produto.aberturaVip && usuarioVipNivel > 0 && now >= produto.aberturaVip) {
-      console.log(`  ✅ [PERÍODO VIP] "${produto.nome}" permitido (período VIP exclusivo)`);
-      return true;
-    }
     console.log(`  ❌ [NÃO ABERTO] "${produto.nome}" bloqueado (abre em ${new Date(produto.aberturaPublica).toLocaleString()})`);
     return false;
   }
