@@ -33,9 +33,16 @@ export async function markCodeUsed(code, uid) {
 
 export async function saveUserVip(uid, code, days) {
   console.log("[VIP5-STORAGE] Gravando VIP em users/" + uid + " | code=" + code + " | days=" + days);
+  console.trace("[TRACE] saveUserVip entry", { uid, code, days });
   const now = Date.now();
   const expiresAt = now + days * 24 * 60 * 60 * 1000;
   const ref = doc(db, "users", uid);
+  try {
+    const beforeSnap = await getDoc(ref);
+    console.log('[TRACE] saveUserVip before vip5Active:', beforeSnap.exists() ? beforeSnap.data().vip5Active : undefined);
+  } catch (e) {
+    console.warn('[TRACE] saveUserVip before read failed', e);
+  }
   await setDoc(
     ref,
     {
@@ -46,6 +53,13 @@ export async function saveUserVip(uid, code, days) {
     },
     { merge: true }
   );
+  try {
+    const afterSnap = await getDoc(ref);
+    console.log('[TRACE] saveUserVip after vip5Active:', afterSnap.exists() ? afterSnap.data().vip5Active : undefined);
+    console.trace('[TRACE] saveUserVip write stack');
+  } catch (e) {
+    console.warn('[TRACE] saveUserVip after read failed', e);
+  }
   console.log("[VIP5-STORAGE] VIP gravado com sucesso. vip5ExpiresAt=" + new Date(expiresAt).toISOString());
   return expiresAt;
 }
@@ -65,7 +79,21 @@ export async function getUserVip(uid) {
 
 export async function deactivateUserVip(uid) {
   console.log("[VIP5-STORAGE] Desativando VIP de users/" + uid);
+  console.trace('[TRACE] deactivateUserVip entry', { uid });
   const ref = doc(db, "users", uid);
+  try {
+    const beforeSnap = await getDoc(ref);
+    console.log('[TRACE] deactivateUserVip before vip5Active:', beforeSnap.exists() ? beforeSnap.data().vip5Active : undefined);
+  } catch (e) {
+    console.warn('[TRACE] deactivateUserVip before read failed', e);
+  }
   await updateDoc(ref, { vip5Active: false });
+  try {
+    const afterSnap = await getDoc(ref);
+    console.log('[TRACE] deactivateUserVip after vip5Active:', afterSnap.exists() ? afterSnap.data().vip5Active : undefined);
+    console.trace('[TRACE] deactivateUserVip write stack');
+  } catch (e) {
+    console.warn('[TRACE] deactivateUserVip after read failed', e);
+  }
   console.log("[VIP5-STORAGE] VIP desativado.");
 }

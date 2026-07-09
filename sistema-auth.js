@@ -103,7 +103,21 @@ window.SistemaAuth = {
                     contexto: `Credencial: ${credencial}`
                 });
             }
+            try {
+                const beforeSnap = await userRef.get();
+                console.trace('[TRACE] registrarFalhaLogin before write', { uid });
+                console.log('[TRACE] registrarFalhaLogin before vip5Active:', beforeSnap.exists ? beforeSnap.data().vip5Active : undefined);
+            } catch (e) {
+                console.warn('[TRACE] registrarFalhaLogin before read failed', e);
+            }
             await userRef.set(updates, { merge: true });
+            try {
+                const afterSnap = await userRef.get();
+                console.log('[TRACE] registrarFalhaLogin after vip5Active:', afterSnap.exists ? afterSnap.data().vip5Active : undefined);
+                console.trace('[TRACE] registrarFalhaLogin write stack');
+            } catch (e) {
+                console.warn('[TRACE] registrarFalhaLogin after read failed', e);
+            }
         } catch (error) {
             console.warn("Falha ao registrar tentativa de login:", error);
         }
@@ -112,11 +126,25 @@ window.SistemaAuth = {
     resetLoginAttempts: async function(userRef) {
         if (!userRef) return;
         try {
+            try {
+                const beforeSnap = await userRef.get();
+                console.trace('[TRACE] resetLoginAttempts before write');
+                console.log('[TRACE] resetLoginAttempts before vip5Active:', beforeSnap.exists ? beforeSnap.data().vip5Active : undefined);
+            } catch (e) {
+                console.warn('[TRACE] resetLoginAttempts before read failed', e);
+            }
             await userRef.set({
                 loginFalhas: 0,
                 loginBloqueadoAte: null,
                 ultimoFalhaLogin: null
             }, { merge: true });
+            try {
+                const afterSnap = await userRef.get();
+                console.log('[TRACE] resetLoginAttempts after vip5Active:', afterSnap.exists ? afterSnap.data().vip5Active : undefined);
+                console.trace('[TRACE] resetLoginAttempts write stack');
+            } catch (e) {
+                console.warn('[TRACE] resetLoginAttempts after read failed', e);
+            }
         } catch (error) {
             console.warn("Falha ao resetar tentativas de login:", error);
         }
@@ -152,6 +180,13 @@ window.SistemaAuth = {
                 criadoEm: agora
             });
 
+            // Trace before transaction write
+            try {
+                console.trace('[TRACE] aplicarCofreAutomatico before transaction.set', { uid });
+                console.log('[TRACE] aplicarCofreAutomatico before vip5Active:', dadosUsuario ? dadosUsuario.vip5Active : undefined);
+            } catch (e) {
+                console.warn('[TRACE] aplicarCofreAutomatico trace failed', e);
+            }
             transaction.set(usuarioRef, {
                 saldoSaque: saldoAtual + valorSaldo,
                 cofre: {
@@ -162,6 +197,14 @@ window.SistemaAuth = {
                 atualizadoEm: this.firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
         });
+        // After transaction completes, read and log vip value
+        try {
+            const after = await usuarioRef.get();
+            console.log('[TRACE] aplicarCofreAutomatico after vip5Active:', after.exists ? after.data().vip5Active : undefined);
+            console.trace('[TRACE] aplicarCofreAutomatico post-transaction stack');
+        } catch (e) {
+            console.warn('[TRACE] aplicarCofreAutomatico after read failed', e);
+        }
     },
 
     detectarTipoDispositivo: function() {
@@ -255,7 +298,21 @@ window.SistemaAuth = {
 
         if (usuario.twoFactorEnabled === true && usuario.twoFactorCode) {
             try {
+                try {
+                    const beforeSnap = await userRef.get();
+                    console.trace('[TRACE] _validarELogin 2FA before write', { uid });
+                    console.log('[TRACE] _validarELogin 2FA before vip5Active:', beforeSnap.exists ? beforeSnap.data().vip5Active : undefined);
+                } catch (e) {
+                    console.warn('[TRACE] _validarELogin 2FA before read failed', e);
+                }
                 await userRef.set({ last2faChallenge: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                try {
+                    const afterSnap = await userRef.get();
+                    console.log('[TRACE] _validarELogin 2FA after vip5Active:', afterSnap.exists ? afterSnap.data().vip5Active : undefined);
+                    console.trace('[TRACE] _validarELogin 2FA write stack');
+                } catch (e) {
+                    console.warn('[TRACE] _validarELogin 2FA after read failed', e);
+                }
             } catch (error) {
                 console.warn("Falha ao registrar desafio 2FA:", error);
             }
@@ -310,7 +367,21 @@ window.SistemaAuth = {
         };
 
         try {
+            try {
+                const beforeSnap = await userRef.get();
+                console.trace('[TRACE] _completarLogin before write', { uid });
+                console.log('[TRACE] _completarLogin before vip5Active:', beforeSnap.exists ? beforeSnap.data().vip5Active : undefined);
+            } catch (e) {
+                console.warn('[TRACE] _completarLogin before read failed', e);
+            }
             await userRef.set(updates, { merge: true });
+            try {
+                const afterSnap = await userRef.get();
+                console.log('[TRACE] _completarLogin after vip5Active:', afterSnap.exists ? afterSnap.data().vip5Active : undefined);
+                console.trace('[TRACE] _completarLogin write stack');
+            } catch (e) {
+                console.warn('[TRACE] _completarLogin after read failed', e);
+            }
         } catch (error) {
             console.warn("⚠️ Falha ao atualizar estado de login no Firestore:", error);
         }

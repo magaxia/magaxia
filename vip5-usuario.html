@@ -1390,6 +1390,16 @@
             const aberturaVip = _toMs(item.aberturaVip);
             const aberturaPublica = _toMs(item.aberturaPublica);
 
+            console.log({
+              produto: item.nome,
+              aberturaVip: item.aberturaVip,
+              aberturaPublica: item.aberturaPublica,
+              requiredVip: requiredVip,
+              usuarioVipNivel: vipLevel,
+              vipAtivo,
+              now: new Date().toLocaleString()
+            });
+
             // Se há abertura pública definida e ainda não chegou, bloquear
             if (aberturaPublica && now < aberturaPublica) {
               // Mas se há abertura VIP e usuário é VIP e já passou a abertura VIP, permitir
@@ -1478,6 +1488,10 @@
               <span class="promo-info-value">${item.preco != null ? Number(item.preco).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}</span>
             </div>
           </div>
+          ${item.codigo ? `<div class="promo-info-grid" style="margin-top:8px"><div class="promo-info-item"><span class="promo-info-label">Código</span><span class="promo-info-value">${item.codigo}</span></div></div>` : ""}
+          ${item.descricao ? `<div style="margin-top:8px;color:var(--text-2);font-size:0.92rem;line-height:1.4">${item.descricao}</div>` : ""}
+          ${item.precoPromocional ? `<div style="margin-top:6px;color:var(--gold);font-size:0.92rem;font-weight:600">Preço promocional: ${Number(item.precoPromocional).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>` : ""}
+          ${item.desconto ? `<div style="margin-top:4px;color:var(--green);font-size:0.9rem;font-weight:600">Desconto: ${item.desconto}%</div>` : ""}
           ${item.imagemPrincipal ? `<img src="${item.imagemPrincipal}" alt="${item.nome}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-top:8px" onerror="this.src='https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80'">` : ""}
         </div>
       `).join("");
