@@ -908,12 +908,12 @@ function carregarNivelVIP() {
       usuarioVipNivel = Number(data.vipNivel || data.vipLevel || 0);
       console.log("👑 Nível VIP do usuário atualizado:", usuarioVipNivel);
       console.log('renderizarProdutos() chamada por carregarNivelVIP()');
-      renderizarProdutos();
+      renderizarProdutos(null, 'carregarNivelVIP');
     }, error => {
       console.error("❌ Erro ao carregar VIP:", error);
       usuarioVipNivel = 0;
       console.log('renderizarProdutos() chamada por carregarNivelVIP() [erro]');
-      renderizarProdutos();
+      renderizarProdutos(null, 'carregarNivelVIP_error');
     });
 }
 
@@ -1185,7 +1185,7 @@ function carregarProdutos(){
     produtosCache = dedupProdutosPorDocId(snapshot.docs.map((doc) => normalizeProduto(doc, 'produtos')));
     console.log("📦 Produtos legacy normalizados:", produtosCache.length);
     console.log('renderizarProdutos() chamada por carregarProdutos()');
-    await renderizarProdutos(dedupProdutosPorDocId([...produtosCache, ...produtosAntecipadosCache]));
+    await renderizarProdutos(dedupProdutosPorDocId([...produtosCache, ...produtosAntecipadosCache]), 'carregarProdutos');
   }, (error) => {
       console.error("Erro ao carregar produtos:", error);
       const eventos = document.getElementById('produtosEventos');
@@ -1322,7 +1322,7 @@ function carregarProdutosAntecipados(){
     if (snapshot.empty) {
       produtosAntecipadosCache = [];
       console.log("📦 [ANTECIPADOS] Nenhum produto antecipado encontrado na collection");
-      await renderizarProdutos();
+      await renderizarProdutos(null, 'carregarProdutosAntecipados_empty');
       return;
     }
 
@@ -1331,13 +1331,13 @@ function carregarProdutosAntecipados(){
     console.log(`📦 [ANTECIPADOS] Atualizando renderização com cache bruto de antecipados`);
     console.log('renderizarProdutos() chamada por carregarProdutosAntecipados()');
 
-    await renderizarProdutos(dedupProdutosPorDocId([...produtosCache, ...produtosAntecipadosCache]));
+    await renderizarProdutos(dedupProdutosPorDocId([...produtosCache, ...produtosAntecipadosCache]), 'carregarProdutosAntecipados');
   }, (error) => {
     console.error("❌ Erro ao carregar produtos antecipados:", error);
   });
 }
 
-async function renderizarProdutos(produtosEntrada = null) {
+async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
   const eventos = document.getElementById('produtosEventos');
   const vip = document.getElementById('produtosVip');
   const diario = document.getElementById('produtosDiario');
@@ -1351,10 +1351,17 @@ async function renderizarProdutos(produtosEntrada = null) {
   console.count("renderizarProdutos()");
   window.renderizarProdutosCallCount = (window.renderizarProdutosCallCount || 0) + 1;
   console.log(`renderizarProdutos() chamada #${window.renderizarProdutosCallCount}`);
-
   const produtosOriginais = Array.isArray(produtosEntrada)
     ? produtosEntrada
     : [...produtosCache, ...produtosAntecipadosCache];
+  // Audit logs requested: active tab, received list, docIds, origin and stack
+  const abaAtual = document.querySelector('.botao-aba.active')?.getAttribute('data-categoria') || 'desconhecido';
+  const listaAudit = produtosEntrada || dedupProdutosPorDocId([...produtosCache, ...produtosAntecipadosCache]);
+  console.log('[ABA]', abaAtual);
+  console.log('produtos recebidos:', Array.isArray(listaAudit) ? listaAudit.length : 0);
+  console.log('docIds:', Array.isArray(listaAudit) ? listaAudit.map(p => p.docId) : []);
+  console.log('renderizarProdutos chamada por:', origem);
+  console.trace();
   const produtosUnidos = dedupProdutosPorDocId(produtosOriginais);
   console.log('Produtos Legacy:', produtosCache.length);
   console.log('produtosCache docIds:', produtosCache.map(p => p.docId));
@@ -1375,6 +1382,21 @@ async function renderizarProdutos(produtosEntrada = null) {
 
   console.log('Produtos Unificados (após filtro de antecipados):', produtosVisiveis.length);
   console.table(produtosVisiveis.map(p => ({ id: p.id, origem: p.origem, nome: p.nome, tipo: p.tipo, categoria: p.categoria })));
+
+  // Per-tab diagnostic logs for vip, fixo, eventos (requested audit)
+  try {
+    const tabs = ['vip', 'fixo', 'eventos'];
+    for (const aba of tabs) {
+      const lista = produtosVisiveis.filter(p => p.tipo === aba);
+      console.log('[ABA]', aba);
+      console.log('produtos recebidos:', lista.length);
+      console.log('docIds:', lista.map(p => p.docId));
+      console.log('renderizarProdutos chamada por:', origem);
+      console.trace();
+    }
+  } catch (e) {
+    console.warn('Erro ao gerar logs por aba:', e);
+  }
 
   if (!produtosVisiveis.length) {
     return;
@@ -1447,6 +1469,12 @@ async function renderizarProdutos(produtosEntrada = null) {
       </button>
     `;
 
+    // Prevent duplicate DOM insertion if a card with the same id already exists
+    const targetId = 'card_' + produto.id;
+    if (document.getElementById(targetId)) {
+      // Already rendered, skip second insertion
+      continue;
+    }
     if(produto.tipo === 'vip') {
       vip.appendChild(card);
     } else if(produto.tipo === 'diario') {
