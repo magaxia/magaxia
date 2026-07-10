@@ -1486,6 +1486,22 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
     const gradienteTipo = getGradienteTipo(produto.tipo);
     const nomeSeguro = produto.nome.replace(/'/g, "\\'");
 
+    // AUDIT: log computed and normalized values immediately before rendering card
+    try {
+      console.log('[AUDIT BEFORE RENDER]', {
+        nome: produto.nome,
+        docId: produto.docId,
+        tipoRendimento: produto.tipoRendimento,
+        valorRendimento: produto.valorRendimento,
+        rendaDiaria: produto.rendaDiaria,
+        ciclo: produto.ciclo,
+        valorExibido,
+        totalRendimento
+      });
+    } catch (e) {
+      console.warn('[AUDIT BEFORE RENDER] log failed', e);
+    }
+
     const card = document.createElement('div');
     card.className = 'card' + (botaoClass ? ' bloqueado' : '');
     card.id = 'card_' + produto.id;
