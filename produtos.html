@@ -1220,18 +1220,52 @@ function normalizeProduto(doc, origem) {
 
   const categoria = String(p.categoria || p.abaProduto || p.tipo || '').toLowerCase();
   const preco = Number(p.preco ?? p.valor ?? 0);
-  const ciclo = Number(p.ciclo ?? p.cicloDias ?? 0);
-  const rendaDiaria = Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? 0);
-  const valorRendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? p.renda ?? 0);
+  // ciclo may be named ciclo, cicloDias, dias, days
+  const ciclo = Number(p.ciclo ?? p.cicloDias ?? p.dias ?? p.days ?? 0);
+  // renda/valorRendimento may appear under several names: rendaDiaria, valorRendimento, renda, rendimento
+  // lucro variants: lucro, valorLucro, valor_lucro
+  const rendaDiaria = Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? p.rendimento ?? 0);
+  const valorRendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? p.renda ?? p.rendimento ?? p.valorLucro ?? p.lucro ?? p.valor_lucro ?? 0);
   const renda = rendaDiaria;
-  const total = Number(p.total ?? (rendaDiaria * ciclo));
-  const tipoRendimento = p.tipoRendimento || p.tipoRetorno || null;
+  // total could be stored or computed
+  const total = Number(p.total ?? ((Number(p.tipoRendimento === 'lucro' ? valorRendimento : rendaDiaria) || 0) * ciclo));
+  // tipoRendimento may be under tipoRendimento, tipoRetorno, retorno
+  const tipoRendimento = p.tipoRendimento || p.tipoRetorno || p.retorno || null;
 
   window.normalizeProdutoAudit = window.normalizeProdutoAudit || { produtos: 0, produtos_antecipados: 0 };
   if (window.normalizeProdutoAudit[origem] < 3) {
     console.log(`normalizeProduto audit (${origem}) docId=${doc.id}`,
       { raw: p, ciclo, rendaDiaria, valorRendimento, total, tipoRendimento });
     window.normalizeProdutoAudit[origem] += 1;
+  }
+
+  // AUDITORIA: log firestore raw + normalized for deeper inspection
+  try {
+    console.log('[AUDITORIA PRODUTO]', {
+      docId: doc.id,
+      nome: nome,
+      firestore: p,
+      normalizado: {
+        id: `${origem}_${doc.id}`,
+        docId: doc.id,
+        origem,
+        tipo,
+        categoria,
+        nome,
+        preco,
+        ciclo,
+        rendaDiaria,
+        valorRendimento,
+        total,
+        tipoRendimento
+      },
+      tipoRendimento: tipoRendimento,
+      valorRendimento: valorRendimento,
+      rendaDiaria: rendaDiaria,
+      ciclo: ciclo
+    });
+  } catch (e) {
+    console.warn('[AUDITORIA PRODUTO] log failed', e);
   }
 
   return {
