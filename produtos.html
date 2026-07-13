@@ -1433,18 +1433,8 @@ function carregarProdutosAntecipados(){
 
 function criarCardProduto(produto, { corTipo, gradienteTipo, textoBot, avisoVip, botaoAtributos = '', botaoClass = '', valorExibido, totalRendimento } = {}) {
   const nomeSeguro = String(produto.nome || '').replace(/'/g, "\\'");
-  const precoPromocional = Number(produto.precoPromocional || 0);
-  const desconto = Number(produto.desconto || 0);
-  const categoriaTexto = produto.categoria || 'Geral';
-  const statusTexto = produto.statusInativo ? 'Inativo' : (produto.ativo ? 'Ativo' : 'Inativo');
   const vipTexto = produto.requiredVip > 0 ? `VIP ${produto.requiredVip}` : 'VIP 0';
-  const codigoTexto = produto.codigo ? `<div class="info">🧾 Código: ${produto.codigo}</div>` : '';
-  const descricaoTexto = produto.descricao ? `<div class="info">📝 ${produto.descricao}</div>` : '';
-  const promocionalTexto = precoPromocional > 0 ? `<div class="info">🏷️ Promocional: R$ ${precoPromocional.toFixed(2)}</div>` : '';
-  const descontoTexto = desconto > 0 ? `<div class="info">🎯 Desconto: ${desconto.toFixed(0)}%</div>` : '';
-  const categoriaLinha = `<div class="info">📂 Categoria: ${categoriaTexto}</div>`;
   const vipLinha = `<div class="info">🔐 Nível VIP: ${vipTexto}</div>`;
-  const statusLinha = `<div class="info">🔄 Status: ${statusTexto}</div>`;
   const card = document.createElement('div');
   card.className = 'card' + (botaoClass ? ' bloqueado' : '');
   card.id = 'card_' + produto.id;
@@ -1452,16 +1442,10 @@ function criarCardProduto(produto, { corTipo, gradienteTipo, textoBot, avisoVip,
     <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
     <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
     <div class="valor" style="color: ${corTipo};">R$ ${Number(produto.preco || 0).toFixed(2)}</div>
-    ${promocionalTexto}
-    ${descontoTexto}
     <div class="info">💰 ${produto.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária'}: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
     <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
     <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
-    ${codigoTexto}
-    ${descricaoTexto}
-    ${categoriaLinha}
     ${vipLinha}
-    ${statusLinha}
     ${avisoVip}
     <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})" ${botaoAtributos}>
       ${textoBot}
