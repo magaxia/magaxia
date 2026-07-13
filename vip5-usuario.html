@@ -207,19 +207,35 @@
 
     /* ── Card base ──────────────────────────────────────────────────────────── */
     .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      padding: 28px;
+      background: rgba(255,255,255,0.98);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.5);
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      box-shadow: var(--shadow-card);
-      transition: border-color 0.25s var(--transition);
+      gap: 0;
+      padding: 0;
     }
 
     .card:hover {
-      border-color: var(--border-h);
+      transform: translateY(-8px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+      border-color: rgba(255,255,255,0.8);
+    }
+
+    .card.bloqueado {
+      opacity: 0.6;
+      pointer-events: none;
+      filter: grayscale(0.5);
+    }
+
+    .card.bloqueado .chip {
+      background: #999 !important;
+      color: white !important;
     }
 
     .card-title {
@@ -272,6 +288,99 @@
       font-weight: 800;
       color: var(--gold);
       letter-spacing: -0.3px;
+    }
+
+    .vip-alert {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #fff4e5;
+      color: #bf360c;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #ffcc80;
+      font-weight: bold;
+      margin: 0 20px 15px;
+    }
+
+    .produto-img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      border-bottom: none;
+    }
+
+    .chip {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      color: #333;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      backdrop-filter: blur(10px);
+      max-width: 85%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .valor {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #4CAF50;
+      text-align: center;
+      margin: 20px 0 15px;
+      letter-spacing: -0.5px;
+    }
+
+    .info {
+      padding: 0 20px;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .destaque {
+      color: #667eea;
+      font-weight: bold;
+      font-size: 1.15rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #2196F3, #1976D2);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      margin: 0 20px 20px 20px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.bloqueado {
+      background: #9E9E9E !important;
+      cursor: not-allowed !important;
+      box-shadow: none !important;
     }
 
     .divider {
@@ -888,16 +997,44 @@
     }
 
     /* ── Responsive ─────────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .card {
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+      }
+      .produto-img {
+        height: 200px;
+      }
+      .valor {
+        font-size: 1.7rem;
+        margin: 16px 0 12px;
+      }
+      .info {
+        font-size: 0.9rem;
+        padding: 0 16px;
+      }
+      button {
+        margin: 0 16px 16px 16px;
+      }
+      .vip-alert {
+        margin: 0 16px 12px;
+      }
+    }
+
     @media (max-width: 640px) {
       body { padding: 24px 12px 48px; }
       h1 { font-size: 22px; }
-      .card { padding: 20px; }
+      .card { padding: 0; }
       .divider { margin: 0 -20px; }
       .cd-number { font-size: 32px; }
       .cd-sep { font-size: 22px; }
       .promo-info-grid { grid-template-columns: repeat(2, 1fr); }
       .info-grid { grid-template-columns: 1fr; }
       .info-row:first-child { grid-column: 1; }
+      .produto-img { height: 180px; }
+      .chip { font-size: 0.8rem; padding: 7px 12px; }
+      .valor { font-size: 1.5rem; }
+      button { padding: 14px; font-size: 0.95rem; }
     }
 
     @media (max-width: 360px) {
