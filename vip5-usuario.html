@@ -396,51 +396,49 @@
     .countdown-wrap {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 18px;
+      gap: 16px;
     }
 
     .countdown-display {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .cd-block {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
+      align-items: baseline;
+      gap: 6px;
       background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 18px 10px 14px;
-      min-height: 110px;
+      border: 1px solid rgba(245,158,11,0.14);
+      border-radius: 18px;
+      padding: 16px 16px;
+      min-width: 100px;
+      flex: 1 1 120px;
+      justify-content: center;
     }
 
     .cd-number {
-      font-size: 38px;
+      font-size: 32px;
       font-weight: 900;
       color: var(--text-1);
-      letter-spacing: -1px;
+      letter-spacing: -0.6px;
       font-variant-numeric: tabular-nums;
       line-height: 1;
     }
 
     .cd-unit {
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 700;
       color: var(--text-3);
-      letter-spacing: 1.2px;
+      letter-spacing: 0.8px;
       text-transform: uppercase;
     }
 
     .cd-sep {
-      font-size: 28px;
-      font-weight: 300;
-      color: var(--text-4);
-      align-self: center;
-      padding-bottom: 8px;
-      flex-shrink: 0;
+      display: none;
     }
 
     .countdown-expired {
