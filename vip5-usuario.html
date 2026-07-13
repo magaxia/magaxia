@@ -1110,6 +1110,153 @@
       return isNaN(d.getTime()) ? 0 : d.getTime();
     }
 
+    function normalizeProdutoAntecipadoUsuario(item) {
+      const p = item || {};
+      const tipoNormalizado = String(p.tipo || p.abaProduto || p.aba || p.categoria || "eventos").toLowerCase();
+      const tipo = ["diario", "vip", "fixo", "eventos"].includes(tipoNormalizado) ? tipoNormalizado : "eventos";
+      const nome = String(p.nome || p.titulo || p.title || "Produto");
+      const categoria = String(p.categoria || p.categoriaInfo?.nome || p.categoriaProduto || p.abaProduto || p.aba || p.tipo || "Geral");
+      const descricao = String(p.descricao || p.descricaoProduto || p.description || p.observacoes || p.obs || "");
+      const codigo = String(p.codigo || p.code || p.sku || p.codigoProduto || "");
+      const preco = Number(p.preco ?? p.valor ?? p.valorProduto ?? p.price ?? p.precoProduto ?? 0);
+      const precoPromocional = Number(p.precoPromocional ?? p.valorPromocional ?? p.promocional ?? p.precoPromo ?? p.valorPromo ?? 0);
+      const desconto = Number(p.desconto ?? p.descontoPercentual ?? p.percentualDesconto ?? p.discount ?? p.descontoProduto ?? 0);
+      const ciclo = Number(p.ciclo ?? p.cicloDias ?? p.dias ?? p.days ?? p.periodo ?? 0);
+      const rendaDiaria = Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? p.rendimento ?? p.valorRenda ?? 0);
+      const valorRendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? p.renda ?? p.rendimento ?? p.valorLucro ?? p.lucro ?? p.valor_lucro ?? p.valorRenda ?? 0);
+      const tipoRetorno = String(p.tipoRetorno || p.tipoRendimento || p.retorno || "").toLowerCase();
+      const tipoRendimento = tipoRetorno === "lucro"
+        ? "lucro"
+        : (tipoRetorno === "renda" || tipoRetorno === "rendadiaria" || tipoRetorno === "rendaDiaria" || tipoRetorno === "renda_diaria" || tipoRetorno === "renda diaria" ? "rendaDiaria" : (p.tipoRendimento === "lucro" ? "lucro" : ""));
+      const imagem = p.imagem || p.imagemPrincipal || p.imagemUrl || p.imageUrl || p.image || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto";
+      const requiredVip = Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? p.vip ?? p.requiredVipNivel ?? 0);
+      const exclusivoVip5 = Boolean(p.exclusivoVip5 === true || p.exclusivoVip5 === "true" || p.exclusivoVip5 === 1 || p.exclusivoVip5 === "1");
+      const status = String(p.status || "").toLowerCase();
+      const statusInativo = ["inativo", "desativado", "pausado"].includes(status);
+
+      return {
+        ...p,
+        id: p.id || p.docId || `produtos_antecipados_${p.id || p.docId || ""}`,
+        docId: p.docId || p.id || "",
+        origem: "produtos_antecipados",
+        tipo,
+        categoria,
+        nome,
+        descricao,
+        codigo,
+        preco,
+        precoPromocional,
+        desconto,
+        valor: preco,
+        ciclo,
+        rendaDiaria,
+        valorRendimento,
+        tipoRendimento,
+        tipoRetorno,
+        imagem,
+        imagemPrincipal: p.imagemPrincipal || p.imagem || p.imagemUrl || p.imageUrl || imagem,
+        requiredVip,
+        nivelVip: requiredVip,
+        exclusivoVip5,
+        ativo: p.ativo !== false,
+        status,
+        statusInativo,
+        aberturaVip: _toMs(p.aberturaVip),
+        aberturaPublica: _toMs(p.aberturaPublica),
+        encerramento: _toMs(p.encerramento ?? p.dataExpiracao ?? p.dataEncerramento),
+        criadoEm: _toMs(p.criadoEm ?? p.createdAt ?? p.dataCriacao),
+        ordem: Number(p.ordem ?? 0)
+      };
+    }
+
+    function getCorTipo(tipo) {
+      const cores = {
+        diario: "#2196F3",
+        vip: "#FFD700",
+        fixo: "#4CAF50",
+        eventos: "#9C27B0"
+      };
+      return cores[tipo] || "#9C27B0";
+    }
+
+    function getGradienteTipo(tipo) {
+      const gradientes = {
+        diario: "linear-gradient(135deg, #2196F3, #1976D2)",
+        vip: "linear-gradient(135deg, #FFD700, #FFC700)",
+        fixo: "linear-gradient(135deg, #4CAF50, #388E3C)",
+        eventos: "linear-gradient(135deg, #9C27B0, #7B1FA2)"
+      };
+      return gradientes[tipo] || gradientes.eventos;
+    }
+
+    function criarCardProdutoAntecipado(produto) {
+      const nomeSeguro = String(produto.nome || "").replace(/'/g, "\\'");
+      const precoPromocional = Number(produto.precoPromocional || 0);
+      const desconto = Number(produto.desconto || 0);
+      const categoriaTexto = produto.categoria || "Geral";
+      const statusTexto = produto.statusInativo ? "Inativo" : (produto.ativo ? "Ativo" : "Inativo");
+      const vipTexto = produto.requiredVip > 0 ? `VIP ${produto.requiredVip}` : "VIP 0";
+      const codigoTexto = produto.codigo ? `<div class="info">🧾 Código: ${produto.codigo}</div>` : "";
+      const descricaoTexto = produto.descricao ? `<div class="info">📝 ${produto.descricao}</div>` : "";
+      const promocionalTexto = precoPromocional > 0 ? `<div class="info">🏷️ Promocional: R$ ${precoPromocional.toFixed(2)}</div>` : "";
+      const descontoTexto = desconto > 0 ? `<div class="info">🎯 Desconto: ${desconto.toFixed(0)}%</div>` : "";
+      const categoriaLinha = `<div class="info">📂 Categoria: ${categoriaTexto}</div>`;
+      const vipLinha = `<div class="info">🔐 Nível VIP: ${vipTexto}</div>`;
+      const statusLinha = `<div class="info">🔄 Status: ${statusTexto}</div>`;
+
+      const bloqueadoPorVIP = produto.requiredVip > 0 && _currentVip?.vipLevel < produto.requiredVip;
+      let textoBot = "🛒 Comprar Agora";
+      let avisoVip = "";
+      let botaoAtributos = "";
+      let botaoClass = "";
+
+      if (produto.exclusivoVip5 && _currentVip?.vip5Active !== true) {
+        textoBot = "🔒 Bloqueado";
+        avisoVip = `<div class="vip-alert">🔒 Exclusivo VIP5</div>`;
+        botaoAtributos = " disabled";
+        botaoClass = "bloqueado";
+      }
+
+      if (bloqueadoPorVIP) {
+        textoBot = "🔒 Bloqueado";
+        avisoVip = `<div class="vip-alert">🔒 Necessário VIP ${produto.requiredVip}</div>`;
+        botaoAtributos = " disabled";
+        botaoClass = "bloqueado";
+      }
+
+      const valorExibido = Number(produto.tipoRendimento === "lucro" ? produto.valorRendimento : produto.rendaDiaria);
+      const totalRendimento = Number(valorExibido * produto.ciclo);
+      const corTipo = getCorTipo(produto.tipo);
+      const gradienteTipo = getGradienteTipo(produto.tipo);
+      const card = document.createElement("div");
+      card.className = "card" + (botaoClass ? " bloqueado" : "");
+      card.id = "card_" + produto.id;
+      card.innerHTML = `
+        <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+        <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
+        <div class="valor" style="color: ${corTipo};">R$ ${Number(produto.preco || 0).toFixed(2)}</div>
+        ${promocionalTexto}
+        ${descontoTexto}
+        <div class="info">💰 ${produto.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária'}: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
+        <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
+        <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
+        ${codigoTexto}
+        ${descricaoTexto}
+        ${categoriaLinha}
+        ${vipLinha}
+        ${statusLinha}
+        ${avisoVip}
+        <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})" ${botaoAtributos}>
+          ${textoBot}
+        </button>
+      `;
+      return card;
+    }
+
+    window.comprarProduto = function (id, nome, preco, renda, ciclo, tipo, requiredVip) {
+      console.log("[VIP5-USUARIO] Compra solicitada", { id, nome, preco, renda, ciclo, tipo, requiredVip });
+    };
+
     function showError(msg) {
       console.error("[VIP5-USUARIO] Erro:", msg);
       if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
@@ -1357,7 +1504,7 @@
         console.log("[VIP5-USUARIO] VIP do usuário: nível", vipLevel, '| ativo:', vipAtivo);
 
         produtosAntecipadosUsuario = snap.docs
-          .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+          .map((docSnap) => normalizeProdutoAntecipadoUsuario({ id: docSnap.id, ...docSnap.data() }))
           .filter((item) => {
             const nomeProduto = item.nome || item.titulo || '(sem nome)';
             const docId = item.docId || item.id || '';
@@ -1516,36 +1663,10 @@
 
       count.textContent = visibleItems.length + (visibleItems.length === 1 ? " disponível" : " disponíveis");
       count.style.display = "inline-flex";
-      list.innerHTML = visibleItems.map((item) => `
-        <div class="promo-card">
-          <div class="promo-card-header">
-            <div class="promo-title-row">
-              <span class="promo-icon-gift">🛍️</span>
-              <span class="promo-titulo">${item.nome || "Produto antecipado"}</span>
-            </div>
-          </div>
-          <div class="promo-divider"></div>
-          <div class="promo-info-grid">
-            <div class="promo-info-item">
-              <span class="promo-info-label">Categoria</span>
-              <span class="promo-info-value">${item.categoria || "—"}</span>
-            </div>
-            <div class="promo-info-item">
-              <span class="promo-info-label">Status</span>
-              <span class="promo-info-value">${item.ativo ? "Ativo" : "Inativo"}</span>
-            </div>
-            <div class="promo-info-item">
-              <span class="promo-info-label">Preço</span>
-              <span class="promo-info-value">${item.preco != null ? Number(item.preco).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}</span>
-            </div>
-          </div>
-          ${item.codigo ? `<div class="promo-info-grid" style="margin-top:8px"><div class="promo-info-item"><span class="promo-info-label">Código</span><span class="promo-info-value">${item.codigo}</span></div></div>` : ""}
-          ${item.descricao ? `<div style="margin-top:8px;color:var(--text-2);font-size:0.92rem;line-height:1.4">${item.descricao}</div>` : ""}
-          ${item.precoPromocional ? `<div style="margin-top:6px;color:var(--gold);font-size:0.92rem;font-weight:600">Preço promocional: ${Number(item.precoPromocional).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>` : ""}
-          ${item.desconto ? `<div style="margin-top:4px;color:var(--green);font-size:0.9rem;font-weight:600">Desconto: ${item.desconto}%</div>` : ""}
-          ${item.imagemPrincipal ? `<img src="${item.imagemPrincipal}" alt="${item.nome}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-top:8px" onerror="this.src='https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80'">` : ""}
-        </div>
-      `).join("");
+      list.innerHTML = "";
+      visibleItems.forEach((item) => {
+        list.appendChild(criarCardProdutoAntecipado(item));
+      });
     }
 
     function pesquisarProdutosAntecipadosUsuario() {

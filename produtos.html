@@ -1212,70 +1212,125 @@ function _toMs(value) {
   return new Date(value).getTime() || 0;
 }
 
+function getFieldType(value) {
+  if (value === null || value === undefined) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (value instanceof Date) return 'date';
+  if (value && typeof value.toDate === 'function') return 'Timestamp';
+  if (typeof value === 'object') return 'object';
+  return typeof value;
+}
+
+function compararEstruturaDocumentos(produtoLegacy, produtoAntecipado) {
+  const legacy = produtoLegacy?.raw || produtoLegacy || {};
+  const antecipado = produtoAntecipado?.raw || produtoAntecipado || {};
+  const aliases = {
+    ciclo: ['cicloDias'],
+    cicloDias: ['ciclo'],
+    valorRendimento: ['rendaDiaria'],
+    rendaDiaria: ['valorRendimento'],
+    tipoRendimento: ['tipoRetorno'],
+    tipoRetorno: ['tipoRendimento'],
+    abaProduto: ['tipo'],
+    tipo: ['abaProduto'],
+    requiredVip: ['nivelVip'],
+    nivelVip: ['requiredVip'],
+    imagem: ['imagemPrincipal'],
+    imagemPrincipal: ['imagem']
+  };
+  const legacyKeys = Object.keys(legacy);
+  const antecipadoKeys = Object.keys(antecipado);
+  const camposEmLegacySo = legacyKeys.filter((key) => !antecipadoKeys.includes(key));
+  const camposEmAntecipadoSo = antecipadoKeys.filter((key) => !legacyKeys.includes(key));
+  const camposRenomeados = [];
+  for (const key of legacyKeys) {
+    const matches = aliases[key] || [];
+    for (const alias of matches) {
+      if (antecipadoKeys.includes(alias)) {
+        camposRenomeados.push({ legacy: key, antecipado: alias });
+      }
+    }
+  }
+  const camposTipoDiferente = [];
+  const camposValorDiferente = [];
+  const sharedKeys = legacyKeys.filter((key) => antecipadoKeys.includes(key));
+  for (const key of sharedKeys) {
+    const legacyType = getFieldType(legacy[key]);
+    const antecipadoType = getFieldType(antecipado[key]);
+    if (legacyType !== antecipadoType) {
+      camposTipoDiferente.push({ campo: key, legacyType, antecipadoType });
+    }
+    if (legacyType !== 'object' && legacyType !== 'array' && legacyType !== 'Timestamp' && String(legacy[key]) !== String(antecipado[key])) {
+      camposValorDiferente.push({ campo: key, legacyValue: legacy[key], antecipadoValue: antecipado[key] });
+    }
+  }
+  return {
+    camposEmLegacySo,
+    camposEmAntecipadoSo,
+    camposRenomeados,
+    camposTipoDiferente,
+    camposValorDiferente,
+    sharedKeys
+  };
+}
+
+function logCompatibilidadeDocumentos() {
+  const legacyProduto = produtosCache.find((item) => item.origem === 'produtos');
+  const antecipadoProduto = produtosAntecipadosCache.find((item) => item.origem === 'produtos_antecipados');
+  if (!legacyProduto || !antecipadoProduto) return;
+  const report = compararEstruturaDocumentos(legacyProduto, antecipadoProduto);
+  console.log('[COMPARE FIRESTORE DOCS]', {
+    legado: legacyProduto.docId,
+    antecipado: antecipadoProduto.docId,
+    report
+  });
+}
+
 function normalizeProduto(doc, origem) {
   const p = doc.data() || {};
-  const tipoNormalizado = String(p.tipo || p.abaProduto || p.categoria || 'eventos').toLowerCase();
+  const tipoNormalizado = String(p.tipo || p.abaProduto || p.aba || p.categoria || 'eventos').toLowerCase();
   const tipo = ['diario', 'vip', 'fixo', 'eventos'].includes(tipoNormalizado) ? tipoNormalizado : 'eventos';
-  const nome = String(p.nome || p.titulo || 'Produto');
+  const nome = String(p.nome || p.titulo || p.title || 'Produto');
 
-  const categoria = String(p.categoria || p.abaProduto || p.tipo || '').toLowerCase();
-  const preco = Number(p.preco ?? p.valor ?? 0);
+  const categoria = String(p.categoria || p.categoriaInfo?.nome || p.categoriaProduto || p.abaProduto || p.aba || p.tipo || 'Geral');
+  const descricao = String(p.descricao || p.descricaoProduto || p.description || p.observacoes || p.obs || '');
+  const codigo = String(p.codigo || p.code || p.sku || p.codigoProduto || '');
+  const preco = Number(p.preco ?? p.valor ?? p.valorProduto ?? p.price ?? p.precoProduto ?? 0);
+  const precoPromocional = Number(p.precoPromocional ?? p.valorPromocional ?? p.promocional ?? p.precoPromo ?? p.valorPromo ?? 0);
+  const desconto = Number(p.desconto ?? p.descontoPercentual ?? p.percentualDesconto ?? p.discount ?? p.descontoProduto ?? 0);
   // ciclo may be named ciclo, cicloDias, dias, days
-  const ciclo = Number(p.ciclo ?? p.cicloDias ?? p.dias ?? p.days ?? 0);
+  const ciclo = Number(p.ciclo ?? p.cicloDias ?? p.dias ?? p.days ?? p.periodo ?? 0);
   // renda/valorRendimento may appear under several names: rendaDiaria, valorRendimento, renda, rendimento
   // lucro variants: lucro, valorLucro, valor_lucro
-  const rendaDiaria = Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? p.rendimento ?? 0);
-  const valorRendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? p.renda ?? p.rendimento ?? p.valorLucro ?? p.lucro ?? p.valor_lucro ?? 0);
+  const rendaDiaria = Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? p.rendimento ?? p.valorRenda ?? 0);
+  const valorRendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? p.renda ?? p.rendimento ?? p.valorLucro ?? p.lucro ?? p.valor_lucro ?? p.valorRenda ?? 0);
   const renda = rendaDiaria;
+  const tipoRetorno = String(p.tipoRetorno || p.tipoRendimento || p.retorno || '').toLowerCase();
+  const tipoRendimento = tipoRetorno === 'lucro'
+    ? 'lucro'
+    : (tipoRetorno === 'renda' || tipoRetorno === 'rendadiaria' || tipoRetorno === 'rendaDiaria' || tipoRetorno === 'renda_diaria' || tipoRetorno === 'renda diaria' ? 'rendaDiaria' : (p.tipoRendimento === 'lucro' ? 'lucro' : ''));
   // total could be stored or computed
-  const total = Number(p.total ?? ((Number(p.tipoRendimento === 'lucro' ? valorRendimento : rendaDiaria) || 0) * ciclo));
-  // tipoRendimento may be under tipoRendimento, tipoRetorno, retorno
-  const tipoRendimento = p.tipoRendimento || p.tipoRetorno || p.retorno || null;
-
-  window.normalizeProdutoAudit = window.normalizeProdutoAudit || { produtos: 0, produtos_antecipados: 0 };
-  if (window.normalizeProdutoAudit[origem] < 3) {
-    console.log(`normalizeProduto audit (${origem}) docId=${doc.id}`,
-      { raw: p, ciclo, rendaDiaria, valorRendimento, total, tipoRendimento });
-    window.normalizeProdutoAudit[origem] += 1;
-  }
-
-  // AUDITORIA: log firestore raw + normalized for deeper inspection
-  try {
-    console.log('[AUDITORIA PRODUTO]', {
-      docId: doc.id,
-      nome: nome,
-      firestore: p,
-      normalizado: {
-        id: `${origem}_${doc.id}`,
-        docId: doc.id,
-        origem,
-        tipo,
-        categoria,
-        nome,
-        preco,
-        ciclo,
-        rendaDiaria,
-        valorRendimento,
-        total,
-        tipoRendimento
-      },
-      tipoRendimento: tipoRendimento,
-      valorRendimento: valorRendimento,
-      rendaDiaria: rendaDiaria,
-      ciclo: ciclo
-    });
-  } catch (e) {
-    console.warn('[AUDITORIA PRODUTO] log failed', e);
-  }
+  const total = Number(p.total ?? ((Number(tipoRendimento === 'lucro' ? valorRendimento : rendaDiaria) || 0) * ciclo));
+  const imagem = p.imagem || p.imagemPrincipal || p.imagemUrl || p.imageUrl || p.image || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto';
+  const requiredVip = Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? p.vip ?? p.requiredVipNivel ?? 0);
+  const destaque = Boolean(p.destaque === true || p.isDestaque === true || p.destaque === 'true' || p.destaque === 1);
+  const exclusivoVip5 = Boolean(p.exclusivoVip5 === true || p.exclusivoVip5 === 'true' || p.exclusivoVip5 === 1 || p.exclusivoVip5 === '1');
+  const status = String(p.status || '').toLowerCase();
+  const statusInativo = ['inativo', 'desativado', 'pausado'].includes(status);
 
   return {
+    ...p,
     id: `${origem}_${doc.id}`,
     docId: doc.id,
     origem,
     tipo,
     categoria,
     nome,
+    descricao,
+    codigo,
     preco,
+    precoPromocional,
+    desconto,
     valor: preco,
     ciclo,
     rendaDiaria,
@@ -1283,12 +1338,17 @@ function normalizeProduto(doc, origem) {
     renda,
     total,
     tipoRendimento,
-    imagem: p.imagem || p.imagemPrincipal || p.imagemUrl || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto',
-    requiredVip: Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? 0),
-    exclusivoVip5: p.exclusivoVip5 === true,
+    tipoRetorno,
+    abaProduto: p.abaProduto || p.aba || p.tipo || tipo,
+    imagem,
+    imagemPrincipal: p.imagemPrincipal || p.imagem || p.imagemUrl || p.imageUrl || imagem,
+    requiredVip,
+    nivelVip: requiredVip,
+    exclusivoVip5,
     ativo: p.ativo !== false,
-    status: String(p.status || '').toLowerCase(),
-    statusInativo: ['inativo', 'desativado'].includes(String(p.status || '').toLowerCase()),
+    destaque,
+    status,
+    statusInativo,
     aberturaVip: _toMs(p.aberturaVip),
     aberturaPublica: _toMs(p.aberturaPublica),
     encerramento: _toMs(p.encerramento ?? p.dataExpiracao ?? p.dataEncerramento),
@@ -1371,6 +1431,45 @@ function carregarProdutosAntecipados(){
   });
 }
 
+function criarCardProduto(produto, { corTipo, gradienteTipo, textoBot, avisoVip, botaoAtributos = '', botaoClass = '', valorExibido, totalRendimento } = {}) {
+  const nomeSeguro = String(produto.nome || '').replace(/'/g, "\\'");
+  const precoPromocional = Number(produto.precoPromocional || 0);
+  const desconto = Number(produto.desconto || 0);
+  const categoriaTexto = produto.categoria || 'Geral';
+  const statusTexto = produto.statusInativo ? 'Inativo' : (produto.ativo ? 'Ativo' : 'Inativo');
+  const vipTexto = produto.requiredVip > 0 ? `VIP ${produto.requiredVip}` : 'VIP 0';
+  const codigoTexto = produto.codigo ? `<div class="info">🧾 Código: ${produto.codigo}</div>` : '';
+  const descricaoTexto = produto.descricao ? `<div class="info">📝 ${produto.descricao}</div>` : '';
+  const promocionalTexto = precoPromocional > 0 ? `<div class="info">🏷️ Promocional: R$ ${precoPromocional.toFixed(2)}</div>` : '';
+  const descontoTexto = desconto > 0 ? `<div class="info">🎯 Desconto: ${desconto.toFixed(0)}%</div>` : '';
+  const categoriaLinha = `<div class="info">📂 Categoria: ${categoriaTexto}</div>`;
+  const vipLinha = `<div class="info">🔐 Nível VIP: ${vipTexto}</div>`;
+  const statusLinha = `<div class="info">🔄 Status: ${statusTexto}</div>`;
+  const card = document.createElement('div');
+  card.className = 'card' + (botaoClass ? ' bloqueado' : '');
+  card.id = 'card_' + produto.id;
+  card.innerHTML = `
+    <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+    <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
+    <div class="valor" style="color: ${corTipo};">R$ ${Number(produto.preco || 0).toFixed(2)}</div>
+    ${promocionalTexto}
+    ${descontoTexto}
+    <div class="info">💰 ${produto.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária'}: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
+    <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
+    <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
+    ${codigoTexto}
+    ${descricaoTexto}
+    ${categoriaLinha}
+    ${vipLinha}
+    ${statusLinha}
+    ${avisoVip}
+    <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})" ${botaoAtributos}>
+      ${textoBot}
+    </button>
+  `;
+  return card;
+}
+
 async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
   const eventos = document.getElementById('produtosEventos');
   const vip = document.getElementById('produtosVip');
@@ -1413,6 +1512,8 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
     if (produto.origem !== 'produtos_antecipados') return true;
     return shouldRenderAntecipado(produto);
   });
+
+  logCompatibilidadeDocumentos();
 
   console.log('Produtos Unificados (após filtro de antecipados):', produtosVisiveis.length);
   console.table(produtosVisiveis.map(p => ({ id: p.id, origem: p.origem, nome: p.nome, tipo: p.tipo, categoria: p.categoria })));
@@ -1484,40 +1585,17 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
     const totalRendimento = Number(valorExibido * produto.ciclo);
     const corTipo = getCorTipo(produto.tipo);
     const gradienteTipo = getGradienteTipo(produto.tipo);
-    const nomeSeguro = produto.nome.replace(/'/g, "\\'");
 
-    // AUDIT: log computed and normalized values immediately before rendering card
-    try {
-      console.log('[AUDIT BEFORE RENDER]', {
-        nome: produto.nome,
-        docId: produto.docId,
-        tipoRendimento: produto.tipoRendimento,
-        valorRendimento: produto.valorRendimento,
-        rendaDiaria: produto.rendaDiaria,
-        ciclo: produto.ciclo,
-        valorExibido,
-        totalRendimento
-      });
-    } catch (e) {
-      console.warn('[AUDIT BEFORE RENDER] log failed', e);
-    }
-
-    const card = document.createElement('div');
-    card.className = 'card' + (botaoClass ? ' bloqueado' : '');
-    card.id = 'card_' + produto.id;
-
-    card.innerHTML = `
-      <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
-      <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
-      <div class="valor" style="color: ${corTipo};">R$ ${produto.preco.toFixed(2)}</div>
-      <div class="info">💰 ${produto.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária'}: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
-      <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
-      <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
-      ${avisoVip}
-      <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})" ${botaoAtributos}>
-        ${textoBot}
-      </button>
-    `;
+    const card = criarCardProduto(produto, {
+      corTipo,
+      gradienteTipo,
+      textoBot,
+      avisoVip,
+      botaoAtributos,
+      botaoClass,
+      valorExibido,
+      totalRendimento
+    });
 
     // Prevent duplicate DOM insertion if a card with the same id already exists
     const targetId = 'card_' + produto.id;
