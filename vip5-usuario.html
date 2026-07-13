@@ -207,30 +207,30 @@
 
     /* ── Card base ──────────────────────────────────────────────────────────── */
     .card {
-      background: rgba(255,255,255,0.98);
-      border-radius: 16px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      backdrop-filter: blur(10px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.16);
+      transition: transform 0.25s var(--transition), box-shadow 0.25s var(--transition), border-color 0.25s var(--transition);
+      backdrop-filter: blur(18px);
       position: relative;
-      border: 1px solid rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.15);
       display: flex;
       flex-direction: column;
-      gap: 0;
-      padding: 0;
+      gap: 22px;
+      padding: 24px;
     }
 
     .card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.18);
-      border-color: rgba(255,255,255,0.8);
+      transform: translateY(-6px);
+      box-shadow: 0 20px 48px rgba(0,0,0,0.18);
+      border-color: rgba(255,255,255,0.35);
     }
 
     .card.bloqueado {
-      opacity: 0.6;
+      opacity: 0.65;
       pointer-events: none;
-      filter: grayscale(0.5);
+      filter: grayscale(0.45);
     }
 
     .card.bloqueado .chip {
@@ -239,37 +239,39 @@
     }
 
     .card-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1.4px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1.6px;
       text-transform: uppercase;
       color: var(--text-4);
+      margin-bottom: 14px;
+    }
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
 
     /* ── Info rows ──────────────────────────────────────────────────────────── */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1px;
-      background: var(--border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
+      gap: 12px;
     }
 
     .info-row {
       display: flex;
       flex-direction: column;
-      gap: 5px;
-      background: var(--bg-card-2);
-      padding: 16px 18px;
-    }
-
-    .info-row:first-child {
-      grid-column: 1 / -1;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 18px 20px;
+      min-height: 84px;
     }
 
     .info-label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--text-3);
       letter-spacing: 0.8px;
@@ -277,10 +279,11 @@
     }
 
     .info-value {
-      font-size: 13px;
-      color: var(--text-2);
-      word-break: break-all;
+      font-size: 14px;
+      color: var(--text-1);
+      word-break: break-word;
       font-variant-numeric: tabular-nums;
+      line-height: 1.4;
     }
 
     .info-value.highlight {
@@ -391,34 +394,34 @@
 
     /* ── Countdown ──────────────────────────────────────────────────────────── */
     .countdown-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
     }
 
     .countdown-display {
-      display: flex;
-      align-items: stretch;
-      gap: 4px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
     }
 
     .cd-block {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
-      flex: 1;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 16px 8px 12px;
+      gap: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 18px 10px 14px;
+      min-height: 110px;
     }
 
     .cd-number {
-      font-size: 40px;
+      font-size: 38px;
       font-weight: 900;
       color: var(--text-1);
-      letter-spacing: -2px;
+      letter-spacing: -1px;
       font-variant-numeric: tabular-nums;
       line-height: 1;
     }
@@ -451,12 +454,14 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      margin-top: 4px;
     }
 
     .progress-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 10px;
     }
 
     .progress-label {
@@ -474,18 +479,18 @@
 
     .progress-bar-bg {
       width: 100%;
-      height: 5px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 100px;
+      height: 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
       overflow: hidden;
     }
 
     .progress-bar-fill {
       height: 100%;
-      border-radius: 100px;
+      border-radius: 999px;
       background: linear-gradient(90deg, var(--gold) 0%, #ef8c0a 100%);
-      transition: width 1s var(--transition);
-      box-shadow: 0 0 8px rgba(245,158,11,0.4);
+      transition: width 0.8s var(--transition);
+      box-shadow: 0 0 10px rgba(245,158,11,0.35);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -1105,23 +1110,24 @@
     <!-- Access info card -->
     <div class="card">
       <p class="card-title">Informações do acesso</p>
-
-      <div class="info-grid">
-        <div class="info-row">
-          <span class="info-label">UID do usuário</span>
-          <span class="info-value" id="uid-value">—</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Código VIP</span>
-          <span class="info-value highlight" id="code-value">—</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Data de ativação</span>
-          <span class="info-value" id="activated-value">—</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Data de expiração</span>
-          <span class="info-value" id="expires-value">—</span>
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-row">
+            <span class="info-label">UID do usuário</span>
+            <span class="info-value" id="uid-value">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Código VIP</span>
+            <span class="info-value highlight" id="code-value">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Data de ativação</span>
+            <span class="info-value" id="activated-value">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Data de expiração</span>
+            <span class="info-value" id="expires-value">—</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1129,8 +1135,8 @@
     <!-- Countdown card -->
     <div class="card">
       <p class="card-title">Tempo restante</p>
-
-      <div class="countdown-wrap">
+      <div class="card-body">
+        <div class="countdown-wrap">
         <div class="countdown-display" id="countdown-display">
           <div class="cd-block">
             <span class="cd-number" id="cd-days">00</span>
