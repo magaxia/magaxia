@@ -309,9 +309,11 @@
 
     .produto-img {
       width: 100%;
-      height: 180px;
+      height: 110px; /* compact thumbnail for antecipados */
       object-fit: cover;
       border-bottom: none;
+      border-radius: 8px;
+      flex-shrink: 0;
     }
 
     .chip {
@@ -566,38 +568,48 @@
     .promos-list {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 24px;
+      gap: 16px;
       margin-top: 0;
-      min-height: 200px;
-      align-items: start;
+      min-height: 120px;
+      align-items: stretch;
+      align-content: start;
     }
 
+    /* Make antecipados cards compact and uniform height */
     .promos-list > .card {
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      height: auto;
-      align-self: start;
+      height: 320px; /* fixed uniform card height */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-self: stretch;
+      padding: 12px;
+      gap: 8px;
     }
 
     @media (max-width: 1200px) {
       .promos-list {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
+      .promos-list > .card { height: 300px; }
     }
 
     @media (max-width: 900px) {
       .promos-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 20px;
+        gap: 14px;
       }
+      .promos-list > .card { height: 280px; }
     }
 
     @media (max-width: 640px) {
       .promos-list {
         grid-template-columns: 1fr;
-        gap: 20px;
+        gap: 12px;
       }
+      .promos-list > .card { height: auto; }
     }
 
     /* ── Promo card ─────────────────────────────────────────────────────────── */
