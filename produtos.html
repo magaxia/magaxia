@@ -986,13 +986,15 @@ async function verificarJaComprou(produtoId) {
 // 💰 COMPRAR PRODUTO
 async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
   try {
-    // 👑 VERIFICAR RESTRIÇÃO VIP
-    const vipNecessario = Number(requiredVip || 0);
-    console.log("👤 Usuário VIP:", usuarioVipNivel, "| Necessário:", vipNecessario);
+    // 👑 VERIFICAR RESTRIÇÃO VIP - APENAS PARA PRODUTOS DA ABA VIP
+    if (tipo === 'vip') {
+      const vipNecessario = Number(requiredVip || 0);
+      console.log("👤 Usuário VIP:", usuarioVipNivel, "| Necessário:", vipNecessario);
 
-    if (vipNecessario > 0 && usuarioVipNivel < vipNecessario) {
-      alert(`Seu nível VIP é insuficiente para comprar este produto.\nNecessário VIP ${vipNecessario}, você é VIP ${usuarioVipNivel}.`);
-      return;
+      if (vipNecessario > 0 && usuarioVipNivel < vipNecessario) {
+        alert(`Seu nível VIP é insuficiente para comprar este produto.\nNecessário VIP ${vipNecessario}, você é VIP ${usuarioVipNivel}.`);
+        return;
+      }
     }
 
     // 🚫 VERIFICAR COMPRA ANTERIOR PARA PRODUTOS VIP
