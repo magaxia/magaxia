@@ -1409,17 +1409,10 @@
       card.innerHTML = `
         <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
         <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
-        <div class="valor" style="color: ${corTipo};">R$ ${Number(produto.preco || 0).toFixed(2)}</div>
-        ${promocionalTexto}
-        ${descontoTexto}
-        <div class="info">💰 ${produto.tipoRendimento === 'lucro' ? 'Lucro' : 'Renda Diária'}: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
+        <div class="info">🔐 Nível VIP: <span class="destaque" style="color: ${corTipo};">${vipTexto}</span></div>
+        <div class="info">💰 Lucro: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
         <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
         <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
-        ${codigoTexto}
-        ${descricaoTexto}
-        ${categoriaLinha}
-        ${vipLinha}
-        ${statusLinha}
         ${avisoVip}
         <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})" ${botaoAtributos}>
           ${textoBot}
