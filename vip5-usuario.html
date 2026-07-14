@@ -580,25 +580,28 @@
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      height: 320px; /* fixed uniform card height */
+      height: auto;
+      min-height: 320px; /* allow card to grow if needed */
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       align-self: stretch;
       padding: 12px;
       gap: 8px;
-      overflow: visible; /* allow CTA button to be fully visible */
+      overflow: visible !important; /* ensure button is visible */
     }
 
     /* CTA inside antecipados cards: full width, no extra margins */
     .promos-list > .card .card-cta {
-      margin: 0;
+      margin: 0 !important;
       width: 100%;
-      padding: 10px 12px;
+      padding: 12px 14px;
       border-radius: 10px;
       box-sizing: border-box;
       font-weight: 700;
       cursor: pointer;
+      align-self: stretch;
+      min-height: 44px;
     }
 
     @media (max-width: 1200px) {
