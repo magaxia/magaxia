@@ -1492,9 +1492,15 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
     .map((produto) => ({ id: produto.id, docId: produto.docId, origem: produto.origem, nome: produto.nome }));
   console.log('duplicateDocIds:', duplicateDocIds);
 
+  /* Aplicar filtro VIP (exclusivoVip5, requiredVip) APENAS para a aba VIP */
+  const abaVip = (abaAtual === 'vip' || abaAtual === 'vip5' || abaAtual === 'desconhecido');
   const produtosVisiveis = produtosUnidos.filter((produto) => {
-    if (produto.origem !== 'produtos_antecipados') return true;
-    return shouldRenderAntecipado(produto);
+    /* Para produtos antecipados na aba VIP: aplicar validações de VIP */
+    if (produto.origem === 'produtos_antecipados' && abaVip) {
+      return shouldRenderAntecipado(produto);
+    }
+    /* Para outras abas ou produtos legados: mostrar todos */
+    return true;
   });
 
   logCompatibilidadeDocumentos();
@@ -1535,27 +1541,40 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
 
   for (const produto of produtosVisiveis) {
 
-    const bloqueadoPorVIP = produto.requiredVip > 0 && usuarioVipNivel < produto.requiredVip;
     let textoBot = '🛒 Comprar Agora';
     let avisoVip = '';
     let botaoAtributos = '';
     let botaoClass = '';
 
-    if (produto.exclusivoVip5 && usuarioVipNivel === 0) {
-      textoBot = '🔒 Bloqueado';
-      avisoVip = `<div class="vip-alert">🔒 Exclusivo VIP5</div>`;
-      botaoAtributos = ' disabled';
-      botaoClass = 'bloqueado';
-    }
+    /* Aplicar bloqueios e alertas de VIP APENAS para a aba VIP */
+    if (produto.tipo === 'vip') {
+      const bloqueadoPorVIP = produto.requiredVip > 0 && usuarioVipNivel < produto.requiredVip;
 
-    if (bloqueadoPorVIP) {
-      textoBot = `🔒 Bloqueado`;
-      avisoVip = `<div class="vip-alert">🔒 Necessário VIP ${produto.requiredVip}</div>`;
-      botaoAtributos = ' disabled';
-      botaoClass = 'bloqueado';
-    }
+      if (produto.exclusivoVip5 && usuarioVipNivel === 0) {
+        textoBot = '🔒 Bloqueado';
+        avisoVip = `<div class="vip-alert">🔒 Exclusivo VIP5</div>`;
+        botaoAtributos = ' disabled';
+        botaoClass = 'bloqueado';
+      }
 
-    if (!bloqueadoPorVIP && produto.tipo === 'vip' && !(produto.exclusivoVip5 && usuarioVipNivel === 0)) {
+      if (bloqueadoPorVIP) {
+        textoBot = `🔒 Bloqueado`;
+        avisoVip = `<div class="vip-alert">🔒 Necessário VIP ${produto.requiredVip}</div>`;
+        botaoAtributos = ' disabled';
+        botaoClass = 'bloqueado';
+      }
+
+      if (!bloqueadoPorVIP && !(produto.exclusivoVip5 && usuarioVipNivel === 0)) {
+        const jaComprou = await verificarJaComprou(produto.docId);
+        if (jaComprou) {
+          textoBot = '✓ Já Comprado';
+          avisoVip = '<div class="info" style="background: #e8f5e9; color: #2e7d32; padding: 8px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 10px;">✓ Você já comprou este produto</div>';
+          botaoAtributos = ' disabled';
+          botaoClass = 'bloqueado';
+        }
+      }
+    } else {
+      /* Para abas não-VIP: permitir compra normalmente sem validações de VIP */
       const jaComprou = await verificarJaComprou(produto.docId);
       if (jaComprou) {
         textoBot = '✓ Já Comprado';
