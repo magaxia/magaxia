@@ -1129,7 +1129,7 @@
         <h1>Área VIP5</h1>
         <p class="subtitle">Seu acesso está ativo e válido</p>
       </div>
-      <span class="badge">VIP5</span>
+      <span class="badge" id="badge-vip">VIP5</span>
     </div>
 
     <!-- Access info card -->
@@ -1144,6 +1144,10 @@
           <div class="info-row">
             <span class="info-label">Código VIP</span>
             <span class="info-value highlight" id="code-value">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nível VIP</span>
+            <span class="info-value" id="nivel-vip-value">—</span>
           </div>
           <div class="info-row">
             <span class="info-label">Data de ativação</span>
@@ -1406,7 +1410,9 @@
       const vipLinha = `<div class="info">🔐 Nível VIP: ${vipTexto}</div>`;
       const statusLinha = `<div class="info">🔄 Status: ${statusTexto}</div>`;
 
-      const bloqueadoPorVIP = produto.requiredVip > 0 && _currentVip?.vipLevel < produto.requiredVip;
+      /* Ler vipNível real do usuário do Firestore */
+      const userVipNivel = Number(_currentVip?.vipNivel ?? 0);
+      const bloqueadoPorVIP = produto.requiredVip > 0 && userVipNivel < produto.requiredVip;
       let textoBot = "🛒 Comprar Agora";
       let avisoVip = "";
       let botaoAtributos = "";
@@ -1692,7 +1698,8 @@
       console.log("[VIP5-USUARIO] carregarProdutosAntecipadosUsuario: carregando lista de produtos antecipados para ", uid);
       try {
         const snap = await getDocs(collection(db, "produtos_antecipados"));
-        const vipLevel = Number(_currentVip?.vipLevel ?? _currentVip?.nivelVip ?? _currentVip?.level ?? 0);
+        /* Ler vipNível real do usuário do Firestore - priorizar vipNivel */
+        const vipLevel = Number(_currentVip?.vipNivel ?? _currentVip?.vipLevel ?? _currentVip?.nivelVip ?? _currentVip?.level ?? 0);
         const vipAtivo = _currentVip?.vip5Active === true && (!_currentVip?.vip5ExpiresAt || _currentVip.vip5ExpiresAt > Date.now());
         const now = Date.now();
 
@@ -1933,6 +1940,8 @@
 
       document.getElementById("uid-value").textContent       = user.uid;
       document.getElementById("code-value").textContent      = vipData.vip5Code || "—";
+      document.getElementById("nivel-vip-value").textContent = vipData.vipNivel ? `VIP ${vipData.vipNivel}` : "—";
+      document.getElementById("badge-vip").textContent       = vipData.vipNivel ? `VIP ${vipData.vipNivel}` : "VIP5";
       document.getElementById("activated-value").textContent = formatDate(vipData.vip5ActivatedAt);
       document.getElementById("expires-value").textContent   = formatDate(vipData.vip5ExpiresAt);
 
