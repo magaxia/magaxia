@@ -587,6 +587,18 @@
       align-self: stretch;
       padding: 12px;
       gap: 8px;
+      overflow: visible; /* allow CTA button to be fully visible */
+    }
+
+    /* CTA inside antecipados cards: full width, no extra margins */
+    .promos-list > .card .card-cta {
+      margin: 0;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      box-sizing: border-box;
+      font-weight: 700;
+      cursor: pointer;
     }
 
     @media (max-width: 1200px) {
@@ -1426,7 +1438,7 @@
         <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
         <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
         ${avisoVip}
-        <button class="${botaoClass}" style="background: ${gradienteTipo}; margin: 0 20px 20px 20px;" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})" ${botaoAtributos}>
+        <button class="card-cta ${botaoClass}" style="background: ${gradienteTipo};" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})" ${botaoAtributos}>
           ${textoBot}
         </button>
       `;
