@@ -1514,14 +1514,14 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
   console.log('duplicateDocIds:', duplicateDocIds);
 
   /* Aplicar filtro VIP (exclusivoVip5, requiredVip) APENAS para a aba VIP */
-  const abaVip = (abaAtual === 'vip' || abaAtual === 'vip5' || abaAtual === 'desconhecido');
+  const abaVip = (abaAtual === 'vip' || abaAtual === 'vip5');
   const produtosVisiveis = produtosUnidos.filter((produto) => {
     /* TODOS os produtos: verificar abertura pública (obrigatório) */
     if (!podeExibirAoPublico(produto)) {
       return false;
     }
 
-    /* Para produtos antecipados na aba VIP: aplicar validações de VIP */
+    /* Para produtos antecipados SOMENTE na aba VIP: aplicar validações de VIP */
     if (produto.origem === 'produtos_antecipados' && abaVip) {
       return shouldRenderAntecipado(produto);
     }
