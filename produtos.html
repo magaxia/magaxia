@@ -1390,6 +1390,27 @@ function shouldRenderAntecipado(produto) {
   return true;
 }
 
+/* Verifica se um produto pode ser exibido ao público (apenas abertura pública, sem validações VIP) */
+function podeExibirAoPublico(produto) {
+  const now = Date.now();
+
+  if (!produto.ativo || produto.statusInativo) {
+    return false;
+  }
+
+  if (produto.encerramento && produto.encerramento < now) {
+    return false;
+  }
+
+  /* Verificação OBRIGATÓRIA: Abertura Pública */
+  if (produto.aberturaPublica && now < produto.aberturaPublica) {
+    console.log(`  ⏳ [AGENDADO] "${produto.nome}" ainda não foi aberto ao público (abre em ${new Date(produto.aberturaPublica).toLocaleString()})`);
+    return false;
+  }
+
+  return true;
+}
+
 // 📦 CARREGAR PRODUTOS ANTECIPADOS (VIP e Público)
 function carregarProdutosAntecipados(){
   console.count("carregarProdutosAntecipados()");
@@ -1495,11 +1516,17 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
   /* Aplicar filtro VIP (exclusivoVip5, requiredVip) APENAS para a aba VIP */
   const abaVip = (abaAtual === 'vip' || abaAtual === 'vip5' || abaAtual === 'desconhecido');
   const produtosVisiveis = produtosUnidos.filter((produto) => {
+    /* TODOS os produtos: verificar abertura pública (obrigatório) */
+    if (!podeExibirAoPublico(produto)) {
+      return false;
+    }
+
     /* Para produtos antecipados na aba VIP: aplicar validações de VIP */
     if (produto.origem === 'produtos_antecipados' && abaVip) {
       return shouldRenderAntecipado(produto);
     }
-    /* Para outras abas ou produtos legados: mostrar todos */
+
+    /* Para outras abas ou produtos legados: mostrar se passou na verificação pública */
     return true;
   });
 
