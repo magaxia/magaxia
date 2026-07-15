@@ -218,7 +218,7 @@
             const countSpan = document.getElementById('ativosCount');
 
             window.SistemaAuth.db.collection("compras")
-                .where("uid", "==", uid)
+                .where("userId", "==", uid)
                 .where("status", "==", "ativo")
                 .onSnapshot((snapshot) => {
                     const ativos = [];
