@@ -1263,6 +1263,7 @@
       fetchVisiblePromotions,
       canParticipate        as canParticipatePromocao,
       registerParticipation as registerParticipationPromocao,
+      applyPromotionToPurchase,
     } from "./vip5-promocoes-storage.js";
 
     // ── Sorteios (coleção vip5_sorteios) ─────────────────────────────────────
@@ -1277,6 +1278,19 @@
     let countdownTimer = null;
     let _currentUser   = null;
     let _currentVip    = null;
+
+    function getCurrentProductContext() {
+      const params = new URLSearchParams(window.location.search);
+      const candidates = [
+        params.get("productId"),
+        params.get("produtoId"),
+        window.__currentProductId,
+        window.currentProductId,
+        window.selectedProductId,
+        document.querySelector("[data-product-id]")?.dataset?.productId,
+      ].filter(Boolean);
+      return candidates[0] || null;
+    }
 
     // Mapeia id → tipo ("promocao" | "sorteio") para despacho no participar()
     const _tipoMap = new Map();
@@ -1485,13 +1499,27 @@
             throw new Error("Saldo insuficiente");
           }
 
+          const promoResult = await applyPromotionToPurchase({
+            uid,
+            productId: id,
+            amount: precoNumero,
+            vipData: _currentVip,
+            extra: {
+              produtoNome: nome || "",
+              tipoProduto: tipo || "",
+            },
+          });
+
+          const descontoAplicado = promoResult.success && promoResult.data?.applicable ? Number(promoResult.data.discountAmount || 0) : 0;
+          const valorFinal = promoResult.success && promoResult.data?.applicable ? Number(promoResult.data.finalAmount || 0) : precoNumero;
+
           let novoSaldoDeposito = saldoDeposito;
           let novoSaldoSaque = saldoSaque;
 
-          if (saldoDeposito >= precoNumero) {
-            novoSaldoDeposito = saldoDeposito - precoNumero;
+          if (saldoDeposito >= valorFinal) {
+            novoSaldoDeposito = saldoDeposito - valorFinal;
           } else {
-            const restante = precoNumero - saldoDeposito;
+            const restante = valorFinal - saldoDeposito;
             novoSaldoDeposito = 0;
             novoSaldoSaque = Math.max(0, saldoSaque - restante);
           }
@@ -1512,6 +1540,9 @@
             produtoId: id,
             nome: nome || "",
             valor: precoNumero,
+            valorFinal: valorFinal,
+            descontoAplicado: descontoAplicado,
+            promocaoId: promoResult.success && promoResult.data?.promoId ? promoResult.data.promoId : null,
             rendaDiaria: Number(renda || 0),
             ciclo: cicloDias,
             tipo: tipo || "",
@@ -1524,12 +1555,19 @@
 
           return {
             novoSaldoDeposito,
-            novoSaldoSaque
+            novoSaldoSaque,
+            descontoAplicado,
+            valorFinal,
+            promoId: promoResult.success && promoResult.data?.promoId ? promoResult.data.promoId : null,
           };
         });
 
-        alert(`✅ Compra realizada!\nSaldo depósito: R$ ${result.novoSaldoDeposito.toFixed(2)}\nSaldo saque: R$ ${result.novoSaldoSaque.toFixed(2)}`);
-        console.log("[VIP5-USUARIO] Compra realizada com sucesso", { id, nome, preco: precoNumero, novoSaldoDeposito: result.novoSaldoDeposito, novoSaldoSaque: result.novoSaldoSaque });
+        const mensagem = result.descontoAplicado > 0
+          ? `✅ Compra realizada com desconto!\nValor original: R$ ${precoNumero.toFixed(2)}\nDesconto: R$ ${result.descontoAplicado.toFixed(2)}\nValor final: R$ ${result.valorFinal.toFixed(2)}\nSaldo depósito: R$ ${result.novoSaldoDeposito.toFixed(2)}\nSaldo saque: R$ ${result.novoSaldoSaque.toFixed(2)}`
+          : `✅ Compra realizada!\nSaldo depósito: R$ ${result.novoSaldoDeposito.toFixed(2)}\nSaldo saque: R$ ${result.novoSaldoSaque.toFixed(2)}`;
+
+        alert(mensagem);
+        console.log("[VIP5-USUARIO] Compra realizada com sucesso", { id, nome, preco: precoNumero, ...result });
       } catch (err) {
         console.error("[VIP5-USUARIO] Erro ao comprar produto antecipado:", err);
         if (String(err.message || "").toLowerCase().includes("insuficiente")) {
@@ -1606,13 +1644,14 @@
       const isVipAtivo = vipData?.vip5Active === true
         && (!vipData.vip5ExpiresAt || vipData.vip5ExpiresAt > Date.now());
 
-      console.log("[VIP5-USUARIO] Carregando promoções e sorteios. isVip:", isVipAtivo);
+      const productId = getCurrentProductContext();
+      console.log("[VIP5-USUARIO] Carregando promoções e sorteios. isVip:", isVipAtivo, "productId:", productId);
 
       // Busca promoções e sorteios em paralelo
       let promoResult, sorteioResult;
       try {
         [promoResult, sorteioResult] = await Promise.all([
-          fetchVisiblePromotions({ isVip: isVipAtivo, limit: 20 }),
+          fetchVisiblePromotions({ isVip: isVipAtivo, limit: 20, productId }),
           fetchVisibleSorteios({ isVip: isVipAtivo, limit: 20 }),
         ]);
       } catch (err) {
@@ -1749,7 +1788,7 @@
         // Despacha para canParticipate do módulo correto
         const check = isSorteio
           ? await canParticipateSorteio(item.id, uid, vipData)
-          : await canParticipatePromocao(item.id, uid, vipData);
+          : await canParticipatePromocao(item.id, uid, vipData, productId);
 
         // Ambos retornam { success, data: { canParticipate, reason }, error }
         const canPart = check.success ? (check.data?.canParticipate === true) : false;
@@ -1986,11 +2025,13 @@
       if (label) label.textContent = "Registrando...";
       if (fb) { fb.className = "promo-feedback"; fb.textContent = ""; }
 
+      const productId = getCurrentProductContext();
+
       // Despacha para o módulo correto com base no tipo registrado em _tipoMap
       const tipo   = _tipoMap.get(itemId) || "promocao";
       const result = tipo === "sorteio"
         ? await registerParticipationSorteio(itemId, _currentUser.uid)
-        : await registerParticipationPromocao(itemId, _currentUser.uid);
+        : await registerParticipationPromocao(itemId, _currentUser.uid, { produtoId: productId || null }, _currentVip);
 
       btn.classList.remove("loading");
 

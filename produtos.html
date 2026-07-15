@@ -983,10 +983,24 @@ async function verificarJaComprou(produtoId) {
   }
 }
 
+async function carregarModuloPromocoes() {
+  if (window.__promoStorageModule) {
+    return window.__promoStorageModule;
+  }
+
+  try {
+    const module = await import('./vip5-promocoes-storage.js');
+    window.__promoStorageModule = module;
+    return module;
+  } catch (error) {
+    console.warn("Promoções indisponíveis no momento, prosseguindo sem desconto:", error);
+    return null;
+  }
+}
+
 // 💰 COMPRAR PRODUTO
 async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
   try {
-    // 👑 VERIFICAR RESTRIÇÃO VIP - APENAS PARA PRODUTOS DA ABA VIP
     if (tipo === 'vip') {
       const vipNecessario = Number(requiredVip || 0);
       console.log("👤 Usuário VIP:", usuarioVipNivel, "| Necessário:", vipNecessario);
@@ -997,7 +1011,6 @@ async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
       }
     }
 
-    // 🚫 VERIFICAR COMPRA ANTERIOR PARA PRODUTOS VIP
     if (tipo === 'vip') {
       console.log("🔍 Verificando compra VIP anterior...");
       const jaComprou = await window.SistemaAuth.db
@@ -1006,58 +1019,49 @@ async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
         .where("produtoId", "==", id)
         .get();
 
-      console.log("✓ Já comprou:", !jaComprou.empty);
-
       if (!jaComprou.empty) {
         alert("❌ Você já comprou este produto VIP.\nCada produto VIP pode ser comprado apenas uma vez.");
         return;
       }
     }
 
-    // Verificar se usuário está autenticado
     if (!firebase.auth().currentUser) {
       alert("Você precisa estar logado para comprar!");
       window.location.href = 'login.html';
       return;
     }
 
-    // Verificar variáveis globais
     if (!uid) {
       alert("Erro: UID do usuário não disponível!");
       return;
     }
 
-    // Ler saldos do Firestore para garantir valores atualizados
     const userDoc = await window.SistemaAuth.db.collection("users").doc(uid).get();
-    const usuario = userDoc.data();
-
+    const usuario = userDoc.data() || {};
     const saldoDeposito = Number(usuario.saldoDeposito || 0);
     const saldoSaque = Number(usuario.saldoSaque || 0);
     const saldoTotal = saldoDeposito + saldoSaque;
+    const precoNumero = Number(preco || 0);
 
-    // Logs obrigatórios
     console.log("Saldo Deposito:", saldoDeposito);
     console.log("Saldo Saque:", saldoSaque);
     console.log("Saldo Total:", saldoTotal);
-    console.log("Preço Produto:", preco);
+    console.log("Preço Produto:", precoNumero);
 
-    // Validar compra usando saldo total
-    if (saldoTotal < preco) {
+    if (saldoTotal < precoNumero) {
       alert("Saldo insuficiente para comprar este produto.");
       return;
     }
 
-    if(!confirm(`Deseja comprar "${nome}" por R$ ${preco.toFixed(2)}?\nSaldo atual: R$ ${saldoTotal.toFixed(2)}`)){
+    if(!confirm(`Deseja comprar "${nome}" por R$ ${precoNumero.toFixed(2)}?\nSaldo atual: R$ ${saldoTotal.toFixed(2)}`)){
       return;
     }
 
-    await window.SistemaAuth.db.runTransaction(async t => {
+    const promoResult = await window.SistemaAuth.db.runTransaction(async t => {
       const userRef = window.SistemaAuth.db.collection("users").doc(uid);
-      const userDoc = await t.get(userRef);
+      const userSnapshot = await t.get(userRef);
 
-      // Se documento não existe, criar com saldos zerados
-      if (!userDoc.exists) {
-        console.log("Documento não existe, criando...");
+      if (!userSnapshot.exists) {
         t.set(userRef, {
           saldoDeposito: 0,
           saldoSaque: 0,
@@ -1068,61 +1072,87 @@ async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
         throw new Error("Documento do usuário foi criado. Por favor, tente a compra novamente.");
       }
 
-      // Ler corretamente os campos do Firestore
-      const saldoSaqueBanco = Number(userDoc.data().saldoSaque || 0);
-      const saldoDepositoBanco = Number(userDoc.data().saldoDeposito || 0);
+      const saldoSaqueBanco = Number(userSnapshot.data().saldoSaque || 0);
+      const saldoDepositoBanco = Number(userSnapshot.data().saldoDeposito || 0);
       const saldoTotalBanco = saldoSaqueBanco + saldoDepositoBanco;
 
-      // Logs adicionais do banco
       console.log("Valores do Banco - saldoSaque:", saldoSaqueBanco, "saldoDeposito:", saldoDepositoBanco, "Total:", saldoTotalBanco);
 
-      // Validação final com valores do banco
-      if(preco > saldoTotalBanco) throw new Error("Saldo insuficiente");
+      if(precoNumero > saldoTotalBanco) throw new Error("Saldo insuficiente");
 
-      // CORREÇÃO: Aplicar prioridade correta - primeiro saldoDeposito, depois saldoSaque
+      const promoModule = await carregarModuloPromocoes();
+      let descontoAplicado = 0;
+      let valorFinal = precoNumero;
+      let promoId = null;
+
+      if (promoModule && typeof promoModule.applyPromotionToPurchase === 'function') {
+        const promoApplyResult = await promoModule.applyPromotionToPurchase({
+          uid,
+          productId: id,
+          amount: precoNumero,
+          vipData: { vip5Active: true, vip5ExpiresAt: Number.MAX_SAFE_INTEGER, vipNivel: usuarioVipNivel },
+          extra: { produtoNome: nome || "", tipoProduto: tipo || "" },
+        });
+
+        if (promoApplyResult?.success && promoApplyResult.data?.applicable) {
+          descontoAplicado = Number(promoApplyResult.data.discountAmount || 0);
+          valorFinal = Number(promoApplyResult.data.finalAmount || 0);
+          promoId = promoApplyResult.data.promoId || null;
+        }
+      }
+
       let novoSaldoDeposito = saldoDepositoBanco;
       let novoSaldoSaque = saldoSaqueBanco;
 
-      if (saldoDepositoBanco >= preco) {
-        // 1. Consumir primeiro do saldoDeposito
-        novoSaldoDeposito = saldoDepositoBanco - preco;
+      if (saldoDepositoBanco >= valorFinal) {
+        novoSaldoDeposito = saldoDepositoBanco - valorFinal;
       } else {
-        // 2. Se saldoDeposito não for suficiente, usar todo ele e descontar o restante de saldoSaque
-        const restante = preco - saldoDepositoBanco;
+        const restante = valorFinal - saldoDepositoBanco;
         novoSaldoDeposito = 0;
         novoSaldoSaque = saldoSaqueBanco - restante;
       }
 
-      // Garantir que nenhum saldo fique negativo
       if (novoSaldoSaque < 0) novoSaldoSaque = 0;
       if (novoSaldoDeposito < 0) novoSaldoDeposito = 0;
 
       console.log("Saldos após desconto - saldoSaque:", novoSaldoSaque, "saldoDeposito:", novoSaldoDeposito);
 
-      // Atualizar CORRETAMENTE no Firestore
       t.update(userRef, {
         saldoSaque: novoSaldoSaque,
         saldoDeposito: novoSaldoDeposito
       });
 
-      // Registrar a compra com informações completas
-      t.set(window.SistemaAuth.db.collection("compras").doc(), {
+      const compraRef = window.SistemaAuth.db.collection("compras").doc();
+      t.set(compraRef, {
         userId: uid,
         produtoId: id,
         nome: nome,
         tipo: tipo,
-        valor: preco,
+        valor: precoNumero,
+        valorFinal,
+        descontoAplicado,
+        promocaoId: promoId,
         rendaDiaria: renda,
         ciclo: ciclo,
         status: "ativo",
         data: window.SistemaAuth.firebase.firestore.FieldValue.serverTimestamp()
       });
+
+      return {
+        novoSaldoDeposito,
+        novoSaldoSaque,
+        descontoAplicado,
+        valorFinal,
+        promocaoId: promoId,
+      };
     });
 
     const dataCompraISO = new Date().toISOString();
     localStorage.setItem('ultimaCompraData', dataCompraISO);
-    alert(`✅ Produto "${nome}" comprado com sucesso!`);
-    // O saldo será atualizado automaticamente pelo listener
+    const mensagem = promoResult.descontoAplicado > 0
+      ? `✅ Produto "${nome}" comprado com sucesso!\nValor original: R$ ${precoNumero.toFixed(2)}\nDesconto: R$ ${promoResult.descontoAplicado.toFixed(2)}\nValor final: R$ ${promoResult.valorFinal.toFixed(2)}`
+      : `✅ Produto "${nome}" comprado com sucesso!`;
+    alert(mensagem);
   } catch(e) {
     alert("❌ Erro ao comprar produto: " + e.message);
     console.error("Erro na compra:", e);

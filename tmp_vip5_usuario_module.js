@@ -72,6 +72,19 @@
       console.log("[VIP5-USUARIO] Contagem regressiva iniciada. Timer ID:", countdownTimer);
     }
 
+    function getCurrentProductContext() {
+      const params = new URLSearchParams(window.location.search);
+      const candidates = [
+        params.get("productId"),
+        params.get("produtoId"),
+        window.__currentProductId,
+        window.currentProductId,
+        window.selectedProductId,
+        document.querySelector("[data-product-id]")?.dataset?.productId,
+      ].filter(Boolean);
+      return candidates[0] || null;
+    }
+
     // ── Renderiza lista de promoções disponíveis ─────────────────────────────
     function renderPromos(promos, uid, vipData) {
       const container = document.getElementById("promos-list");
@@ -178,8 +191,9 @@
       const isVipAtivo = vipData?.vip5Active === true
         && (!vipData.vip5ExpiresAt || vipData.vip5ExpiresAt > Date.now());
 
-      console.log("[VIP5-USUARIO] Carregando promoções. isVip:", isVipAtivo);
-      const result = await fetchVisiblePromotions({ isVip: isVipAtivo, limit: 10 });
+      const productId = getCurrentProductContext();
+      console.log("[VIP5-USUARIO] Carregando promoções. isVip:", isVipAtivo, "productId:", productId);
+      const result = await fetchVisiblePromotions({ isVip: isVipAtivo, limit: 10, productId });
 
       if (!result.success || result.data.items.length === 0) {
         document.getElementById("promos-list").innerHTML = `
@@ -194,7 +208,7 @@
 
       // Verifica elegibilidade de cada promoção em paralelo
       await Promise.all(result.data.items.map(async (p) => {
-        const check = await canParticipate(p.id, uid, vipData);
+        const check = await canParticipate(p.id, uid, vipData, productId);
         const btn   = document.getElementById(`btn-part-${p.id}`);
         const fb    = document.getElementById(`feedback-${p.id}`);
         if (!btn) return;
@@ -228,7 +242,8 @@
       if (label) label.textContent = "Registrando...";
       if (fb) { fb.className = "promo-feedback"; fb.textContent = ""; }
 
-      const result = await registerParticipation(promoId, _currentUser.uid);
+      const productId = getCurrentProductContext();
+      const result = await registerParticipation(promoId, _currentUser.uid, { produtoId: productId || null }, _currentVip);
 
       btn.classList.remove("loading");
 
