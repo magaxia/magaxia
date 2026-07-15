@@ -1255,7 +1255,7 @@
   <script type="module">
     import { auth, db } from "./vip5-firebase.js";
     import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { collection, doc, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { checkVipExpiration } from "./vip5-expiration-manager.js";
 
     // ── Promoções (coleção vip5_promocoes) ───────────────────────────────────
@@ -1454,8 +1454,69 @@
       return card;
     }
 
-    window.comprarProduto = function (id, nome, preco, renda, ciclo, tipo, requiredVip) {
-      console.log("[VIP5-USUARIO] Compra solicitada", { id, nome, preco, renda, ciclo, tipo, requiredVip });
+    window.comprarProduto = async function (id, nome, preco, renda, ciclo, tipo, requiredVip) {
+      if (!_currentUser) {
+        alert("Usuário não autenticado. Faça login novamente.");
+        return;
+      }
+
+      const uid = _currentUser.uid;
+      const userRef = doc(db, "users", uid);
+      const precoNumero = Number(preco || 0);
+
+      if (precoNumero <= 0) {
+        alert("Preço do produto inválido.");
+        return;
+      }
+
+      try {
+        const result = await runTransaction(db, async (transaction) => {
+          const userSnapshot = await transaction.get(userRef);
+          if (!userSnapshot.exists()) {
+            throw new Error("Documento do usuário não encontrado.");
+          }
+
+          const userData = userSnapshot.data() || {};
+          const saldoDeposito = Number(userData.saldoDeposito || 0);
+          const saldoSaque = Number(userData.saldoSaque || 0);
+          const saldoTotal = saldoDeposito + saldoSaque;
+
+          if (saldoTotal < precoNumero) {
+            throw new Error("Saldo insuficiente");
+          }
+
+          let novoSaldoDeposito = saldoDeposito;
+          let novoSaldoSaque = saldoSaque;
+
+          if (saldoDeposito >= precoNumero) {
+            novoSaldoDeposito = saldoDeposito - precoNumero;
+          } else {
+            const restante = precoNumero - saldoDeposito;
+            novoSaldoDeposito = 0;
+            novoSaldoSaque = Math.max(0, saldoSaque - restante);
+          }
+
+          transaction.update(userRef, {
+            saldoDeposito: novoSaldoDeposito,
+            saldoSaque: novoSaldoSaque
+          });
+
+          return {
+            novoSaldoDeposito,
+            novoSaldoSaque
+          };
+        });
+
+        alert(`✅ Compra realizada!\nSaldo depósito: R$ ${result.novoSaldoDeposito.toFixed(2)}\nSaldo saque: R$ ${result.novoSaldoSaque.toFixed(2)}`);
+        console.log("[VIP5-USUARIO] Compra realizada com sucesso", { id, nome, preco: precoNumero, novoSaldoDeposito: result.novoSaldoDeposito, novoSaldoSaque: result.novoSaldoSaque });
+      } catch (err) {
+        console.error("[VIP5-USUARIO] Erro ao comprar produto antecipado:", err);
+        if (String(err.message || "").toLowerCase().includes("insuficiente")) {
+          alert("Saldo insuficiente para comprar este produto.");
+        } else {
+          alert("Erro ao processar a compra: " + (err.message || "Tente novamente."));
+        }
+      }
     };
 
     function showError(msg) {
