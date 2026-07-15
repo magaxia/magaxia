@@ -1255,7 +1255,7 @@
   <script type="module">
     import { auth, db } from "./vip5-firebase.js";
     import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { collection, doc, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { collection, doc, getDocs, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { checkVipExpiration } from "./vip5-expiration-manager.js";
 
     // ── Promoções (coleção vip5_promocoes) ───────────────────────────────────
@@ -1499,6 +1499,27 @@
           transaction.update(userRef, {
             saldoDeposito: novoSaldoDeposito,
             saldoSaque: novoSaldoSaque
+          });
+
+          const comprasRef = collection(db, "compras");
+          const compraRef = doc(comprasRef);
+          const cicloDias = Number(ciclo || 0);
+          const dataAgora = new Date();
+          const dataFinalizacao = new Date(dataAgora.getTime() + cicloDias * 24 * 60 * 60 * 1000);
+
+          transaction.set(compraRef, {
+            userId: uid,
+            produtoId: id,
+            nome: nome || "",
+            valor: precoNumero,
+            rendaDiaria: Number(renda || 0),
+            ciclo: cicloDias,
+            tipo: tipo || "",
+            status: "ativo",
+            data: serverTimestamp(),
+            ultimaRendaGerada: null,
+            dataFinalizacao,
+            totalGerado: 0
           });
 
           return {
