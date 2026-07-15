@@ -1413,6 +1413,21 @@ function podeExibirAoPublico(produto) {
   return true;
 }
 
+/* Verifica se um produto antecipado está no período VIP (entre Abertura VIP e Abertura Pública) */
+function estaNoPerioodoVip(produto) {
+  const now = Date.now();
+  const aberturaVip = produto.aberturaVip || 0;
+  const aberturaPublica = produto.aberturaPublica || 0;
+
+  /* Se não tiver Abertura Pública definida, não está em período VIP */
+  if (!aberturaPublica) {
+    return false;
+  }
+
+  /* Está no período VIP se: agora >= aberturaVip E agora < aberturaPublica */
+  return now >= aberturaVip && now < aberturaPublica;
+}
+
 // 📦 CARREGAR PRODUTOS ANTECIPADOS (VIP e Público)
 function carregarProdutosAntecipados(){
   console.count("carregarProdutosAntecipados()");
@@ -1523,7 +1538,18 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
       return false;
     }
 
-    /* Para produtos antecipados SOMENTE na aba VIP: aplicar validações de VIP */
+    /* TRANSIÇÃO AUTOMÁTICA: Produtos antecipados no período VIP aparecem SOMENTE na aba VIP */
+    if (produto.origem === 'produtos_antecipados' && estaNoPerioodoVip(produto)) {
+      /* Se não for aba VIP, filtrar fora o produto (ele só aparece em vip5-usuario.html) */
+      if (!abaVip) {
+        console.log(`  📦 [ANTECIPADO VIP] "${produto.nome}" aparece SOMENTE em vip5-usuario.html`);
+        return false;
+      }
+      /* Se for aba VIP, aplicar validações de VIP */
+      return shouldRenderAntecipado(produto);
+    }
+
+    /* Para produtos antecipados na aba VIP fora do período VIP: aplicar validações */
     if (produto.origem === 'produtos_antecipados' && abaVip) {
       return shouldRenderAntecipado(produto);
     }

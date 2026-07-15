@@ -1787,6 +1787,18 @@
             if (isTarget) console.log('[AUDIT] PASSOU IF 3B');
 
             // 4️⃣ VERIFICAR DISPONIBILIDADE POR DATAS
+            /* Produto só aparece na aba VIP se estiver entre Abertura VIP e Abertura Pública */
+            if (aberturaPublica && now >= aberturaPublica) {
+              /* Abertura Pública atingida: produto deve sair da aba VIP e ir para produtos.html */
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 4: abertura pública atingida');
+                console.log('[AUDIT] motivo: produto deve aparecer apenas em produtos.html agora');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: abertura pública atingida (produto agora em produtos.html)`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+
             if (aberturaPublica && now < aberturaPublica) {
               if (aberturaVip && vipAtivo && now >= aberturaVip) {
                 if (isTarget) {
@@ -1805,13 +1817,13 @@
               return false;
             }
 
+            /* Se chegou aqui sem Abertura Pública definida, aceitar o produto */
             if (isTarget) {
-              console.log('[AUDIT] PASSOU IF 4: abertura pública já disponível');
+              console.log('[AUDIT] PASSOU IF 4: sem Abertura Pública definida ou produto sem período de transição');
               console.log('[AUDIT] permitido: passou todas as verificações');
               console.groupEnd();
             }
 
-            // Se passou da abertura pública, permitir para todos
             console.log(`[FILTER] "${nomeProduto}" permitido: passou todas as verificações`);
             return true;
           })
