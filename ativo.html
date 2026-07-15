@@ -242,6 +242,7 @@
                     let html = '<div style="text-align: left; margin-bottom: 20px;">';
                     ativos.forEach((ativo) => {
                         const data = ativo.data;
+                        const nomeAtivo = data.nome || data.produto || 'Produto sem nome';
                         // Função robusta para formatar a data de início
                         function formatarDataInicio(valor) {
                             if (!valor) return 'Data indisponível';
@@ -300,7 +301,7 @@
                         const inicio = formatarDataInicio(campoData);
                         html += `
                             <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 10px; color: black;">
-                                <strong>${data.produto}</strong><br>
+                                <strong>${nomeAtivo}</strong><br>
                                 Valor: R$ ${data.valor.toFixed(2)}<br>
                                 Renda Diária: R$ ${data.rendaDiaria.toFixed(2)}<br>
                                 Ciclo: ${data.ciclo} dias<br>
