@@ -1181,13 +1181,10 @@ async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
 
       console.log("Valores do Banco - saldoSaque:", saldoSaqueBanco, "saldoDeposito:", saldoDepositoBanco, "Total:", saldoTotalBanco);
 
-      if (valorFinal > saldoTotalBanco) throw new Error("Saldo insuficiente");
-
-      const promoModule = await carregarModuloPromocoes();
       let descontoAplicado = 0;
-      let valorFinal = precoNumero;
       let promoId = null;
 
+      const promoModule = await carregarModuloPromocoes();
       if (promoModule && typeof promoModule.applyPromotionToPurchase === 'function') {
         const promoApplyResult = await promoModule.applyPromotionToPurchase({
           uid,
@@ -1199,10 +1196,12 @@ async function comprarProduto(id, nome, preco, renda, ciclo, tipo, requiredVip){
 
         if (promoApplyResult?.success && promoApplyResult.data?.applicable) {
           descontoAplicado = Number(promoApplyResult.data.discountAmount || 0);
-          valorFinal = Number(promoApplyResult.data.finalAmount || 0);
           promoId = promoApplyResult.data.promoId || null;
         }
       }
+
+      const valorFinal = Number(precoNumero) - descontoAplicado;
+      if (valorFinal > saldoTotalBanco) throw new Error("Saldo insuficiente");
 
       let novoSaldoDeposito = saldoDepositoBanco;
       let novoSaldoSaque = saldoSaqueBanco;
