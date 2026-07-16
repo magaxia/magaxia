@@ -984,13 +984,26 @@ export async function applyPromotionToPurchase({ uid, productId = null, amount =
         ...extra,
       });
 
-      return _ok({
+      const result = _ok({
         applicable: true,
         promoId: selected.id,
         discountAmount: postEligibility.discountAmount,
         finalAmount: postEligibility.finalAmount,
         reason: null,
       });
+
+      console.log("[Vip5PromocoesStorage] Promo selecionada", {
+        promoId: selected.id,
+        preferredPromoId,
+        selectedTitle: selected.titulo || selected.title || selected.id,
+        baseAmount,
+        discountAmount: postEligibility.discountAmount,
+        finalAmount: postEligibility.finalAmount,
+        useCount: count,
+        currentVIP: vipData,
+      });
+
+      return result;
     };
 
     if (transaction) {

@@ -1296,6 +1296,7 @@
       if (!produto || !activePromocoesUsuarioCache.length) return null;
       const now = new Date();
       const vipNivel = Number(_currentVip?.vipNivel || 0);
+      const precoBase = Number(produto.preco || produto.valor || produto.valorOriginal || 0);
 
       const candidatos = activePromocoesUsuarioCache.filter((promo) => {
         if (!promo || promo.status !== 'ativa') return false;
@@ -1313,13 +1314,13 @@
 
         return true;
       }).map((promo) => {
-        const desconto = _promoDiscountAmount(promo, produto.preco);
+        const desconto = _promoDiscountAmount(promo, precoBase);
         return {
           promo,
           desconto,
-          precoPromocional: Math.max(0, Number(produto.preco || 0) - desconto),
+          precoPromocional: Math.max(0, precoBase - desconto),
           discountPercent: promo.tipoDesconto === 'fixo'
-            ? desconto > 0 ? Math.round((desconto / produto.preco) * 100) : 0
+            ? desconto > 0 ? Math.round((desconto / precoBase) * 100) : 0
             : Number(promo.valorDesconto || 0),
         };
       }).filter((item) => item.desconto > 0);
@@ -1579,9 +1580,10 @@
           const saldoDeposito = Number(userData.saldoDeposito || 0);
           const saldoSaque = Number(userData.saldoSaque || 0);
           const saldoTotal = saldoDeposito + saldoSaque;
+          const valorOriginal = precoNumero;
 
-              const previewPromo = getBestPromoForProduct({ docId: id, preco: precoNumero, tipo, requiredVip });
-          const precoPreview = previewPromo ? Number(previewPromo.precoPromocional || 0) : precoNumero;
+          const previewPromo = getBestPromoForProduct({ docId: id, preco: precoNumero, tipo, requiredVip });
+          const precoPreview = previewPromo ? Number(previewPromo.precoPromocional || 0) : valorOriginal;
           const preferredPromoId = previewPromo?.promo?.id || null;
 
           if (saldoTotal < precoPreview) {
@@ -1610,11 +1612,22 @@
             if (promoResult && promoResult.error) {
               throw new Error("Erro na promoção: " + promoResult.error);
             }
-            promoResult = { success: true, data: { applicable: false, discountAmount: 0, finalAmount: precoNumero } };
+            promoResult = { success: true, data: { applicable: false, discountAmount: 0, finalAmount: valorOriginal } };
           }
 
           const descontoAplicado = promoResult.data?.applicable ? Number(promoResult.data.discountAmount || 0) : 0;
-          const valorFinal = promoResult.data?.applicable ? Number(promoResult.data.finalAmount || 0) : precoNumero;
+          const valorFinal = promoResult.data?.applicable ? Number(promoResult.data.finalAmount || 0) : valorOriginal;
+          const promoId = promoResult.data?.promoId || null;
+
+          const debitoDeposito = Math.min(saldoDeposito, valorFinal);
+          const debitoSaque = Math.max(0, valorFinal - debitoDeposito);
+
+          console.log("[VIP5-USUARIO] Compra promo audit",
+            { valorOriginal, precoPreview, valorFinal, descontoAplicado, promoId, preferredPromoId, debitoDeposito, debitoSaque, saldoDeposito, saldoSaque, saldoTotal });
+
+          if (valorFinal !== precoPreview) {
+            console.warn("[VIP5-USUARIO] discrepância detectada: precoPreview != valorFinal", { precoPreview, valorFinal, promoId, preferredPromoId });
+          }
 
           let novoSaldoDeposito = saldoDeposito;
           let novoSaldoSaque = saldoSaque;
@@ -1626,6 +1639,9 @@
             novoSaldoDeposito = 0;
             novoSaldoSaque = Math.max(0, saldoSaque - restante);
           }
+
+          console.log("[VIP5-USUARIO] Débito efetivo",
+            { novoSaldoDeposito, novoSaldoSaque, saldoDeposito, saldoSaque, valorFinal, debitoDeposito, debitoSaque });
 
           transaction.update(userRef, {
             saldoDeposito: novoSaldoDeposito,
@@ -1642,11 +1658,11 @@
             userId: uid,
             produtoId: id,
             nome: nome || "",
-            valor: precoNumero,
-            valorOriginal: precoNumero,
+            valor: valorOriginal,
+            valorOriginal: valorOriginal,
             valorFinal: valorFinal,
             descontoAplicado: descontoAplicado,
-            promocaoId: promoResult.data?.promoId || null,
+            promocaoId: promoId,
             rendaDiaria: Number(renda || 0),
             ciclo: cicloDias,
             tipo: tipo || "",
