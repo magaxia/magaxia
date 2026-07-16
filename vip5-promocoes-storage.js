@@ -862,15 +862,22 @@ export async function applyPromotionToPurchase({ uid, productId = null, amount =
       return _ok({ applicable: false, promoId: null, discountAmount: 0, finalAmount: 0, reason: "Valor de compra inválido." });
     }
 
-    const resolvePromotion = async (tx) => {
-      const promoQuery = query(collection(db, COL_PROMOS), where("status", "==", STATUS.ATIVA));
-      const promoSnapshot = await tx.get(promoQuery);
-      const promos = promoSnapshot.docs.map((snap) => _serialize(snap)).filter(Boolean);
+    const promoQuery = query(collection(db, COL_PROMOS), where("status", "==", STATUS.ATIVA));
+    const promoSnapshot = await getDocs(promoQuery);
+    const promos = promoSnapshot.docs.map((snap) => _serialize(snap)).filter(Boolean);
 
+    const resolvePromotion = async (tx) => {
       const candidates = [];
       for (const promo of promos) {
         const useRef = doc(db, COL_USES, `${promo.id}_${uid}`);
         const partRef = doc(db, COL_PARTS, `${promo.id}_${uid}`);
+        if (!useRef || typeof useRef.path !== 'string') {
+          throw new Error(`useRef inválido para promoId=${promo.id}`);
+        }
+        if (!partRef || typeof partRef.path !== 'string') {
+          throw new Error(`partRef inválido para promoId=${promo.id}`);
+        }
+
         const useSnap = await tx.get(useRef);
         const partSnap = await tx.get(partRef);
         const count = _getUserPromoUsageCount(partSnap, useSnap);
@@ -904,8 +911,19 @@ export async function applyPromotionToPurchase({ uid, productId = null, amount =
           .sort((a, b) => (b.discountAmount - a.discountAmount) || (_toMs(b.criadoEm) - _toMs(a.criadoEm)))[0];
       }
 
+      if (!selected || !selected.id) {
+        return _ok({ applicable: false, promoId: null, discountAmount: 0, finalAmount: baseAmount, reason: "Promoção selecionada inválida." });
+      }
+
       const useRef = doc(db, COL_USES, `${selected.id}_${uid}`);
       const partRef = doc(db, COL_PARTS, `${selected.id}_${uid}`);
+      if (!useRef || typeof useRef.path !== 'string') {
+        throw new Error(`useRef inválido para selected.id=${selected.id}`);
+      }
+      if (!partRef || typeof partRef.path !== 'string') {
+        throw new Error(`partRef inválido para selected.id=${selected.id}`);
+      }
+
       const useSnap = await tx.get(useRef);
       const partSnap = await tx.get(partRef);
       const count = _getUserPromoUsageCount(partSnap, useSnap);
@@ -923,6 +941,10 @@ export async function applyPromotionToPurchase({ uid, productId = null, amount =
       }
 
       const promoRef = doc(db, COL_PROMOS, selected.id);
+      if (!promoRef || typeof promoRef.path !== 'string') {
+        throw new Error(`promoRef inválido para selected.id=${selected.id}`);
+      }
+
       const promoSnap = await tx.get(promoRef);
       const promoData = promoSnap.data() || {};
       const qty = _getPromoCapacity(promoData);
