@@ -1590,6 +1590,14 @@
             throw new Error("Saldo insuficiente");
           }
 
+          console.log("[VIP5-USUARIO] Promoção preview antes do checkout", {
+            previewPromoId: preferredPromoId,
+            previewPromo,
+            precoPreview,
+            valorOriginal,
+            requiredVip,
+          });
+
           let promoResult = null;
           try {
             promoResult = await applyPromotionToPurchase({
@@ -1598,6 +1606,8 @@
               amount: precoNumero,
               vipData: _currentVip,
               preferredPromoId,
+              selectedPromo: previewPromo?.promo || null,
+              expectedFinalAmount: precoPreview,
               extra: {
                 produtoNome: nome || "",
                 tipoProduto: tipo || "",
@@ -1608,11 +1618,18 @@
             throw new Error("Erro ao aplicar promoção: " + promoError.message);
           }
 
+          console.log("[VIP5-USUARIO] Resultado da promoção no checkout", { promoResult });
+
           if (!promoResult || !promoResult.success) {
             if (promoResult && promoResult.error) {
               throw new Error("Erro na promoção: " + promoResult.error);
             }
-            promoResult = { success: true, data: { applicable: false, discountAmount: 0, finalAmount: valorOriginal } };
+            promoResult = { success: true, data: { applicable: false, discountAmount: 0, finalAmount: valorOriginal, reason: "Promoção não retornou resultado válido." } };
+          }
+
+          if (previewPromo && !promoResult.data?.applicable) {
+            const reason = promoResult.data?.reason || promoResult.error || "Promoção não aplicável no checkout.";
+            throw new Error(`Promoção NÃO aplicável no checkout: ${String(reason)} (previewPromoId=${previewPromo?.promo?.id || null})`);
           }
 
           const descontoAplicado = promoResult.data?.applicable ? Number(promoResult.data.discountAmount || 0) : 0;

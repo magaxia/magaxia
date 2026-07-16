@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bootstrap Login</title>
+</head>
+<body>
+  <script type="module">
+    import { auth } from './vip5-firebase.js';
+    import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+    (async () => {
+      const email = 'tester+promo@example.com';
+      const pass = 'Password123!';
+      try {
+        await createUserWithEmailAndPassword(auth, email, pass);
+        console.log('[BOOT] created user', email);
+      } catch (e) {
+        console.log('[BOOT] createUser error (may already exist):', e && e.message);
+      }
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        console.log('[BOOT] signed in', email);
+        // Give auth state a moment to persist
+        setTimeout(() => { window.location.href = '/vip5-usuario.html'; }, 400);
+      } catch (e) {
+        console.error('[BOOT] signIn failed', e && e.message);
+      }
+    })();
+  </script>
+</body>
+</html>

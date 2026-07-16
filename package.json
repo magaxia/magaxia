@@ -4,5 +4,8 @@
   "scripts": {
     "emulators": "firebase emulators:start --only auth,firestore",
     "serve": "npx http-server -c-1 . -p 8081"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
   }
 }
