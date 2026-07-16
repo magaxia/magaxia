@@ -1,0 +1,8 @@
+{
+  "name": "greeting-bot",
+  "private": true,
+  "scripts": {
+    "emulators": "firebase emulators:start --only auth,firestore",
+    "serve": "npx http-server -c-1 . -p 8081"
+  }
+}

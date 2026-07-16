@@ -853,7 +853,7 @@ export async function registerParticipation(promoId, uid, extra = {}, vipData = 
  * @param {object|null} [opts.vipData]
  * @param {object} [opts.extra]
  */
-export async function applyPromotionToPurchase({ uid, productId = null, amount = 0, vipData = null, extra = {} } = {}) {
+export async function applyPromotionToPurchase({ uid, productId = null, amount = 0, vipData = null, preferredPromoId = null, extra = {}, transaction = null } = {}) {
   try {
     if (!uid) throw new Error("uid é obrigatório.");
 
@@ -862,7 +862,7 @@ export async function applyPromotionToPurchase({ uid, productId = null, amount =
       return _ok({ applicable: false, promoId: null, discountAmount: 0, finalAmount: 0, reason: "Valor de compra inválido." });
     }
 
-    return await runTransaction(db, async (tx) => {
+    const resolvePromotion = async (tx) => {
       const promoQuery = query(collection(db, COL_PROMOS), where("status", "==", STATUS.ATIVA));
       const promoSnapshot = await tx.get(promoQuery);
       const promos = promoSnapshot.docs.map((snap) => _serialize(snap)).filter(Boolean);
@@ -895,8 +895,14 @@ export async function applyPromotionToPurchase({ uid, productId = null, amount =
         return _ok({ applicable: false, promoId: null, discountAmount: 0, finalAmount: baseAmount, reason: "Nenhuma promoção aplicável no momento." });
       }
 
-      const selected = candidates
-        .sort((a, b) => (b.discountAmount - a.discountAmount) || (_toMs(b.criadoEm) - _toMs(a.criadoEm)))[0];
+      let selected = null;
+      if (preferredPromoId) {
+        selected = candidates.find((promo) => String(promo.id) === String(preferredPromoId));
+      }
+      if (!selected) {
+        selected = candidates
+          .sort((a, b) => (b.discountAmount - a.discountAmount) || (_toMs(b.criadoEm) - _toMs(a.criadoEm)))[0];
+      }
 
       const useRef = doc(db, COL_USES, `${selected.id}_${uid}`);
       const partRef = doc(db, COL_PARTS, `${selected.id}_${uid}`);
@@ -963,7 +969,13 @@ export async function applyPromotionToPurchase({ uid, productId = null, amount =
         finalAmount: postEligibility.finalAmount,
         reason: null,
       });
-    });
+    };
+
+    if (transaction) {
+      return await resolvePromotion(transaction);
+    }
+
+    return await runTransaction(db, async (tx) => resolvePromotion(tx));
   } catch (e) {
     return _err("Erro ao aplicar promoção na compra: " + e.message, e);
   }

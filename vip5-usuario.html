@@ -1582,24 +1582,39 @@
 
               const previewPromo = getBestPromoForProduct({ docId: id, preco: precoNumero, tipo, requiredVip });
           const precoPreview = previewPromo ? Number(previewPromo.precoPromocional || 0) : precoNumero;
+          const preferredPromoId = previewPromo?.promo?.id || null;
 
           if (saldoTotal < precoPreview) {
             throw new Error("Saldo insuficiente");
           }
 
-          const promoResult = await applyPromotionToPurchase({
-            uid,
-            productId: id,
-            amount: precoNumero,
-            vipData: _currentVip,
-            extra: {
-              produtoNome: nome || "",
-              tipoProduto: tipo || "",
-            },
-          });
+          let promoResult = null;
+          try {
+            promoResult = await applyPromotionToPurchase({
+              uid,
+              productId: id,
+              amount: precoNumero,
+              vipData: _currentVip,
+              preferredPromoId,
+              extra: {
+                produtoNome: nome || "",
+                tipoProduto: tipo || "",
+              },
+              transaction,
+            });
+          } catch (promoError) {
+            throw new Error("Erro ao aplicar promoção: " + promoError.message);
+          }
 
-          const descontoAplicado = promoResult.success && promoResult.data?.applicable ? Number(promoResult.data.discountAmount || 0) : 0;
-          const valorFinal = promoResult.success && promoResult.data?.applicable ? Number(promoResult.data.finalAmount || 0) : precoNumero;
+          if (!promoResult || !promoResult.success) {
+            if (promoResult && promoResult.error) {
+              throw new Error("Erro na promoção: " + promoResult.error);
+            }
+            promoResult = { success: true, data: { applicable: false, discountAmount: 0, finalAmount: precoNumero } };
+          }
+
+          const descontoAplicado = promoResult.data?.applicable ? Number(promoResult.data.discountAmount || 0) : 0;
+          const valorFinal = promoResult.data?.applicable ? Number(promoResult.data.finalAmount || 0) : precoNumero;
 
           let novoSaldoDeposito = saldoDeposito;
           let novoSaldoSaque = saldoSaque;
@@ -1631,7 +1646,7 @@
             valorOriginal: precoNumero,
             valorFinal: valorFinal,
             descontoAplicado: descontoAplicado,
-            promocaoId: promoResult.success && promoResult.data?.promoId ? promoResult.data.promoId : null,
+            promocaoId: promoResult.data?.promoId || null,
             rendaDiaria: Number(renda || 0),
             ciclo: cicloDias,
             tipo: tipo || "",
@@ -1647,7 +1662,7 @@
             novoSaldoSaque,
             descontoAplicado,
             valorFinal,
-            promoId: promoResult.success && promoResult.data?.promoId ? promoResult.data.promoId : null,
+            promoId: promoResult.data?.promoId || null,
           };
         });
 
