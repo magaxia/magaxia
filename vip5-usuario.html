@@ -800,6 +800,13 @@
       border: 1px solid rgba(99,102,241,0.22);
     }
 
+    .price-old {
+      text-decoration: line-through;
+      color: #94a3b8;
+      margin-right: 8px;
+      font-size: 0.95rem;
+    }
+
     /* Internal divider */
     .promo-divider {
       height: 1px;
@@ -1273,6 +1280,76 @@
       registerParticipation as registerParticipationSorteio,
     } from "./vip5-sorteios-storage.js";
 
+    let activePromocoesUsuarioCache = [];
+
+    function _promoDiscountAmount(promo, amount) {
+      const base = Number(amount || 0);
+      if (base <= 0 || !promo) return 0;
+      const value = Number(promo?.valorDesconto || 0);
+      if (promo?.tipoDesconto === 'fixo') {
+        return Math.min(base, value);
+      }
+      return Math.min(base, (base * value) / 100);
+    }
+
+    function getBestPromoForProduct(produto) {
+      if (!produto || !activePromocoesUsuarioCache.length) return null;
+      const now = new Date();
+      const vipNivel = Number(_currentVip?.vipNivel || 0);
+
+      const candidatos = activePromocoesUsuarioCache.filter((promo) => {
+        if (!promo || promo.status !== 'ativa') return false;
+        if (promo.restante !== undefined && Number(promo.restante) <= 0) return false;
+        if (promo.vipMinimo > 0 && vipNivel < Number(promo.vipMinimo || 0)) return false;
+
+        const inicio = promo.inicio ? new Date(promo.inicio.toDate ? promo.inicio.toDate() : promo.inicio) : null;
+        const fim = promo.fim ? new Date(promo.fim.toDate ? promo.fim.toDate() : promo.fim) : null;
+        if (inicio && inicio > now) return false;
+        if (fim && fim < now) return false;
+
+        const selected = Array.isArray(promo.produtosSelecionados) ? promo.produtosSelecionados.filter(Boolean) : [];
+        if (selected.length && !produto?.docId) return false;
+        if (selected.length && !selected.some((item) => String(item) === String(produto.docId))) return false;
+
+        return true;
+      }).map((promo) => {
+        const desconto = _promoDiscountAmount(promo, produto.preco);
+        return {
+          promo,
+          desconto,
+          precoPromocional: Math.max(0, Number(produto.preco || 0) - desconto),
+          discountPercent: promo.tipoDesconto === 'fixo'
+            ? desconto > 0 ? Math.round((desconto / produto.preco) * 100) : 0
+            : Number(promo.valorDesconto || 0),
+        };
+      }).filter((item) => item.desconto > 0);
+
+      if (!candidatos.length) return null;
+
+      candidatos.sort((a, b) => {
+        if (b.desconto !== a.desconto) return b.desconto - a.desconto;
+        return (_toMs(b.promo.criadoEm) || 0) - (_toMs(a.promo.criadoEm) || 0);
+      });
+
+      return candidatos[0];
+    }
+
+    async function carregarPromocoesAtivasUsuario(isVip) {
+      try {
+        const result = await fetchVisiblePromotions({ isVip: Boolean(isVip), limit: 200, productId: null });
+        if (result.success && Array.isArray(result.data?.items)) {
+          activePromocoesUsuarioCache = result.data.items;
+          console.log("[VIP5-USUARIO] Promoções ativas para produtos carregadas:", activePromocoesUsuarioCache.length);
+        } else {
+          activePromocoesUsuarioCache = [];
+          console.warn("[VIP5-USUARIO] Falha ao carregar promoções ativas:", result.error);
+        }
+      } catch (err) {
+        activePromocoesUsuarioCache = [];
+        console.warn("[VIP5-USUARIO] Erro ao carregar promoções ativas:", err);
+      }
+    }
+
     console.log("[VIP5-USUARIO] Página carregada. Verificando expiração VIP...");
 
     let countdownTimer = null;
@@ -1411,20 +1488,15 @@
 
     function criarCardProdutoAntecipado(produto) {
       const nomeSeguro = String(produto.nome || "").replace(/'/g, "\\'");
-      const precoPromocional = Number(produto.precoPromocional || 0);
-      const desconto = Number(produto.desconto || 0);
       const categoriaTexto = produto.categoria || "Geral";
       const statusTexto = produto.statusInativo ? "Inativo" : (produto.ativo ? "Ativo" : "Inativo");
       const vipTexto = produto.requiredVip > 0 ? `VIP ${produto.requiredVip}` : "VIP 0";
       const codigoTexto = produto.codigo ? `<div class="info">🧾 Código: ${produto.codigo}</div>` : "";
       const descricaoTexto = produto.descricao ? `<div class="info">📝 ${produto.descricao}</div>` : "";
-      const promocionalTexto = precoPromocional > 0 ? `<div class="info">🏷️ Promocional: R$ ${precoPromocional.toFixed(2)}</div>` : "";
-      const descontoTexto = desconto > 0 ? `<div class="info">🎯 Desconto: ${desconto.toFixed(0)}%</div>` : "";
       const categoriaLinha = `<div class="info">📂 Categoria: ${categoriaTexto}</div>`;
       const vipLinha = `<div class="info">🔐 Nível VIP: ${vipTexto}</div>`;
       const statusLinha = `<div class="info">🔄 Status: ${statusTexto}</div>`;
 
-      /* Ler vipNível real do usuário do Firestore */
       const userVipNivel = Number(_currentVip?.vipNivel ?? 0);
       const bloqueadoPorVIP = produto.requiredVip > 0 && userVipNivel < produto.requiredVip;
       let textoBot = "🛒 Comprar Agora";
@@ -1450,13 +1522,26 @@
       const totalRendimento = Number(valorExibido * produto.ciclo);
       const corTipo = getCorTipo(produto.tipo);
       const gradienteTipo = getGradienteTipo(produto.tipo);
+      const promo = produto.promoPreview || null;
+      const precoOriginal = Number(produto.preco || 0);
+      const precoPromo = promo ? Number(promo.precoPromocional || 0) : precoOriginal;
+      const descontoTexto = promo ? `<div class="info" style="color:#2e7d32;">Economize R$ ${Number(promo.desconto || 0).toFixed(2)} (${promo.discountPercent}% off)</div>` : "";
+      const promoBadge = promo ? `<div class="promo-badge" style="background: linear-gradient(135deg, #f44336, #d32f2f); color:#fff; display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:0.82rem; font-weight:700; margin-bottom:10px;">🔥 Promoção ativa</div>` : "";
+
       const card = document.createElement("div");
       card.className = "card" + (botaoClass ? " bloqueado" : "");
       card.id = "card_" + produto.id;
       card.innerHTML = `
         <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
         <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
-        <div class="info">🔐 Nível VIP: <span class="destaque" style="color: ${corTipo};">${vipTexto}</span></div>
+        ${promoBadge}
+        <div class="info">${promo ? `<span class="price-old" style="text-decoration:line-through;color:#888;">R$ ${precoOriginal.toFixed(2)}</span> <strong style="color:#d32f2f;">R$ ${precoPromo.toFixed(2)}</strong>` : `<span class="destaque" style="color: ${corTipo};">R$ ${precoOriginal.toFixed(2)}</span>`}</div>
+        ${descontoTexto}
+        ${codigoTexto}
+        ${descricaoTexto}
+        ${vipLinha}
+        ${categoriaLinha}
+        ${statusLinha}
         <div class="info">💰 Lucro: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
         <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
         <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
@@ -1495,7 +1580,10 @@
           const saldoSaque = Number(userData.saldoSaque || 0);
           const saldoTotal = saldoDeposito + saldoSaque;
 
-          if (saldoTotal < precoNumero) {
+              const previewPromo = getBestPromoForProduct({ docId: id, preco: precoNumero, tipo, requiredVip });
+          const precoPreview = previewPromo ? Number(previewPromo.precoPromocional || 0) : precoNumero;
+
+          if (saldoTotal < precoPreview) {
             throw new Error("Saldo insuficiente");
           }
 
@@ -1540,6 +1628,7 @@
             produtoId: id,
             nome: nome || "",
             valor: precoNumero,
+            valorOriginal: precoNumero,
             valorFinal: valorFinal,
             descontoAplicado: descontoAplicado,
             promocaoId: promoResult.success && promoResult.data?.promoId ? promoResult.data.promoId : null,
@@ -1958,6 +2047,7 @@
           });
 
         console.log("[VIP5-USUARIO] Total produtos após filtro:", produtosAntecipadosUsuario.length);
+        await carregarPromocoesAtivasUsuario(vipAtivo);
         renderizarProdutosAntecipadosUsuario();
       } catch (err) {
         console.error("[VIP5-USUARIO] Erro ao carregar produtos antecipados:", err.message, err);
@@ -2000,6 +2090,7 @@
       count.style.display = "inline-flex";
       list.innerHTML = "";
       visibleItems.forEach((item) => {
+        item.promoPreview = getBestPromoForProduct(item);
         list.appendChild(criarCardProdutoAntecipado(item));
       });
     }
