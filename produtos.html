@@ -1443,8 +1443,12 @@ function normalizeProduto(doc, origem) {
   const tipoRendimento = tipoRetorno === 'lucro'
     ? 'lucro'
     : (tipoRetorno === 'renda' || tipoRetorno === 'rendadiaria' || tipoRetorno === 'rendaDiaria' || tipoRetorno === 'renda_diaria' || tipoRetorno === 'renda diaria' ? 'rendaDiaria' : (p.tipoRendimento === 'lucro' ? 'lucro' : ''));
-  // total could be stored or computed
-  const total = Number(p.total ?? ((Number(tipoRendimento === 'lucro' ? valorRendimento : rendaDiaria) || 0) * ciclo));
+  // total could be stored or computed using the saved tipoRendimento configuration
+  const total = Number(p.total ?? (
+    tipoRendimento === 'lucro'
+      ? Number(valorRendimento) || 0
+      : (Number(rendaDiaria) || 0) * ciclo
+  ));
   const imagem = p.imagem || p.imagemPrincipal || p.imagemUrl || p.imageUrl || p.image || 'https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto';
   const requiredVip = Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? p.vip ?? p.requiredVipNivel ?? 0);
   const destaque = Boolean(p.destaque === true || p.isDestaque === true || p.destaque === 'true' || p.destaque === 1);
@@ -1784,7 +1788,9 @@ async function renderizarProdutos(produtosEntrada = null, origem = 'manual') {
     }
 
     const valorExibido = Number(produto.tipoRendimento === 'lucro' ? produto.valorRendimento : produto.rendaDiaria);
-    const totalRendimento = Number(valorExibido * produto.ciclo);
+    const totalRendimento = produto.tipoRendimento === 'lucro'
+      ? Number(valorExibido)
+      : Number(valorExibido * produto.ciclo);
     const corTipo = getCorTipo(produto.tipo);
     const gradienteTipo = getGradienteTipo(produto.tipo);
 

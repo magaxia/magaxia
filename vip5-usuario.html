@@ -1520,7 +1520,9 @@
       }
 
       const valorExibido = Number(produto.tipoRendimento === "lucro" ? produto.valorRendimento : produto.rendaDiaria);
-      const totalRendimento = Number(valorExibido * produto.ciclo);
+      const totalRendimento = produto.tipoRendimento === "lucro"
+        ? Number(valorExibido)
+        : Number(valorExibido * produto.ciclo);
       const corTipo = getCorTipo(produto.tipo);
       const gradienteTipo = getGradienteTipo(produto.tipo);
       const promo = produto.promoPreview || null;
