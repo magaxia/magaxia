@@ -233,6 +233,7 @@
     // ── Handler de participação ───────────────────────────────────────────────
     window.participar = async function (promoId, btn) {
       if (!_currentUser) return;
+      try { console.trace("[TMP_MODULE] participar() called", { promoId, productId: getCurrentProductContext() }); } catch (e) {}
       const fb      = document.getElementById(`feedback-${promoId}`);
       const label   = btn.querySelector(".btn-label");
       const spinner = btn.querySelector(".btn-spinner");
@@ -243,6 +244,9 @@
       if (fb) { fb.className = "promo-feedback"; fb.textContent = ""; }
 
       const productId = getCurrentProductContext();
+      try {
+        console.trace("[TMP_MODULE] about to call registerParticipation", { promoId, uid: _currentUser && _currentUser.uid });
+      } catch (e) {}
       const result = await registerParticipation(promoId, _currentUser.uid, { produtoId: productId || null }, _currentVip);
 
       btn.classList.remove("loading");

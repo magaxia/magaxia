@@ -1697,7 +1697,7 @@
             valorFinal,
             promoId: promoResult.data?.promoId || null,
           };
-        });
+          });
 
         const mensagem = result.descontoAplicado > 0
           ? `✅ Compra realizada com desconto!\nValor original: R$ ${precoNumero.toFixed(2)}\nDesconto: R$ ${result.descontoAplicado.toFixed(2)}\nValor final: R$ ${result.valorFinal.toFixed(2)}\nSaldo depósito: R$ ${result.novoSaldoDeposito.toFixed(2)}\nSaldo saque: R$ ${result.novoSaldoSaque.toFixed(2)}`
@@ -2156,6 +2156,7 @@
     // ── Handler de participação ───────────────────────────────────────────────
     window.participar = async function (itemId, btn) {
       if (!_currentUser) return;
+      try { console.trace("[VIP5-USUARIO] participar() called", { itemId, productId: getCurrentProductContext() }); } catch (e) {}
       const fb    = document.getElementById(`feedback-${itemId}`);
       const label = btn.querySelector(".btn-label");
 
@@ -2168,6 +2169,7 @@
 
       // Despacha para o módulo correto com base no tipo registrado em _tipoMap
       const tipo   = _tipoMap.get(itemId) || "promocao";
+      try { console.trace("[VIP5-USUARIO] about to call registerParticipation", { itemId, tipo, uid: _currentUser && _currentUser.uid }); } catch (e) {}
       const result = tipo === "sorteio"
         ? await registerParticipationSorteio(itemId, _currentUser.uid)
         : await registerParticipationPromocao(itemId, _currentUser.uid, { produtoId: productId || null }, _currentVip);

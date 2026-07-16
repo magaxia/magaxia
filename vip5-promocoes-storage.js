@@ -764,6 +764,59 @@ export async function registerParticipation(promoId, uid, extra = {}, vipData = 
     if (!promoId) throw new Error("promoId é obrigatório.");
     if (!uid)     throw new Error("uid é obrigatório.");
 
+    // Detailed instrumentation: emit stack, caller function, source file:line, args, and inferred flow
+    try {
+      const err = new Error();
+      const rawStack = err.stack || "";
+      const stackLines = String(rawStack).split("\n").map((l) => l.trim()).filter(Boolean);
+
+      // Find first stack line that is not this function itself
+      let callerLine = null;
+      for (let i = 1; i < stackLines.length; i++) {
+        const line = stackLines[i];
+        if (!/registerParticipation/.test(line)) { callerLine = line; break; }
+      }
+
+      // Parse caller function name and file:line
+      let callerFn = null;
+      let callerFileLine = null;
+      const m = callerLine && callerLine.match(/at\s+(.*?)\s+\((.*?):(\d+):(\d+)\)$/);
+      if (m) {
+        callerFn = m[1];
+        callerFileLine = `${m[2]}:${m[3]}`;
+      } else if (callerLine) {
+        // Try alternative format: at /path/to/file:line:col
+        const m2 = callerLine.match(/at\s+(.*?):(\d+):(\d+)$/);
+        if (m2) {
+          callerFn = '<anonymous>';
+          callerFileLine = `${m2[1]}:${m2[2]}`;
+        } else {
+          callerFn = callerLine;
+          callerFileLine = '<unknown>';
+        }
+      }
+
+      // Determine likely origin flow by scanning the full stack text for known function names
+      const stackText = stackLines.join('\n');
+      const flow = (/participar\(|participar\b/.test(stackText)) ? 'participar()' :
+                   (/comprarProduto\b/.test(stackText)) ? 'comprarProduto()' :
+                   (/applyPromotionToPurchase\b/.test(stackText)) ? 'applyPromotionToPurchase()' :
+                   'unknown';
+
+      // Extract productId from extra if present
+      const productId = extra && (extra.produtoId || extra.productId || extra.produto || extra.productId) ? (extra.produtoId || extra.productId || extra.produto || extra.productId) : null;
+
+      console.groupCollapsed('[Vip5PromocoesStorage] registerParticipation TRACE', promoId, uid);
+      try { console.log('args:', { promoId, uid, productId, extra, vipData }); } catch(e){}
+      try { console.log('inferredFlow:', flow); } catch(e){}
+      try { console.log('callerFunction:', callerFn); } catch(e){}
+      try { console.log('callerSource:', callerFileLine); } catch(e){}
+      try { console.log('rawStack:\n', rawStack); } catch(e){}
+      console.groupEnd();
+    } catch (traceErr) {
+      try { console.warn('[Vip5PromocoesStorage] trace fail', traceErr && traceErr.message); } catch(e){}
+    }
+
     const promoRef = doc(db, COL_PROMOS, promoId);
     const partRef  = doc(db, COL_PARTS, `${promoId}_${uid}`);
     const useRef   = doc(db, COL_USES, `${promoId}_${uid}`);
@@ -836,6 +889,7 @@ export async function registerParticipation(promoId, uid, extra = {}, vipData = 
       message:  `Participação registrada. promoId="${promoId}" uid="${uid}"`,
     });
 
+    console.trace("[Vip5PromocoesStorage] Participação registrada:", { promoId, uid });
     console.log("[Vip5PromocoesStorage] Participação registrada:", promoId, uid);
     return _ok({ promoId, uid, participacaoId: `${promoId}_${uid}` });
   } catch (e) {
