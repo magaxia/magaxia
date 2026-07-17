@@ -1911,7 +1911,18 @@
               <span class="promo-info-label"><span class="promo-info-icon">📅</span>Encerra</span>
               <span class="promo-info-value">${dataFim}</span>
             </div>
+            ${isSorteio ? `
+              <div class="promo-info-item">
+                <span class="promo-info-label"><span class="promo-info-icon">🏆</span>Prêmio</span>
+                <span class="promo-info-value">${item.premio ? String(item.premio) : '—'}</span>
+              </div>
+              <div class="promo-info-item">
+                <span class="promo-info-label"><span class="promo-info-icon">👑</span>Ganhadores</span>
+                <span class="promo-info-value">${Number(item.quantidadeGanhadores) || 1}</span>
+              </div>
+            ` : ''}
           </div>
+          ${item.regulamento ? `<div class="promo-regulamento" style="margin-top:8px;font-size:12px;color:var(--muted);">${String(item.regulamento).length > 300 ? String(item.regulamento).slice(0,300) + '…' : String(item.regulamento)}</div>` : ''}
           <button class="btn-participar" id="btn-part-${item.id}" onclick="participar('${item.id}', this)">
             <span class="btn-spinner"></span>
             <span class="btn-label">Participar</span>

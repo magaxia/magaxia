@@ -157,9 +157,12 @@ function _validateSorteioPayload(payload, isCreate = true) {
   const descricao = payload.descricao === undefined ? null : _toSafeString(String(payload.descricao));
   const imagem = payload.imagem === undefined ? null : _toSafeString(String(payload.imagem));
   const tipoSorteio = payload.tipoSorteio === undefined ? null : _toSafeString(String(payload.tipoSorteio));
+  const premio = payload.premio === undefined ? null : _toSafeString(String(payload.premio));
+  const regulamento = payload.regulamento === undefined ? null : _toSafeString(String(payload.regulamento));
   const status = payload.status === undefined ? null : payload.status;
   const quantidade = payload.quantidade === undefined ? undefined : _toNonNegativeInteger(payload.quantidade);
   const limitePorUsuario = payload.limitePorUsuario === undefined ? undefined : _toNonNegativeInteger(payload.limitePorUsuario);
+  const quantidadeGanhadores = payload.quantidadeGanhadores === undefined ? undefined : _toNonNegativeInteger(payload.quantidadeGanhadores);
   const dataVip = payload.dataVip === undefined ? null : _normalizeTimestamp(payload.dataVip);
   const dataPublica = payload.dataPublica === undefined ? null : _normalizeTimestamp(payload.dataPublica);
   const dataFinal = payload.dataFinal === undefined ? null : _normalizeTimestamp(payload.dataFinal);
@@ -172,6 +175,12 @@ function _validateSorteioPayload(payload, isCreate = true) {
   }
   if (descricao && descricao.length > 1000) {
     errors.push('"descricao" não pode exceder 1000 caracteres.');
+  }
+  if (premio && premio.length > 500) {
+    errors.push('"premio" não pode exceder 500 caracteres.');
+  }
+  if (regulamento && regulamento.length > 5000) {
+    errors.push('"regulamento" não pode exceder 5000 caracteres.');
   }
   if (imagem && imagem.length > 1024) {
     errors.push('"imagem" não pode exceder 1024 caracteres.');
@@ -207,6 +216,9 @@ function _validateSorteioPayload(payload, isCreate = true) {
   if (dataVip && dataFinal && _timestampToMillis(dataVip) > _timestampToMillis(dataFinal)) {
     errors.push('"dataVip" deve ser anterior ou igual a "dataFinal".');
   }
+  if (quantidadeGanhadores !== undefined && (typeof quantidadeGanhadores !== 'number' || quantidadeGanhadores < 1)) {
+    errors.push('"quantidadeGanhadores" deve ser um inteiro >= 1.');
+  }
 
   if (errors.length > 0) {
     throw new Error(errors.join(" ")); 
@@ -217,6 +229,9 @@ function _validateSorteioPayload(payload, isCreate = true) {
     descricao,
     imagem,
     tipoSorteio,
+    premio,
+    regulamento,
+    quantidadeGanhadores,
     status,
     quantidade,
     limitePorUsuario,
@@ -318,6 +333,9 @@ export async function createSorteio(payload, admin = {}) {
       imagem,
       tipoSorteio: tipoSorteio || "geral",
       status: status || STATUS.PROGRAMADA,
+      premio: premio || null,
+      regulamento: regulamento || null,
+      quantidadeGanhadores: quantidadeGanhadores ?? 1,
       quantidade: quantidade ?? 0,
       limitePorUsuario: limitePorUsuario ?? DEFAULT_USER_LIMIT,
       participacoesCount: 0,
@@ -376,6 +394,9 @@ export async function editSorteio(id, changes, admin = {}) {
       descricao,
       imagem,
       tipoSorteio,
+      premio,
+      regulamento,
+      quantidadeGanhadores,
       status,
       quantidade,
       limitePorUsuario,
@@ -791,29 +812,46 @@ export async function pickSorteioWinner(sorteioId, admin = {}) {
       throw new Error("Nenhum participante encontrado para este sorteio.");
     }
 
-    const winner = _randomItem(participants);
-    if (!winner) {
-      throw new Error("Não foi possível sortear um vencedor.");
+    // Determine how many winners to select
+    const sorteio = sorteioSnap.data();
+    const n = Number(sorteio.quantidadeGanhadores || 1);
+    const uniqueParticipants = participants.slice();
+    // If n >= available participants, take all
+    const winnersCount = Math.max(1, Math.min(n, uniqueParticipants.length));
+
+    // Random unique selection
+    const picked = [];
+    while (picked.length < winnersCount && uniqueParticipants.length) {
+      const idx = Math.floor(Math.random() * uniqueParticipants.length);
+      const item = uniqueParticipants.splice(idx, 1)[0];
+      if (item) picked.push(item);
     }
 
-    const winnerData = _stripUndefined({
+    if (!picked.length) {
+      throw new Error("Não foi possível sortear vencedores.");
+    }
+
+    const winnersArray = picked.map((winner) => _stripUndefined({
       id: winner.id || null,
       uid: winner.uid || null,
       count: _toNonNegativeInteger(winner.count, 0),
       status: winner.status || null,
       lastParticipationAt: winner.lastParticipationAt || null,
       selectedAt: serverTimestamp(),
-    });
+    }));
 
-    await updateDoc(sorteioRef, {
-      winner: winnerData,
+    // Update sorteio: keep backward-compatible 'winner' (first) and add 'winners' array
+    await updateDoc(sorteioRef, _stripUndefined({
+      winner: winnersArray[0] || null,
+      winners: winnersArray,
       updatedAt: serverTimestamp(),
-    });
+    }));
 
     const resultRef = doc(collection(db, COL_RESULTS));
     await setDoc(resultRef, _stripUndefined({
       sorteioId,
-      winner: winnerData,
+      winner: winnersArray[0] || null,
+      winners: winnersArray,
       createdAt: serverTimestamp(),
       selectedBy: {
         uid: admin?.uid || null,
