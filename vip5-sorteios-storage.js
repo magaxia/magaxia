@@ -77,6 +77,23 @@ function _serializeSnapshot(snapshot) {
   return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
 }
 
+function _withDisplayDefaults(sorteio) {
+  if (!sorteio) return sorteio;
+  return {
+    ...sorteio,
+    banner: sorteio.banner || sorteio.imagem || null,
+    imagem: sorteio.imagem || sorteio.banner || null,
+    premio: sorteio.premio || null,
+    quantidadeGanhadores: typeof sorteio.quantidadeGanhadores === 'number' ? sorteio.quantidadeGanhadores : (sorteio.quantidadeGanhadores ?? 1),
+    valor: sorteio.valor ?? null,
+    entrega: sorteio.entrega ?? null,
+    observacoes: sorteio.observacoes ?? null,
+    winners: Array.isArray(sorteio.winners) ? sorteio.winners : (sorteio.winner ? [sorteio.winner] : []),
+    participacoesCount: Number(sorteio.participacoesCount || 0),
+    quantidade: Number(sorteio.quantidade || 0),
+  };
+}
+
 function _timestampToMillis(value) {
   if (!value) {
     return 0;
@@ -319,6 +336,9 @@ export async function createSorteio(payload, admin = {}) {
       descricao,
       imagem,
       tipoSorteio,
+      premio,
+      regulamento,
+      quantidadeGanhadores,
       status,
       quantidade,
       limitePorUsuario,
@@ -381,6 +401,9 @@ export async function editSorteio(id, changes, admin = {}) {
       descricao,
       imagem,
       tipoSorteio,
+      premio,
+      regulamento,
+      quantidadeGanhadores,
       status,
       quantidade,
       limitePorUsuario,
@@ -510,6 +533,12 @@ export async function duplicateSorteio(id, admin = {}) {
       descricao: original.descricao,
       imagem: original.imagem,
       tipoSorteio: original.tipoSorteio,
+      premio: original.premio ?? null,
+      regulamento: original.regulamento ?? null,
+      quantidadeGanhadores: original.quantidadeGanhadores ?? 1,
+      valor: original.valor ?? null,
+      entrega: original.entrega ?? null,
+      observacoes: original.observacoes ?? null,
       quantidade: original.quantidade ?? 0,
       limitePorUsuario: original.limitePorUsuario ?? DEFAULT_USER_LIMIT,
       dataVip: original.dataVip,
@@ -573,6 +602,7 @@ export async function fetchAllSorteios({ statusFilter = null, limit: lim = DEF_L
     const items = page
       .map(_serializeSnapshot)
       .filter(Boolean)
+      .map(_withDisplayDefaults)
       .sort((a, b) => _timestampToMillis(b.createdAt) - _timestampToMillis(a.createdAt));
 
     return _ok({ items, hasMore, lastDoc: page.length > 0 ? page[page.length - 1] : null });
@@ -621,7 +651,8 @@ export async function fetchVisibleSorteios({ isVip = false, limit: lim = DEF_LIM
         return false;
       })
       .sort((a, b) => _timestampToMillis(b.createdAt) - _timestampToMillis(a.createdAt))
-      .slice(0, safeLimit);
+      .slice(0, safeLimit)
+      .map(_withDisplayDefaults);
 
     return _ok({ items, hasMore: items.length >= safeLimit && docs.length > safeLimit, lastDoc: docs.length > 0 ? docs[docs.length - 1] : null });
   } catch (error) {
@@ -638,7 +669,8 @@ export async function fetchSorteioById(id) {
     if (!snapshot.exists()) {
       throw new Error(`Sorteio não encontrado: "${id}".`);
     }
-    return _ok(_serializeSnapshot(snapshot));
+    const data = _serializeSnapshot(snapshot);
+    return _ok(_withDisplayDefaults(data));
   } catch (error) {
     return _err("Erro ao buscar sorteio: " + error.message, error);
   }
@@ -840,34 +872,45 @@ export async function pickSorteioWinner(sorteioId, admin = {}) {
       selectedAt: serverTimestamp(),
     }));
 
-    // Update sorteio: keep backward-compatible 'winner' (first) and add 'winners' array
+    const winnerData = winnersArray[0] || null;
+    const drawSeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+    const drawMeta = _stripUndefined({
+      drawDate: serverTimestamp(),
+      drawBy: { uid: admin?.uid || null, email: admin?.email || null },
+      drawVersion: 'v1',
+      drawSeed,
+    });
+
+    // Update sorteio: keep backward-compatible 'winner' (first) and add 'winners' array and last draw metadata
     await updateDoc(sorteioRef, _stripUndefined({
-      winner: winnersArray[0] || null,
+      winner: winnerData || null,
       winners: winnersArray,
+      lastDraw: drawMeta,
       updatedAt: serverTimestamp(),
     }));
 
     const resultRef = doc(collection(db, COL_RESULTS));
     await setDoc(resultRef, _stripUndefined({
       sorteioId,
-      winner: winnersArray[0] || null,
+      winner: winnerData || null,
       winners: winnersArray,
       createdAt: serverTimestamp(),
       selectedBy: {
         uid: admin?.uid || null,
         email: admin?.email || null,
       },
+      drawMeta,
     }));
 
     await _writeLog({
       action: "sorteio_draw_winner",
       sorteioId,
-      after: { winner: winnerData },
+      after: { winner: winnerData, winners: winnersArray, drawMeta },
       uid: admin?.uid || null,
-      message: `Vencedor sorteado para o sorteio "${sorteioId}": ${winnerData.uid}`,
+      message: `Vencedores sorteados para o sorteio "${sorteioId}".`,
     });
 
-    return _ok({ id: sorteioId, winner: winnerData });
+    return _ok({ id: sorteioId, winner: winnerData, winners: winnersArray, drawMeta });
   } catch (error) {
     return _err("Erro ao sortear vencedor: " + error.message, error);
   }

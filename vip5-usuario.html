@@ -84,43 +84,6 @@
       letter-spacing: 0.3px;
     }
 
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 2px solid rgba(255,255,255,0.06);
-      border-top-color: var(--gold);
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Main content wrapper ───────────────────────────────────────────────── */
-    #content {
-      display: none;
-      width: 100%;
-      max-width: 1000px;
-      flex-direction: column;
-      gap: 24px;
-      z-index: 1;
-      position: relative;
-    }
-
-    /* ── Page header ────────────────────────────────────────────────────────── */
-    .header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      padding-bottom: 8px;
-    }
-
-    .header-left {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
     .header-eyebrow {
       display: flex;
       align-items: center;
@@ -1114,6 +1077,29 @@
       .cd-unit { font-size: 9px; }
     }
   </style>
+  <style>
+    /* Enhanced sorteio card styles (minimal, scoped) */
+    .sorteio-card{border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,0.06);box-shadow:0 6px 18px rgba(0,0,0,0.06);margin:12px 0;background:#fff}
+    .sorteio-banner{height:140px;background-size:cover;background-position:center;position:relative}
+    .sorteio-badges{position:absolute;top:8px;left:8px;display:flex;gap:6px}
+    .badge{background:rgba(255,255,255,0.85);padding:4px 8px;border-radius:999px;font-size:12px}
+    .sorteio-body{display:flex;padding:12px;gap:12px}
+    .sorteio-left{flex:1}
+    .sorteio-right{width:280px;display:flex;flex-direction:column;gap:8px}
+    .sorteio-title{margin:0 0 6px 0;font-size:18px}
+    .sorteio-desc{margin:0 0 8px;color:#444}
+    .sorteio-meta{font-size:12px;color:#666;margin-bottom:6px}
+    .sorteio-stats-row{display:flex;gap:12px;align-items:center}
+    .sorteio-progress-wrap{margin-bottom:6px}
+    .sorteio-progress-bar{height:10px;background:#eee;border-radius:999px;overflow:hidden}
+    .sorteio-progress-fill{height:100%;background:linear-gradient(90deg,#4caf50,#8bc34a);width:0;transition:width 600ms cubic-bezier(.2,.9,.2,1)}
+    .sorteio-countdown{display:flex;align-items:center;gap:8px;font-size:13px}
+    .sorteio-actions{display:flex;gap:8px;justify-content:flex-end}
+    .btn-participar{background:linear-gradient(90deg,#ff9800,#ffb74d);border:none;padding:8px 12px;border-radius:6px;color:#fff;cursor:pointer}
+    .btn-details{background:transparent;border:1px solid #ccc;padding:8px 12px;border-radius:6px;cursor:pointer}
+    .sorteio-footer{padding:8px 12px;border-top:1px solid rgba(0,0,0,0.04);font-size:12px;color:#666}
+    @media(max-width:800px){.sorteio-right{width:160px}.sorteio-body{flex-direction:column}.sorteio-right{order:2}}
+  </style>
 </head>
 <body>
 
@@ -1278,6 +1264,8 @@
       fetchVisibleSorteios,
       canParticipate        as canParticipateSorteio,
       registerParticipation as registerParticipationSorteio,
+      fetchSorteioById,
+      fetchSorteioResults,
     } from "./vip5-sorteios-storage.js";
 
     let activePromocoesUsuarioCache = [];
@@ -1373,6 +1361,36 @@
     // Mapeia id → tipo ("promocao" | "sorteio") para despacho no participar()
     const _tipoMap = new Map();
     let produtosAntecipadosUsuario = [];
+    const ITEM_STATUS_LABELS = {
+      ativa: "Ativa",
+      programada: "Programada",
+      pausada: "Pausada",
+      encerrada: "Encerrada",
+    };
+
+    function clearCountdownElementTimer(element) {
+      if (!element) return;
+      if (element._timerId) {
+        clearInterval(element._timerId);
+        element._timerId = null;
+      }
+      element.removeAttribute("data-countdown-managed");
+    }
+
+    function clearCountdownTimers(container = null) {
+      const elements = container
+        ? container.querySelectorAll('[data-countdown-managed="true"]')
+        : document.querySelectorAll('[data-countdown-managed="true"]');
+      elements.forEach(clearCountdownElementTimer);
+    }
+
+    window.addEventListener("beforeunload", () => {
+      clearCountdownTimers();
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+    });
 
     // ── Utilitários ───────────────────────────────────────────────────────────
     function pad(n) {
@@ -1832,25 +1850,15 @@
       countBadge.textContent = total + (total === 1 ? " disponível" : " disponíveis");
       countBadge.style.display = "inline-flex";
 
-      const statusLabel = {
-        ativa:      "Ativa",
-        programada: "Programada",
-        pausada:    "Pausada",
-        encerrada:  "Encerrada",
-      };
-
       const now = new Date();
       list.innerHTML = "";
 
       await Promise.all(itens.map(async (item) => {
         const isSorteio = item.tipo === "sorteio";
 
-        // Ícone diferenciado por tipo
-        const icone = isSorteio ? "🎰" : "🎁";
-
         // Badge de status
         const statusCls = "badge-" + (item.status || "encerrada");
-        const statusTxt = statusLabel[item.status] || item.status || "—";
+        const statusTxt = ITEM_STATUS_LABELS[item.status] || item.status || "—";
 
         // Badge de acesso VIP ou público
         const vipDate = item.dataVip
@@ -1865,72 +1873,85 @@
         const participacoes = isSorteio
           ? (Number(item.participacoesCount) || 0)
           : (Number(item.participacoes)      || 0);
-        const vagasRestantes = quantidade === 0 ? null : Math.max(0, quantidade - participacoes);
-        const urgencyClass   = vagasRestantes !== null && vagasRestantes > 0 && vagasRestantes <= 3 ? " urgent" : "";
-        const vagasTxt = quantidade === 0
-          ? "Ilimitadas"
-          : (vagasRestantes === 0 ? "Esgotadas" : `${vagasRestantes} / ${quantidade}`);
-
-        // Limite por usuário e data de encerramento
-        const limite  = Number(item.limitePorUsuario) || 1;
         const dataFim = fmtDateShort(item.dataFinal);
 
         // Título de fallback por tipo
         const titulo = item.titulo || (isSorteio ? "Sorteio VIP" : "Promoção VIP");
 
-        const descricaoHtml = item.descricao ? `<div class="promo-description">${String(item.descricao)}</div>` : "";
         const tipoBadge = item.tipoSorteio ? `<span class="promo-badge promo-badge-type">${String(item.tipoSorteio)}</span>` : "";
         const div = document.createElement("div");
         div.className = "promo-card";
         div.id = `promo-${item.id}`;
 
+        // compute enhanced fields for the card (backwards-compatible defaults)
+        const bannerUrl = item.banner || item.imagem || '';
+        const premioText = item.premio ? String(item.premio) : '—';
+        const qtdGanhadores = Number(item.quantidadeGanhadores) || 1;
+        const participantesCount = Number(isSorteio ? (item.participacoesCount || 0) : (item.participacoes || 0)) || 0;
+        const totalVagas = Number(item.quantidade) || 0;
+        const progressPct = totalVagas > 0 ? Math.min(100, Math.round((participantesCount / totalVagas) * 100)) : (participantesCount ? 100 : 0);
+
         div.innerHTML = `
-          <div class="promo-card-header">
-            <div class="promo-title-row">
-              <span class="promo-icon-gift">${icone}</span>
-              <span class="promo-titulo">${titulo}</span>
+          <div class="sorteio-card">
+            <div class="sorteio-banner" style="background-image: url('${bannerUrl}');">
+              <div class="sorteio-badges">
+                <span class="badge ${accessCls}">${accessTxt}</span>
+                <span class="badge status ${statusCls}">${statusTxt}</span>
+                ${tipoBadge}
+              </div>
             </div>
-            <div class="promo-badges-row">
-              <span class="promo-status-badge ${statusCls}">${statusTxt}</span>
-              <span class="promo-badge ${accessCls}">${accessTxt}</span>
-              ${tipoBadge}
+            <div class="sorteio-body">
+              <div class="sorteio-left">
+                <h3 class="sorteio-title">${titulo}</h3>
+                <div class="sorteio-meta">
+                  <span class="sorteio-cat">${item.tipoSorteio || ''}</span>
+                  <span class="sorteio-dates">${dataFim}</span>
+                </div>
+                <p class="sorteio-desc">${(item.descricao || '').slice(0, 180)}${(item.descricao || '').length>180?'…':''}</p>
+                <div class="sorteio-stats-row">
+                  <div class="sorteio-prize">🏆 <strong>${premioText}</strong></div>
+                  <div class="sorteio-winners">👑 ${qtdGanhadores} ${qtdGanhadores>1?'ganhadores':'ganhador'}</div>
+                </div>
+              </div>
+              <div class="sorteio-right">
+                <div class="sorteio-progress-wrap">
+                  <div class="sorteio-progress-label">${participantesCount} / ${totalVagas === 0 ? '∞' : totalVagas} participantes</div>
+                  <div class="sorteio-progress-bar" id="progress-${item.id}">
+                    <div class="sorteio-progress-fill" style="width: ${progressPct}%"></div>
+                  </div>
+                </div>
+                <div class="sorteio-countdown" id="countdown-${item.id}" data-end="${item.dataFinal ? (item.dataFinal.toDate ? item.dataFinal.toDate().toISOString() : item.dataFinal) : ''}">
+                  <div class="cd-label">⏳</div>
+                  <div class="cd-time">${dataFim}</div>
+                </div>
+                <div class="sorteio-actions">
+                  <button class="btn-participar" id="btn-part-${item.id}" onclick="participar('${item.id}', this)"><span class="btn-label">Participar</span></button>
+                  <button class="btn btn-outline btn-details" onclick="openSorteioDetails('${item.id}')">Ver detalhes</button>
+                </div>
+              </div>
+            </div>
+            <div class="sorteio-footer">
+              ${item.regulamento ? `<small class="sorteio-regulamento-snippet">${String(item.regulamento).slice(0,200)}${String(item.regulamento).length>200?'…':''}</small>` : ''}
             </div>
           </div>
-          <div class="promo-divider"></div>
-          ${descricaoHtml}
-          <div class="promo-info-grid">
-            <div class="promo-info-item">
-              <span class="promo-info-label"><span class="promo-info-icon">👥</span>Vagas</span>
-              <span class="promo-info-value${urgencyClass}">${vagasTxt}</span>
-            </div>
-            <div class="promo-info-item">
-              <span class="promo-info-label"><span class="promo-info-icon">🔁</span>Limite</span>
-              <span class="promo-info-value">${limite}× por usuário</span>
-            </div>
-            <div class="promo-info-item">
-              <span class="promo-info-label"><span class="promo-info-icon">📅</span>Encerra</span>
-              <span class="promo-info-value">${dataFim}</span>
-            </div>
-            ${isSorteio ? `
-              <div class="promo-info-item">
-                <span class="promo-info-label"><span class="promo-info-icon">🏆</span>Prêmio</span>
-                <span class="promo-info-value">${item.premio ? String(item.premio) : '—'}</span>
-              </div>
-              <div class="promo-info-item">
-                <span class="promo-info-label"><span class="promo-info-icon">👑</span>Ganhadores</span>
-                <span class="promo-info-value">${Number(item.quantidadeGanhadores) || 1}</span>
-              </div>
-            ` : ''}
-          </div>
-          ${item.regulamento ? `<div class="promo-regulamento" style="margin-top:8px;font-size:12px;color:var(--muted);">${String(item.regulamento).length > 300 ? String(item.regulamento).slice(0,300) + '…' : String(item.regulamento)}</div>` : ''}
-          <button class="btn-participar" id="btn-part-${item.id}" onclick="participar('${item.id}', this)">
-            <span class="btn-spinner"></span>
-            <span class="btn-label">Participar</span>
-          </button>
-          <div class="promo-feedback" id="feedback-${item.id}"></div>
         `;
 
         list.appendChild(div);
+
+        // initialize animated progress bar for this card
+        try {
+          const progressFill = div.querySelector('.sorteio-progress-fill');
+          if (progressFill) {
+            // animate to target width
+            requestAnimationFrame(() => { progressFill.style.width = `${progressPct}%`; });
+          }
+
+          // initialize countdown element
+          const cdElem = div.querySelector('.sorteio-countdown');
+          if (cdElem) { initCountdownElement(cdElem); }
+        } catch (e) {
+          console.warn('[VIP5-USUARIO] init card UI error', e);
+        }
 
         // Pré-verifica elegibilidade de participação
         const btn   = div.querySelector(`#btn-part-${item.id}`);
@@ -2267,6 +2288,266 @@
       console.error("[VIP5-USUARIO] Erro ao verificar VIP:", err.code, err.message, err);
       showError("Erro ao verificar acesso VIP: " + (err.message || "Tente novamente."));
     }
+
+  // ── Helpers: per-card countdown and modal stub ──────────────────────────────
+  function initCountdownElement(cdElem) {
+      if (!cdElem) return;
+      if (cdElem._timerId) {
+        clearInterval(cdElem._timerId);
+        cdElem._timerId = null;
+      }
+      const end = cdElem.getAttribute('data-end');
+      if (!end) return;
+      const endDate = new Date(end);
+      function tick() {
+        const now = new Date();
+        const diff = endDate - now;
+        const timeEl = cdElem.querySelector('.cd-time');
+        if (!timeEl) return;
+        if (diff <= 0) {
+          if (cdElem._timerId) {
+            clearInterval(cdElem._timerId);
+            cdElem._timerId = null;
+          }
+          timeEl.textContent = 'Encerrado';
+          cdElem.classList.add('countdown-expired');
+          return;
+        }
+        const days = Math.floor(diff / (1000*60*60*24));
+        const hours = Math.floor((diff / (1000*60*60)) % 24);
+        const mins = Math.floor((diff / (1000*60)) % 60);
+        const secs = Math.floor((diff / 1000) % 60);
+        timeEl.textContent = `${days>0?days+'d ':''}${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+      }
+      tick();
+      const id = setInterval(tick, 1000);
+      cdElem._timerId = id;
+      cdElem.setAttribute('data-countdown-managed', 'true');
+  }
+
+  window.openSorteioDetails = window.openSorteioDetails || async function (id) {
+    try {
+      const mount = document.getElementById('sorteio-modal-root') || (() => {
+        const container = document.createElement('div');
+        container.id = 'sorteio-modal-root';
+        document.body.appendChild(container);
+        return container;
+      })();
+
+      // Modal markup
+      mount.innerHTML = `
+        <div class="sb-overlay" id="sb-overlay">
+          <div class="sb-modal" role="dialog" aria-modal="true" aria-label="Detalhes do Sorteio">
+            <header class="sb-modal-header">
+              <div class="sb-title">Detalhes do Sorteio</div>
+              <div class="sb-actions"><button id="sb-close" class="sb-btn-close">✕</button></div>
+            </header>
+            <nav class="sb-tabs" role="tablist">
+              <button role="tab" data-tab="overview" class="sb-tab sb-tab-active">🏆 Visão Geral</button>
+              <button role="tab" data-tab="prize" class="sb-tab">🎁 Prêmio</button>
+              <button role="tab" data-tab="rules" class="sb-tab">📜 Regulamento</button>
+              <button role="tab" data-tab="participants" class="sb-tab">👥 Participantes</button>
+              <button role="tab" data-tab="winners" class="sb-tab">🏅 Ganhadores</button>
+              <button role="tab" data-tab="stats" class="sb-tab">📊 Estatísticas</button>
+              <button role="tab" data-tab="faq" class="sb-tab">❓ FAQ</button>
+            </nav>
+            <main class="sb-content">
+              <section id="tab-overview" class="sb-panel sb-panel-active"></section>
+              <section id="tab-prize" class="sb-panel"></section>
+              <section id="tab-rules" class="sb-panel"></section>
+              <section id="tab-participants" class="sb-panel"></section>
+              <section id="tab-winners" class="sb-panel"></section>
+              <section id="tab-stats" class="sb-panel"></section>
+              <section id="tab-faq" class="sb-panel"></section>
+            </main>
+          </div>
+        </div>
+      `;
+
+      // inject styles if not present
+      if (!document.getElementById('sorteio-modal-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sorteio-modal-styles';
+        style.textContent = `
+          .sb-overlay{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:10000;animation:sb-fade .18s ease}
+          @keyframes sb-fade{from{opacity:0}to{opacity:1}}
+          .sb-modal{width:92%;max-width:980px;background:#0f1724;color:#e6eef8;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(2,6,23,0.6);transform:translateY(12px);animation:sb-pop .22s cubic-bezier(.2,.9,.2,1)}
+          @keyframes sb-pop{from{opacity:0;transform:translateY(24px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+          .sb-modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.03)}
+          .sb-title{font-weight:700;font-size:18px}
+          .sb-btn-close{background:transparent;border:none;color:#9fb3d8;font-size:18px;cursor:pointer}
+          .sb-tabs{display:flex;gap:6px;padding:10px 16px;overflow:auto;background:linear-gradient(90deg, rgba(255,255,255,0.01), transparent)}
+          .sb-tab{background:transparent;border:1px solid transparent;color:#bcd3ee;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+          .sb-tab-active{background:linear-gradient(90deg,#1e3a8a,#2563eb);color:#fff;border-color:rgba(255,255,255,0.04)}
+          .sb-content{padding:18px;max-height:66vh;overflow:auto}
+          .sb-panel{display:none}
+          .sb-panel-active{display:block}
+          .sb-banner{height:220px;background-size:cover;background-position:center;border-radius:8px;margin-bottom:12px}
+          .sb-grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+          .sb-meta{background:rgba(255,255,255,0.03);padding:12px;border-radius:8px}
+          .sb-section-title{font-weight:700;margin-bottom:8px}
+          .sb-list{display:flex;flex-direction:column;gap:8px}
+          .sb-participant{display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02)}
+          .sb-avatar{width:44px;height:44px;border-radius:999px;background:#253449;display:inline-block;flex-shrink:0}
+          .sb-pill{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.03);font-weight:600}
+          @media(max-width:820px){.sb-grid{grid-template-columns:1fr}.sb-banner{height:140px}}
+        `;
+        document.head.appendChild(style);
+      }
+
+      // wire events
+      mount.querySelector('#sb-close').addEventListener('click', () => { mount.innerHTML = ''; });
+      mount.querySelectorAll('.sb-tab').forEach((btn) => {
+        btn.addEventListener('click', (ev) => {
+          mount.querySelectorAll('.sb-tab').forEach(x => x.classList.remove('sb-tab-active'));
+          btn.classList.add('sb-tab-active');
+          const tab = btn.getAttribute('data-tab');
+          mount.querySelectorAll('.sb-panel').forEach(p => p.classList.remove('sb-panel-active'));
+          const panel = mount.querySelector(`#tab-${tab}`);
+          if (panel) panel.classList.add('sb-panel-active');
+        });
+      });
+
+      // Load data from storage
+      const res = await fetchSorteioById(id);
+      if (!res.success) {
+        mount.querySelector('#tab-overview').innerHTML = `<div class="sb-meta">Erro ao carregar sorteio: ${res.error}</div>`;
+        return;
+      }
+      const sorteio = res.data;
+
+      // Overview
+      const overview = mount.querySelector('#tab-overview');
+      overview.innerHTML = `
+        <div class="sb-grid">
+          <div>
+            <div class="sb-banner" style="background-image: url('${sorteio.imagem || sorteio.banner || ''}')"></div>
+            <h2 style="margin:0 0 8px 0">${sorteio.titulo || 'Sorteio'}</h2>
+            <div style="color:#bcd3ee;margin-bottom:12px">${sorteio.descricao || ''}</div>
+          </div>
+          <aside class="sb-meta">
+            <div class="sb-section-title">Resumo</div>
+            <div>Categoria: <strong>${sorteio.tipoSorteio || '—'}</strong></div>
+            <div>Status: <span class="sb-pill">${sorteio.status || '—'}</span></div>
+            <div>Tipo: <strong>${(sorteio.dataVip ? 'VIP' : 'Público')}</strong></div>
+            <div>Abertura: <strong>${sorteio.dataPublica ? new Date(sorteio.dataPublica.toDate ? sorteio.dataPublica.toDate() : sorteio.dataPublica).toLocaleString() : '—'}</strong></div>
+            <div>Data do sorteio: <strong>${sorteio.dataFinal ? new Date(sorteio.dataFinal.toDate ? sorteio.dataFinal.toDate() : sorteio.dataFinal).toLocaleString() : '—'}</strong></div>
+            <div>Participantes: <strong>${Number(sorteio.participacoesCount || 0)}</strong></div>
+            <div>Ganhadores: <strong>${Number(sorteio.quantidadeGanhadores || 1)}</strong></div>
+            <div style="margin-top:8px">Contagem:
+              <div class="modal-countdown-wrapper" data-end="${sorteio.dataFinal ? (sorteio.dataFinal.toDate ? sorteio.dataFinal.toDate().toISOString() : sorteio.dataFinal) : ''}" style="margin-top:6px">
+                <div class="cd-label">⏳</div>
+                <div id="modal-countdown" class="cd-time" style="font-weight:700">${sorteio.dataFinal ? '' : '—'}</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      `;
+
+      // Prize tab
+      const prize = mount.querySelector('#tab-prize');
+      prize.innerHTML = `
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="flex:1">
+            <div class="sb-section-title">Prêmio</div>
+            <div style="font-size:18px;font-weight:700">${sorteio.premio || '—'}</div>
+            <div style="margin-top:8px;color:#bcd3ee">Valor estimado: <strong>${sorteio.valor || '—'}</strong></div>
+            <div style="margin-top:8px;color:#bcd3ee">Forma de entrega: <strong>${sorteio.entrega || '—'}</strong></div>
+            <div style="margin-top:12px;color:#bcd3ee">Observações: ${sorteio.observacoes || '—'}</div>
+          </div>
+          <div style="width:220px">
+            ${sorteio.imagem ? `<img src="${sorteio.imagem}" alt="prêmio" style="width:100%;height:140px;object-fit:cover;border-radius:8px">` : `<div style="width:100%;height:140px;background:linear-gradient(90deg,#0b1220,#122137);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#6b89a8">Sem imagem</div>`}
+          </div>
+        </div>
+      `;
+
+      // Rules tab
+      const rules = mount.querySelector('#tab-rules');
+      rules.innerHTML = `<div style="white-space:pre-wrap;line-height:1.5">${sorteio.regulamento || 'Regulamento não disponível.'}</div>`;
+
+      // Participants tab
+      const participantsPanel = mount.querySelector('#tab-participants');
+      participantsPanel.innerHTML = `<div class="sb-section-title">Participantes</div><div id="participants-list" class="sb-list">Carregando…</div>`;
+      (async () => {
+        try {
+          const coll = collection(db, 'vip5_sorteios', id, 'participantes');
+          const snaps = await getDocs(coll);
+          const items = snaps.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=> (b.lastParticipationAt?1:0)-(a.lastParticipationAt?1:0));
+          const list = mount.querySelector('#participants-list');
+          list.innerHTML = '';
+          for (const p of items) {
+            const el = document.createElement('div'); el.className='sb-participant';
+            el.innerHTML = `<div class="sb-avatar"></div><div style="flex:1"><div style="font-weight:700">${p.nome || p.displayName || p.uid}</div><div style="font-size:12px;color:#bcd3ee">${p.lastParticipationAt ? (new Date(p.lastParticipationAt.toDate ? p.lastParticipationAt.toDate() : p.lastParticipationAt)).toLocaleString() : ''}</div></div>`;
+            list.appendChild(el);
+          }
+          if (!items.length) list.textContent = 'Nenhum participante registrado.';
+        } catch (err) {
+          mount.querySelector('#participants-list').textContent = 'Erro ao carregar participantes.';
+          console.error(err);
+        }
+      })();
+
+      // Winners tab
+      const winnersPanel = mount.querySelector('#tab-winners');
+      winnersPanel.innerHTML = `<div class="sb-section-title">Ganhadores</div><div id="winners-list" class="sb-list">Carregando…</div>`;
+      (async () => {
+        try {
+          const r = await fetchSorteioResults(id, { limit: 20 });
+          const list = mount.querySelector('#winners-list'); list.innerHTML = '';
+          if (!r.success || !r.data.items.length) { list.textContent = 'Ainda não há vencedores.'; return; }
+          for (const result of r.data.items) {
+            const winners = Array.isArray(result.winners) ? result.winners : (result.winner ? [result.winner] : []);
+            for (let i=0;i<winners.length;i++){
+              const w = winners[i];
+              const el = document.createElement('div'); el.className='sb-participant';
+              el.innerHTML = `<div class="sb-avatar"></div><div style="flex:1"><div style="font-weight:700">${w?.uid || w?.nome || '—'}</div><div style="font-size:12px;color:#bcd3ee">Posição: ${i+1} • ${result.createdAt ? (new Date(result.createdAt.toDate ? result.createdAt.toDate() : result.createdAt)).toLocaleString() : ''}</div></div>`;
+              list.appendChild(el);
+            }
+          }
+        } catch (err) {
+          mount.querySelector('#winners-list').textContent = 'Erro ao carregar vencedores.';
+          console.error(err);
+        }
+      })();
+
+      // Stats tab
+      const statsPanel = mount.querySelector('#tab-stats');
+      const total = Number(sorteio.quantidade || 0);
+      const participants = Number(sorteio.participacoesCount || 0);
+      const filledPct = total>0?Math.round((participants/total)*100): (participants?100:0);
+      const chance = participants>0?((1/(participants))*100).toFixed(2)+'%':'—';
+      statsPanel.innerHTML = `
+        <div class="sb-section-title">Estatísticas</div>
+        <div>Participantes: <strong>${participants}</strong></div>
+        <div>Vagas: <strong>${total||'Ilimitadas'}</strong></div>
+        <div>Porcentagem preenchida: <strong>${filledPct}%</strong></div>
+        <div>Tempo restante: <strong id="modal-time-remaining">${sorteio.dataFinal? 'Calculando...' : '—'}</strong></div>
+        <div>Quantidade de ganhadores: <strong>${Number(sorteio.quantidadeGanhadores||1)}</strong></div>
+        <div>Chance aproximada: <strong>${chance}</strong></div>
+      `;
+
+      // FAQ tab
+      const faq = mount.querySelector('#tab-faq');
+      faq.innerHTML = `
+        <div class="sb-section-title">Perguntas Frequentes</div>
+        <div><strong>Como participar?</strong><div>Use o botão Participar no card do sorteio.</div></div>
+        <div style="margin-top:8px"><strong>Quem pode participar?</strong><div>Verifique se o sorteio é VIP ou Público nas informações.</div></div>
+        <div style="margin-top:8px"><strong>Quantas vezes posso participar?</strong><div>Depende do limite por usuário definido no sorteio.</div></div>
+        <div style="margin-top:8px"><strong>Como recebo o prêmio?</strong><div>Contato via dados informados no perfil ou conforme regulamento.</div></div>
+        <div style="margin-top:8px"><strong>Quando o resultado será divulgado?</strong><div>Na data do sorteio definida nas informações.</div></div>
+      `;
+
+      // start modal countdown using the wrapper element
+      const modalWrapper = mount.querySelector('.modal-countdown-wrapper');
+      if (modalWrapper) {
+        initCountdownElement(modalWrapper);
+      }
+
+    } catch (error) {
+      console.error('[VIP5-USUARIO] openSorteioDetails error', error);
+      alert('Falha ao abrir o modal de detalhes: ' + (error.message || error));
+    }
+  };
   </script>
 
 </body>
