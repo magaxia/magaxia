@@ -1361,36 +1361,6 @@
     // Mapeia id → tipo ("promocao" | "sorteio") para despacho no participar()
     const _tipoMap = new Map();
     let produtosAntecipadosUsuario = [];
-    const ITEM_STATUS_LABELS = {
-      ativa: "Ativa",
-      programada: "Programada",
-      pausada: "Pausada",
-      encerrada: "Encerrada",
-    };
-
-    function clearCountdownElementTimer(element) {
-      if (!element) return;
-      if (element._timerId) {
-        clearInterval(element._timerId);
-        element._timerId = null;
-      }
-      element.removeAttribute("data-countdown-managed");
-    }
-
-    function clearCountdownTimers(container = null) {
-      const elements = container
-        ? container.querySelectorAll('[data-countdown-managed="true"]')
-        : document.querySelectorAll('[data-countdown-managed="true"]');
-      elements.forEach(clearCountdownElementTimer);
-    }
-
-    window.addEventListener("beforeunload", () => {
-      clearCountdownTimers();
-      if (countdownTimer) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
-      }
-    });
 
     // ── Utilitários ───────────────────────────────────────────────────────────
     function pad(n) {
@@ -2291,38 +2261,29 @@
 
   // ── Helpers: per-card countdown and modal stub ──────────────────────────────
   function initCountdownElement(cdElem) {
-      if (!cdElem) return;
-      if (cdElem._timerId) {
-        clearInterval(cdElem._timerId);
-        cdElem._timerId = null;
+    const end = cdElem.getAttribute('data-end');
+    if (!end) return;
+    const endDate = new Date(end);
+    function tick() {
+      const now = new Date();
+      const diff = endDate - now;
+      const timeEl = cdElem.querySelector('.cd-time');
+      if (!timeEl) return;
+      if (diff <= 0) {
+        timeEl.textContent = 'Encerrado';
+        cdElem.classList.add('countdown-expired');
+        return;
       }
-      const end = cdElem.getAttribute('data-end');
-      if (!end) return;
-      const endDate = new Date(end);
-      function tick() {
-        const now = new Date();
-        const diff = endDate - now;
-        const timeEl = cdElem.querySelector('.cd-time');
-        if (!timeEl) return;
-        if (diff <= 0) {
-          if (cdElem._timerId) {
-            clearInterval(cdElem._timerId);
-            cdElem._timerId = null;
-          }
-          timeEl.textContent = 'Encerrado';
-          cdElem.classList.add('countdown-expired');
-          return;
-        }
-        const days = Math.floor(diff / (1000*60*60*24));
-        const hours = Math.floor((diff / (1000*60*60)) % 24);
-        const mins = Math.floor((diff / (1000*60)) % 60);
-        const secs = Math.floor((diff / 1000) % 60);
-        timeEl.textContent = `${days>0?days+'d ':''}${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-      }
-      tick();
-      const id = setInterval(tick, 1000);
-      cdElem._timerId = id;
-      cdElem.setAttribute('data-countdown-managed', 'true');
+      const days = Math.floor(diff / (1000*60*60*24));
+      const hours = Math.floor((diff / (1000*60*60)) % 24);
+      const mins = Math.floor((diff / (1000*60)) % 60);
+      const secs = Math.floor((diff / 1000) % 60);
+      timeEl.textContent = `${days>0?days+'d ':''}${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    // store the timer on element to allow cleanup if needed
+    cdElem._timerId = id;
   }
 
   window.openSorteioDetails = window.openSorteioDetails || async function (id) {
