@@ -1878,6 +1878,8 @@
         // Título de fallback por tipo
         const titulo = item.titulo || (isSorteio ? "Sorteio VIP" : "Promoção VIP");
 
+        const descricaoHtml = item.descricao ? `<div class="promo-description">${String(item.descricao)}</div>` : "";
+        const tipoBadge = item.tipoSorteio ? `<span class="promo-badge promo-badge-type">${String(item.tipoSorteio)}</span>` : "";
         const div = document.createElement("div");
         div.className = "promo-card";
         div.id = `promo-${item.id}`;
@@ -1891,9 +1893,11 @@
             <div class="promo-badges-row">
               <span class="promo-status-badge ${statusCls}">${statusTxt}</span>
               <span class="promo-badge ${accessCls}">${accessTxt}</span>
+              ${tipoBadge}
             </div>
           </div>
           <div class="promo-divider"></div>
+          ${descricaoHtml}
           <div class="promo-info-grid">
             <div class="promo-info-item">
               <span class="promo-info-label"><span class="promo-info-icon">👥</span>Vagas</span>
