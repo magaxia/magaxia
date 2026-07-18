@@ -1592,6 +1592,15 @@
       countdownTimer = setInterval(tick, 1000);
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
     // ── Carrega e exibe promoções + sorteios ──────────────────────────────────
     async function vip5SorteioLoadItems(uid, vipData) {
       const card       = document.getElementById("promos-card");
@@ -1665,8 +1674,9 @@
           const isSorteio = item.tipo === "sorteio";
 
           // Badge de status
-          const statusCls = "badge-" + (item.status || "encerrada");
-          const statusTxt = ITEM_STATUS_LABELS[item.status] || item.status || "—";
+          const normalizedStatus = String(item.status || "").toLowerCase();
+          const statusCls = "badge-" + (normalizedStatus || "encerrada");
+          const statusTxt = ITEM_STATUS_LABELS[normalizedStatus] || item.status || "—";
 
           // Badge de acesso VIP ou público
           const vipDate = item.dataVip
@@ -1681,41 +1691,69 @@
           const participacoes = isSorteio
             ? (Number(item.participacoesCount) || 0)
             : (Number(item.participacoes)      || 0);
-          const dataFim = fmtDateShort(item.dataFinal);
+          const dataVipFmt = fmtDateShort(item.dataVip);
+          const dataPublicaFmt = fmtDateShort(item.dataPublica);
+          const dataSorteioFmt = fmtDateShort(item.dataSorteio);
+          const dataFinal = item.dataFinal || item.dataSorteio || item.dataPublica || null;
+          const dataFim = fmtDateShort(dataFinal);
 
           // Título de fallback por tipo
-          const titulo = item.titulo || (isSorteio ? "Sorteio VIP" : "Promoção VIP");
+          const titulo = item.titulo || item.title || (isSorteio ? "Sorteio VIP" : "Promoção VIP");
+          const bannerUrl = item.banner || item.imagem || item.imageUrl || item.image || "";
+          const descricao = String(item.descricao || item.descricaoDetalhada || item.details || "").trim();
+          const premioText = item.premio ? String(item.premio) : (item.premioTexto || item.valor || "—");
+          const qtdGanhadores = Number(item.quantidadeGanhadores || item.ganhadores || item.qtdGanhadores || 1) || 1;
+          const participantesCount = Number(isSorteio ? (item.participacoesCount || 0) : (item.participacoes || 0)) || 0;
+          const totalVagas = Number(item.quantidade || item.vagas || item.vaga || 0) || 0;
+          const regulamento = String(item.regulamento || item.regras || item.termos || "").trim();
+          const destaque = item.destaque === true || item.destaque === "true" || item.destaque === 1;
 
-          const tipoBadge = item.tipoSorteio ? `<span class="vip5-sorteio-badge vip5-sorteio-badge-type">${String(item.tipoSorteio)}</span>` : "";
+          const tipoBadge = item.tipoSorteio ? `<span class="vip5-sorteio-badge vip5-sorteio-badge-type">${escapeHtml(String(item.tipoSorteio))}</span>` : "";
+          const destaqueBadge = destaque ? `<span class="vip5-sorteio-badge vip5-sorteio-badge-vip" style="background: linear-gradient(135deg, #ffb300, #f57c00); color:#fff;">⭐ Destaque</span>` : "";
+          const bannerMarkup = bannerUrl
+            ? `<img src="${escapeHtml(bannerUrl)}" alt="${escapeHtml(titulo)}" style="width:100%;height:140px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,0.12);margin-bottom:10px;">`
+            : "";
+          const summaryRows = [
+            premioText && premioText !== "—" ? `<span class="vip5-sorteio-pill">🏆 <strong>${escapeHtml(String(premioText))}</strong></span>` : "",
+            qtdGanhadores > 1 ? `<span class="vip5-sorteio-pill">👑 ${qtdGanhadores} ganhadores</span>` : `<span class="vip5-sorteio-pill">👑 ${qtdGanhadores} ganhador</span>`,
+          ].filter(Boolean).join("");
+          const sorteioSummary = isSorteio && summaryRows ? `<div class="vip5-sorteio-summary">${summaryRows}</div>` : "";
+          const descricaoMarkup = descricao ? escapeHtml(descricao) : "Acompanhe a novidade e participe quando a oportunidade estiver disponível.";
+          const regulamentoMarkup = regulamento ? `<div class="vip5-sorteio-info-item"><div class="vip5-sorteio-info-label">📜 Regulamento</div><div class="vip5-sorteio-info-value">${escapeHtml(regulamento)}</div></div>` : "";
+          const dataInfoMarkup = isSorteio ? `
+            <div class="vip5-sorteio-info-item">
+              <div class="vip5-sorteio-info-label">🗓️ VIP</div>
+              <div class="vip5-sorteio-info-value">${dataVipFmt}</div>
+            </div>
+            <div class="vip5-sorteio-info-item">
+              <div class="vip5-sorteio-info-label">📢 Pública</div>
+              <div class="vip5-sorteio-info-value">${dataPublicaFmt}</div>
+            </div>
+            <div class="vip5-sorteio-info-item">
+              <div class="vip5-sorteio-info-label">🎯 Sorteio</div>
+              <div class="vip5-sorteio-info-value">${dataSorteioFmt}</div>
+            </div>
+          ` : "";
+
           const div = document.createElement("div");
           div.className = "vip5-sorteio-card";
           div.id = `promo-${item.id}`;
-
-          // compute enhanced fields for the card (backwards-compatible defaults)
-          const premioText = item.premio ? String(item.premio) : '—';
-          const qtdGanhadores = Number(item.quantidadeGanhadores) || 1;
-          const participantesCount = Number(isSorteio ? (item.participacoesCount || 0) : (item.participacoes || 0)) || 0;
-          const totalVagas = Number(item.quantidade) || 0;
-          const sorteioSummary = isSorteio ? `
-            <div class="vip5-sorteio-summary">
-              <span class="vip5-sorteio-pill">🏆 <strong>${premioText}</strong></span>
-              <span class="vip5-sorteio-pill">👑 ${qtdGanhadores} ${qtdGanhadores > 1 ? 'ganhadores' : 'ganhador'}</span>
-            </div>
-          ` : "";
 
           div.innerHTML = `
             <div class="vip5-sorteio-card-header">
               <div class="vip5-sorteio-title-row">
                 <span class="vip5-sorteio-icon">${isSorteio ? '🎟️' : '🎁'}</span>
-                <div class="vip5-sorteio-title">${titulo}</div>
+                <div class="vip5-sorteio-title">${escapeHtml(titulo)}</div>
               </div>
               <div class="vip5-sorteio-badges-row">
-                <span class="vip5-sorteio-status-badge ${statusCls}">${statusTxt}</span>
+                <span class="vip5-sorteio-status-badge ${statusCls}">${escapeHtml(statusTxt)}</span>
                 <span class="vip5-sorteio-badge ${accessCls}">${accessTxt}</span>
                 ${tipoBadge}
+                ${destaqueBadge}
               </div>
             </div>
             <div class="vip5-sorteio-divider"></div>
+            ${bannerMarkup}
             <div class="vip5-sorteio-info-grid">
               <div class="vip5-sorteio-info-item">
                 <div class="vip5-sorteio-info-label">📅 Fim</div>
@@ -1730,11 +1768,13 @@
                 <div class="vip5-sorteio-info-value" id="countdown-${item.id}" data-end="${item.dataFinal ? (item.dataFinal.toDate ? item.dataFinal.toDate().toISOString() : item.dataFinal) : ''}">${dataFim}</div>
               </div>
             </div>
+            ${dataInfoMarkup}
             ${sorteioSummary}
             <div class="vip5-sorteio-info-item">
               <div class="vip5-sorteio-info-label">📝 ${isSorteio ? 'Descrição' : 'Detalhes'}</div>
-              <div class="vip5-sorteio-info-value">${(item.descricao || '').slice(0, 120)}${(item.descricao || '').length>120?'…':''}</div>
+              <div class="vip5-sorteio-info-value">${descricaoMarkup}</div>
             </div>
+            ${regulamentoMarkup}
             <button class="vip5-sorteio-button" id="btn-part-${item.id}" onclick="vip5SorteioParticipar('${item.id}', this)"><span class="btn-label">Participar</span></button>
           `;
 

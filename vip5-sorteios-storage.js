@@ -77,8 +77,54 @@ function _serializeSnapshot(snapshot) {
   return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
 }
 
+function _normalizeWinnerRecord(value) {
+  if (!value) {
+    return null;
+  }
+  if (typeof value === "string") {
+    return { uid: value, id: value };
+  }
+  if (typeof value === "object") {
+    const uid = value.uid || value.id || value.userId || null;
+    const id = value.id || uid || null;
+    if (!uid && !id) {
+      return null;
+    }
+    return _stripUndefined({
+      id,
+      uid,
+      count: _toNonNegativeInteger(value.count, 0),
+      status: value.status || null,
+      lastParticipationAt: value.lastParticipationAt || null,
+      selectedAt: value.selectedAt || null,
+    });
+  }
+  return null;
+}
+
+function _normalizeWinners(value, fallbackWinner = null) {
+  const list = [];
+  if (Array.isArray(value)) {
+    value.forEach((entry) => {
+      const normalized = _normalizeWinnerRecord(entry);
+      if (normalized) {
+        list.push(normalized);
+      }
+    });
+  }
+  if (!list.length) {
+    const fallback = _normalizeWinnerRecord(fallbackWinner);
+    if (fallback) {
+      list.push(fallback);
+    }
+  }
+  return list;
+}
+
 function _withDisplayDefaults(sorteio) {
   if (!sorteio) return sorteio;
+  const winners = _normalizeWinners(sorteio.winners, sorteio.winner);
+  const firstWinner = winners[0] || _normalizeWinnerRecord(sorteio.winner) || null;
   return {
     ...sorteio,
     banner: sorteio.banner || sorteio.imagem || null,
@@ -88,7 +134,12 @@ function _withDisplayDefaults(sorteio) {
     valor: sorteio.valor ?? null,
     entrega: sorteio.entrega ?? null,
     observacoes: sorteio.observacoes ?? null,
-    winners: Array.isArray(sorteio.winners) ? sorteio.winners : (sorteio.winner ? [sorteio.winner] : []),
+    destaque: Boolean(sorteio.destaque),
+    ordem: _toNonNegativeInteger(sorteio.ordem, 0),
+    idInterno: _toSafeString(sorteio.idInterno) || null,
+    tipoSorteio: _toSafeString(sorteio.tipoSorteio) || _toSafeString(sorteio.tipo) || null,
+    winner: firstWinner,
+    winners,
     participacoesCount: Number(sorteio.participacoesCount || 0),
     quantidade: Number(sorteio.quantidade || 0),
   };
@@ -173,15 +224,20 @@ function _validateSorteioPayload(payload, isCreate = true) {
   const titulo = _toSafeString(payload.titulo);
   const descricao = payload.descricao === undefined ? null : _toSafeString(String(payload.descricao));
   const imagem = payload.imagem === undefined ? null : _toSafeString(String(payload.imagem));
+  const banner = payload.banner === undefined ? null : _toSafeString(String(payload.banner));
   const tipoSorteio = payload.tipoSorteio === undefined ? null : _toSafeString(String(payload.tipoSorteio));
   const premio = payload.premio === undefined ? null : _toSafeString(String(payload.premio));
   const regulamento = payload.regulamento === undefined ? null : _toSafeString(String(payload.regulamento));
+  const idInterno = payload.idInterno === undefined ? null : _toSafeString(String(payload.idInterno));
+  const destaque = payload.destaque === undefined ? null : Boolean(payload.destaque);
+  const ordem = payload.ordem === undefined ? undefined : _toNonNegativeInteger(payload.ordem);
   const status = payload.status === undefined ? null : payload.status;
   const quantidade = payload.quantidade === undefined ? undefined : _toNonNegativeInteger(payload.quantidade);
   const limitePorUsuario = payload.limitePorUsuario === undefined ? undefined : _toNonNegativeInteger(payload.limitePorUsuario);
   const quantidadeGanhadores = payload.quantidadeGanhadores === undefined ? undefined : _toNonNegativeInteger(payload.quantidadeGanhadores);
   const dataVip = payload.dataVip === undefined ? null : _normalizeTimestamp(payload.dataVip);
   const dataPublica = payload.dataPublica === undefined ? null : _normalizeTimestamp(payload.dataPublica);
+  const dataSorteio = payload.dataSorteio === undefined ? null : _normalizeTimestamp(payload.dataSorteio);
   const dataFinal = payload.dataFinal === undefined ? null : _normalizeTimestamp(payload.dataFinal);
 
   if (isCreate && !titulo) {
@@ -220,6 +276,9 @@ function _validateSorteioPayload(payload, isCreate = true) {
   if (payload.dataPublica !== undefined && payload.dataPublica !== null && !dataPublica) {
     errors.push('"dataPublica" inválida.');
   }
+  if (payload.dataSorteio !== undefined && payload.dataSorteio !== null && !dataSorteio) {
+    errors.push('"dataSorteio" inválida.');
+  }
   if (payload.dataFinal !== undefined && payload.dataFinal !== null && !dataFinal) {
     errors.push('"dataFinal" inválida.');
   }
@@ -227,8 +286,11 @@ function _validateSorteioPayload(payload, isCreate = true) {
   if (dataVip && dataPublica && _timestampToMillis(dataVip) > _timestampToMillis(dataPublica)) {
     errors.push('"dataVip" deve ser anterior ou igual a "dataPublica".');
   }
-  if (dataPublica && dataFinal && _timestampToMillis(dataPublica) > _timestampToMillis(dataFinal)) {
-    errors.push('"dataPublica" deve ser anterior ou igual a "dataFinal".');
+  if (dataPublica && dataSorteio && _timestampToMillis(dataPublica) > _timestampToMillis(dataSorteio)) {
+    errors.push('"dataPublica" deve ser anterior ou igual a "dataSorteio".');
+  }
+  if (dataSorteio && dataFinal && _timestampToMillis(dataSorteio) > _timestampToMillis(dataFinal)) {
+    errors.push('"dataSorteio" deve ser anterior ou igual a "dataFinal".');
   }
   if (dataVip && dataFinal && _timestampToMillis(dataVip) > _timestampToMillis(dataFinal)) {
     errors.push('"dataVip" deve ser anterior ou igual a "dataFinal".');
@@ -254,7 +316,12 @@ function _validateSorteioPayload(payload, isCreate = true) {
     limitePorUsuario,
     dataVip,
     dataPublica,
+    dataSorteio,
     dataFinal,
+    banner,
+    idInterno,
+    destaque,
+    ordem,
   };
 }
 
@@ -344,7 +411,12 @@ export async function createSorteio(payload, admin = {}) {
       limitePorUsuario,
       dataVip,
       dataPublica,
+      dataSorteio,
       dataFinal,
+      banner,
+      idInterno,
+      destaque,
+      ordem,
     } = _validateSorteioPayload(payload, true);
 
     const data = _stripUndefined({
@@ -361,7 +433,12 @@ export async function createSorteio(payload, admin = {}) {
       participacoesCount: 0,
       dataVip,
       dataPublica,
+      dataSorteio,
       dataFinal,
+      banner: banner || null,
+      idInterno: idInterno || null,
+      destaque: Boolean(destaque),
+      ordem: ordem ?? 0,
       createdBy: {
         uid: admin?.uid || null,
         email: admin?.email || null,
@@ -409,7 +486,12 @@ export async function editSorteio(id, changes, admin = {}) {
       limitePorUsuario,
       dataVip,
       dataPublica,
+      dataSorteio,
       dataFinal,
+      banner,
+      idInterno,
+      destaque,
+      ordem,
     } = _validateSorteioPayload(changes, false);
 
     const update = _stripUndefined({
@@ -425,7 +507,12 @@ export async function editSorteio(id, changes, admin = {}) {
       limitePorUsuario,
       dataVip,
       dataPublica,
+      dataSorteio,
       dataFinal,
+      banner: banner || null,
+      idInterno: idInterno || null,
+      destaque: Boolean(destaque),
+      ordem: ordem ?? 0,
       updatedAt: serverTimestamp(),
     });
 
@@ -543,7 +630,12 @@ export async function duplicateSorteio(id, admin = {}) {
       limitePorUsuario: original.limitePorUsuario ?? DEFAULT_USER_LIMIT,
       dataVip: original.dataVip,
       dataPublica: original.dataPublica,
+      dataSorteio: original.dataSorteio,
       dataFinal: original.dataFinal,
+      banner: original.banner || original.imagem || null,
+      idInterno: original.idInterno || null,
+      destaque: Boolean(original.destaque),
+      ordem: _toNonNegativeInteger(original.ordem, 0),
       status: STATUS.PROGRAMADA,
       participacoesCount: 0,
       createdBy: {
@@ -835,28 +927,25 @@ export async function pickSorteioWinner(sorteioId, admin = {}) {
       throw new Error("Sorteio não encontrado.");
     }
 
+    const sorteio = sorteioSnap.data();
     const participantsSnap = await getDocs(_participantCollectionRef(sorteioId));
     const participants = participantsSnap.docs
       .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-      .filter((p) => p && p.uid);
+      .filter((p) => p && (p.uid || p.id));
 
     if (!participants.length) {
       throw new Error("Nenhum participante encontrado para este sorteio.");
     }
 
-    // Determine how many winners to select
-    const sorteio = sorteioSnap.data();
-    const n = Number(sorteio.quantidadeGanhadores || 1);
-    const uniqueParticipants = participants.slice();
-    // If n >= available participants, take all
-    const winnersCount = Math.max(1, Math.min(n, uniqueParticipants.length));
-
-    // Random unique selection
+    const requestedCount = Math.max(1, Math.min(_toNonNegativeInteger(sorteio.quantidadeGanhadores, 1), participants.length));
+    const pool = participants.slice();
     const picked = [];
-    while (picked.length < winnersCount && uniqueParticipants.length) {
-      const idx = Math.floor(Math.random() * uniqueParticipants.length);
-      const item = uniqueParticipants.splice(idx, 1)[0];
-      if (item) picked.push(item);
+    while (picked.length < requestedCount && pool.length) {
+      const idx = Math.floor(Math.random() * pool.length);
+      const item = pool.splice(idx, 1)[0];
+      if (item) {
+        picked.push(item);
+      }
     }
 
     if (!picked.length) {
@@ -874,14 +963,18 @@ export async function pickSorteioWinner(sorteioId, admin = {}) {
 
     const winnerData = winnersArray[0] || null;
     const drawSeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+    const nextDrawNumber = _toNonNegativeInteger(sorteio.lastDraw?.drawNumber, 0) + 1;
     const drawMeta = _stripUndefined({
       drawDate: serverTimestamp(),
       drawBy: { uid: admin?.uid || null, email: admin?.email || null },
-      drawVersion: 'v1',
+      drawVersion: 'v2',
       drawSeed,
+      drawNumber: nextDrawNumber,
+      participantCount: participants.length,
+      winnerCount: winnersArray.length,
+      selectionMode: 'unique',
     });
 
-    // Update sorteio: keep backward-compatible 'winner' (first) and add 'winners' array and last draw metadata
     await updateDoc(sorteioRef, _stripUndefined({
       winner: winnerData || null,
       winners: winnersArray,
@@ -900,6 +993,10 @@ export async function pickSorteioWinner(sorteioId, admin = {}) {
         email: admin?.email || null,
       },
       drawMeta,
+      roundNumber: nextDrawNumber,
+      participantCount: participants.length,
+      winnerCount: winnersArray.length,
+      resultType: 'draw',
     }));
 
     await _writeLog({
@@ -910,7 +1007,7 @@ export async function pickSorteioWinner(sorteioId, admin = {}) {
       message: `Vencedores sorteados para o sorteio "${sorteioId}".`,
     });
 
-    return _ok({ id: sorteioId, winner: winnerData, winners: winnersArray, drawMeta });
+    return _ok({ id: sorteioId, winner: winnerData, winners: winnersArray, drawMeta, resultId: resultRef.id });
   } catch (error) {
     return _err("Erro ao sortear vencedor: " + error.message, error);
   }
