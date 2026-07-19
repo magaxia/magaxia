@@ -1220,7 +1220,8 @@
 
     <div id="sorteios-section" class="tab-panel" style="display:none;">
       <div class="subtab-nav" role="tablist" aria-label="Subabas de sorteios">
-        <button class="subtab-btn active" type="button" data-subtarget="promos-panel">Promoções e Sorteios</button>
+        <button class="subtab-btn active" type="button" data-subtarget="promos-panel">Promoções</button>
+        <button class="subtab-btn" type="button" data-subtarget="sorteios-panel">Sorteios</button>
         <button class="subtab-btn" type="button" data-subtarget="produtos-panel">Produtos Antecipados</button>
       </div>
 
@@ -1231,6 +1232,22 @@
             <span class="vip5-sorteio-count-badge" id="promos-count" style="display:none"></span>
           </div>
           <div class="vip5-sorteio-list" id="promos-list">
+            <div class="vip5-sorteio-loading">
+              <div class="vip5-sorteio-loading-dot"></div>
+              <div class="vip5-sorteio-loading-dot"></div>
+              <div class="vip5-sorteio-loading-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="sorteios-panel" class="subtab-panel" style="display:none;">
+        <div class="card" id="sorteios-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
+          <div class="vip5-sorteio-section-header">
+            <p class="vip5-sorteio-section-title">Sorteios</p>
+            <span class="vip5-sorteio-count-badge" id="sorteios-count" style="display:none"></span>
+          </div>
+          <div class="vip5-sorteio-list" id="sorteios-list">
             <div class="vip5-sorteio-loading">
               <div class="vip5-sorteio-loading-dot"></div>
               <div class="vip5-sorteio-loading-dot"></div>
