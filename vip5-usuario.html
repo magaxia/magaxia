@@ -623,8 +623,9 @@
 
     .vip5-sorteio-info-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
+      align-items: stretch;
     }
 
     .vip5-sorteio-info-item {
@@ -634,8 +635,9 @@
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.05);
       border-radius: 12px;
-      padding: 10px;
-      min-height: 64px;
+      padding: 12px 12px 11px;
+      min-height: 72px;
+      justify-content: center;
     }
 
     .vip5-sorteio-info-label {
@@ -654,6 +656,8 @@
       font-weight: 600;
       color: #e2e8f0;
       line-height: 1.4;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     .vip5-sorteio-button {
