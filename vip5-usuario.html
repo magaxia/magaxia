@@ -1933,9 +1933,6 @@
           const accessCls  = isVipEarly ? "vip5-sorteio-badge-vip"  : "vip5-sorteio-badge-publica";
           const accessTxt  = isVipEarly ? "⭐ VIP"           : "🌐 Público";
 
-          const dataVipFmt = fmtDateShort(item.dataVip);
-          const dataPublicaFmt = fmtDateShort(item.dataPublica);
-          const dataSorteioFmt = fmtDateShort(item.dataSorteio);
           const dataFinal = item.dataFinal || item.dataSorteio || item.dataPublica || null;
           const dataFim = fmtDateShort(dataFinal);
 
@@ -1961,20 +1958,6 @@
           const sorteioSummary = isSorteio && summaryRows ? `<div class="vip5-sorteio-summary">${summaryRows}</div>` : "";
           const descricaoMarkup = descricao ? escapeHtml(descricao) : "Acompanhe a novidade e participe quando a oportunidade estiver disponível.";
           const regulamentoMarkup = regulamento ? `<div class="vip5-sorteio-info-item"><div class="vip5-sorteio-info-label">📜 Regulamento</div><div class="vip5-sorteio-info-value">${escapeHtml(regulamento)}</div></div>` : "";
-          const dataInfoMarkup = isSorteio ? `
-            <div class="vip5-sorteio-info-item">
-              <div class="vip5-sorteio-info-label">🗓️ VIP</div>
-              <div class="vip5-sorteio-info-value">${dataVipFmt}</div>
-            </div>
-            <div class="vip5-sorteio-info-item">
-              <div class="vip5-sorteio-info-label">📢 Pública</div>
-              <div class="vip5-sorteio-info-value">${dataPublicaFmt}</div>
-            </div>
-            <div class="vip5-sorteio-info-item">
-              <div class="vip5-sorteio-info-label">🎯 Sorteio</div>
-              <div class="vip5-sorteio-info-value">${dataSorteioFmt}</div>
-            </div>
-          ` : "";
 
           const div = document.createElement("div");
           div.className = "vip5-sorteio-card";
