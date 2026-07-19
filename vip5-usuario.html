@@ -1865,84 +1865,31 @@
         .replace(/'/g, "&#39;");
     }
 
-    // ── Carrega e exibe promoções + sorteios ──────────────────────────────────
-    async function vip5SorteioLoadItems(uid, vipData) {
-      const card       = document.getElementById("promos-card");
-      const list       = document.getElementById("promos-list");
-      const countBadge = document.getElementById("promos-count");
+    async function renderVip5ItemsList({ listElement, countElement, items, uid, vipData, productId, emptyMessage, itemTypeLabel }) {
+      if (!listElement || !countElement) return;
 
-      if (!card || !list || !countBadge) return;
-      card.style.display = "flex";
-
-      const isVipAtivo = vipData?.vip5Active === true
-        && (!vipData.vip5ExpiresAt || vipData.vip5ExpiresAt > Date.now());
-
-      const productId = getCurrentProductContext();
-      console.log("[VIP5-USUARIO] Carregando promoções e sorteios. isVip:", isVipAtivo, "productId:", productId);
-
-      // Busca promoções e sorteios em paralelo
-      let promoResult, sorteioResult;
-      try {
-        [promoResult, sorteioResult] = await Promise.all([
-          fetchVisiblePromotions({ isVip: isVipAtivo, limit: 20, productId }),
-          fetchVisibleSorteios({ isVip: isVipAtivo, limit: 20 }),
-        ]);
-      } catch (err) {
-        console.error("[VIP5-USUARIO] Erro ao buscar itens:", err.message, err);
-        list.innerHTML = `<div class="vip5-sorteio-empty">
-          <span class="vip5-sorteio-empty-icon">⚠️</span>
-          Erro ao carregar. Tente recarregar a página.
-        </div>`;
+      if (!items.length) {
+        countElement.textContent = "0 disponível";
+        countElement.style.display = "inline-flex";
+        listElement.innerHTML = emptyMessage;
         return;
       }
 
-      // Desembrulha resultados — cada função retorna { success, data: { items }, error }
-      const promos   = promoResult.success   ? promoResult.data.items   : [];
-      const sorteios = sorteioResult.success ? sorteioResult.data.items : [];
-
-      if (!promoResult.success)   console.warn("[VIP5-USUARIO] fetchVisiblePromotions falhou:", promoResult.error);
-      if (!sorteioResult.success) console.warn("[VIP5-USUARIO] fetchVisibleSorteios falhou:", sorteioResult.error);
-
-      // Mescla com tag de tipo e ordena por data de criação (mais recente primeiro)
-      // promos usam campo "criadoEm"; sorteios usam campo "createdAt"
-      const promoItems   = promos.map(p => ({ ...p, tipo: "promocao" }));
-      const sorteioItems = sorteios.map(s => ({ ...s, tipo: "sorteio" }));
-      const itens = [...promoItems, ...sorteioItems].sort((a, b) => {
-        const ta = a.tipo === "promocao" ? _toMs(a.criadoEm) : _toMs(a.createdAt);
-        const tb = b.tipo === "promocao" ? _toMs(b.criadoEm) : _toMs(b.createdAt);
-        return tb - ta;
-      });
-
-      // Registra tipo de cada item para despacho no participar()
-      itens.forEach(item => _tipoMap.set(item.id, item.tipo));
-
-      if (itens.length === 0) {
-        countBadge.textContent = "0 disponível";
-        countBadge.style.display = "inline-flex";
-        list.innerHTML = `<div class="vip5-sorteio-empty">
-          <span class="vip5-sorteio-empty-icon">🎁</span>
-          Nenhuma promoção ou sorteio disponível no momento.
-        </div>`;
-        return;
-      }
-
-      const total = itens.length;
-      countBadge.textContent = total + (total === 1 ? " disponível" : " disponíveis");
-      countBadge.style.display = "inline-flex";
+      const total = items.length;
+      countElement.textContent = total + (total === 1 ? " disponível" : " disponíveis");
+      countElement.style.display = "inline-flex";
+      listElement.innerHTML = "";
 
       const now = new Date();
-      list.innerHTML = "";
 
-      await Promise.all(itens.map(async (item) => {
+      await Promise.all(items.map(async (item) => {
         try {
           const isSorteio = item.tipo === "sorteio";
 
-          // Badge de status
           const normalizedStatus = String(item.status || "").toLowerCase();
           const statusCls = "badge-" + (normalizedStatus || "encerrada");
           const statusTxt = ITEM_STATUS_LABELS[normalizedStatus] || item.status || "—";
 
-          // Badge de acesso VIP ou público
           const vipDate = item.dataVip
             ? (typeof item.dataVip.toDate === "function" ? item.dataVip.toDate() : new Date(item.dataVip))
             : null;
@@ -1950,18 +1897,12 @@
           const accessCls  = isVipEarly ? "vip5-sorteio-badge-vip"  : "vip5-sorteio-badge-publica";
           const accessTxt  = isVipEarly ? "⭐ VIP"           : "🌐 Público";
 
-          // Vagas: promos usam "participacoes"; sorteios usam "participacoesCount"
-          const quantidade    = Number(item.quantidade) || 0;
-          const participacoes = isSorteio
-            ? (Number(item.participacoesCount) || 0)
-            : (Number(item.participacoes)      || 0);
           const dataVipFmt = fmtDateShort(item.dataVip);
           const dataPublicaFmt = fmtDateShort(item.dataPublica);
           const dataSorteioFmt = fmtDateShort(item.dataSorteio);
           const dataFinal = item.dataFinal || item.dataSorteio || item.dataPublica || null;
           const dataFim = fmtDateShort(dataFinal);
 
-          // Título de fallback por tipo
           const titulo = item.titulo || item.title || (isSorteio ? "Sorteio VIP" : "Promoção VIP");
           const bannerUrl = item.banner || item.imagem || item.imageUrl || item.image || "";
           const descricao = String(item.descricao || item.descricaoDetalhada || item.details || "").trim();
@@ -2042,9 +1983,8 @@
             <button class="vip5-sorteio-button" id="btn-part-${item.id}" onclick="vip5SorteioParticipar('${item.id}', this)"><span class="btn-label">Participar</span></button>
           `;
 
-          list.appendChild(div);
+          listElement.appendChild(div);
 
-          // initialize countdown element for the card
           try {
             const cdElem = div.querySelector('#countdown-' + item.id);
             if (cdElem) { vip5SorteioInitCountdownElement(cdElem); }
@@ -2052,19 +1992,16 @@
             console.warn('[VIP5-USUARIO] init card UI error', e);
           }
 
-          // Pré-verifica elegibilidade de participação
           const btn   = div.querySelector(`#btn-part-${item.id}`);
           const fb    = div.querySelector(`#feedback-${item.id}`);
-          const label = btn ? btn.querySelector(".btn-label") : null;
+          const label = btn ? btn.querySelector('.btn-label') : null;
 
-          // Despacha para canParticipate do módulo correto
           const check = isSorteio
             ? await canParticipateSorteio(item.id, uid, vipData)
             : await canParticipatePromocao(item.id, uid, vipData, productId);
 
-          // Ambos retornam { success, data: { canParticipate, reason }, error }
           const canPart = check.success ? (check.data?.canParticipate === true) : false;
-          const reason  = check.success ? (check.data?.reason || "")            : (check.error || "");
+          const reason  = check.success ? (check.data?.reason || "") : (check.error || "");
 
           if (!canPart && btn) {
             btn.disabled = true;
@@ -2088,6 +2025,86 @@
           console.warn('[VIP5-USUARIO] Falha ao renderizar item do módulo de sorteios:', item?.id, err);
         }
       }));
+    }
+
+    // ── Carrega e exibe promoções + sorteios ──────────────────────────────────
+    async function vip5SorteioLoadItems(uid, vipData) {
+      const promosCard = document.getElementById("promos-card");
+      const promosList = document.getElementById("promos-list");
+      const promosCount = document.getElementById("promos-count");
+      const sorteiosCard = document.getElementById("sorteios-card");
+      const sorteiosList = document.getElementById("sorteios-list");
+      const sorteiosCount = document.getElementById("sorteios-count");
+
+      if (!promosCard || !promosList || !promosCount || !sorteiosCard || !sorteiosList || !sorteiosCount) return;
+      promosCard.style.display = "flex";
+      sorteiosCard.style.display = "flex";
+
+      const isVipAtivo = vipData?.vip5Active === true
+        && (!vipData.vip5ExpiresAt || vipData.vip5ExpiresAt > Date.now());
+
+      const productId = getCurrentProductContext();
+      console.log("[VIP5-USUARIO] Carregando promoções e sorteios. isVip:", isVipAtivo, "productId:", productId);
+
+      let promoResult, sorteioResult;
+      try {
+        [promoResult, sorteioResult] = await Promise.all([
+          fetchVisiblePromotions({ isVip: isVipAtivo, limit: 20, productId }),
+          fetchVisibleSorteios({ isVip: isVipAtivo, limit: 20 }),
+        ]);
+      } catch (err) {
+        console.error("[VIP5-USUARIO] Erro ao buscar itens:", err.message, err);
+        promosList.innerHTML = `<div class="vip5-sorteio-empty">
+          <span class="vip5-sorteio-empty-icon">⚠️</span>
+          Erro ao carregar. Tente recarregar a página.
+        </div>`;
+        sorteiosList.innerHTML = `<div class="vip5-sorteio-empty">
+          <span class="vip5-sorteio-empty-icon">⚠️</span>
+          Erro ao carregar. Tente recarregar a página.
+        </div>`;
+        return;
+      }
+
+      const promos = Array.isArray(promoResult?.data?.items) ? promoResult.data.items : [];
+      const sorteios = Array.isArray(sorteioResult?.data?.items) ? sorteioResult.data.items : [];
+
+      if (!promoResult.success)   console.warn("[VIP5-USUARIO] fetchVisiblePromotions falhou:", promoResult.error);
+      if (!sorteioResult.success) console.warn("[VIP5-USUARIO] fetchVisibleSorteios falhou:", sorteioResult.error);
+
+      const promoItems   = promos.map(p => ({ ...p, tipo: "promocao" }));
+      const sorteioItems = sorteios.map(s => ({ ...s, tipo: "sorteio" }));
+
+      _tipoMap.clear();
+      promoItems.forEach(item => _tipoMap.set(item.id, item.tipo));
+      sorteioItems.forEach(item => _tipoMap.set(item.id, item.tipo));
+
+      await renderVip5ItemsList({
+        listElement: promosList,
+        countElement: promosCount,
+        items: promoItems,
+        uid,
+        vipData,
+        productId,
+        emptyMessage: `<div class="vip5-sorteio-empty">
+          <span class="vip5-sorteio-empty-icon">🎁</span>
+          Nenhuma promoção disponível no momento.
+        </div>`,
+        itemTypeLabel: "promoção"
+      });
+
+      await renderVip5ItemsList({
+        listElement: sorteiosList,
+        countElement: sorteiosCount,
+        items: sorteioItems,
+        uid,
+        vipData,
+        productId,
+        emptyMessage: `<div class="vip5-sorteio-empty">
+          <span class="vip5-sorteio-empty-icon">🎟️</span>
+          Nenhum sorteio disponível no momento.
+        </div>`,
+        itemTypeLabel: "sorteio"
+      });
     }
 
     async function carregarProdutosAntecipadosUsuario(uid) {
