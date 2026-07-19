@@ -987,6 +987,49 @@
       margin: 0;
     }
 
+    .tab-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(8px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+      align-self: flex-start;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-3);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-2);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(245,158,11,0.24), rgba(245,158,11,0.14));
+      color: #fef3c7;
+      box-shadow: inset 0 0 0 1px rgba(245,158,11,0.22);
+    }
+
+    .tab-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
     /* ── Responsive ─────────────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .card {
@@ -1066,116 +1109,123 @@
       <span class="badge" id="badge-vip">VIP5</span>
     </div>
 
-    <!-- Access info card -->
-    <div class="card">
-      <p class="card-title">Informações do acesso</p>
-      <div class="card-body">
-        <div class="info-grid">
-          <div class="info-row">
-            <span class="info-label">UID do usuário</span>
-            <span class="info-value" id="uid-value">—</span>
+    <div class="tab-nav" role="tablist" aria-label="Navegação da área VIP">
+      <button class="tab-btn active" type="button" data-target="overview-section">Resumo</button>
+      <button class="tab-btn" type="button" data-target="sorteios-section">Sorteios</button>
+    </div>
+
+    <div id="overview-section" class="tab-panel">
+      <div class="card">
+        <p class="card-title">Informações do acesso</p>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-row">
+              <span class="info-label">UID do usuário</span>
+              <span class="info-value" id="uid-value">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Código VIP</span>
+              <span class="info-value highlight" id="code-value">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Nível VIP</span>
+              <span class="info-value" id="nivel-vip-value">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Data de ativação</span>
+              <span class="info-value" id="activated-value">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Data de expiração</span>
+              <span class="info-value" id="expires-value">—</span>
+            </div>
           </div>
-          <div class="info-row">
-            <span class="info-label">Código VIP</span>
-            <span class="info-value highlight" id="code-value">—</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Nível VIP</span>
-            <span class="info-value" id="nivel-vip-value">—</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Data de ativação</span>
-            <span class="info-value" id="activated-value">—</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Data de expiração</span>
-            <span class="info-value" id="expires-value">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Tempo restante</p>
+        <div class="card-body">
+          <div class="countdown-wrap">
+            <div class="countdown-display" id="countdown-display">
+              <div class="cd-block">
+                <span class="cd-number" id="cd-days">00</span>
+                <span class="cd-unit">dias</span>
+              </div>
+              <span class="cd-sep">:</span>
+              <div class="cd-block">
+                <span class="cd-number" id="cd-hours">00</span>
+                <span class="cd-unit">horas</span>
+              </div>
+              <span class="cd-sep">:</span>
+              <div class="cd-block">
+                <span class="cd-number" id="cd-minutes">00</span>
+                <span class="cd-unit">min</span>
+              </div>
+              <span class="cd-sep">:</span>
+              <div class="cd-block">
+                <span class="cd-number" id="cd-seconds">00</span>
+                <span class="cd-unit">seg</span>
+              </div>
+            </div>
+
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label">Consumido do plano</span>
+                <span class="progress-pct" id="progress-pct">—</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Countdown card -->
-    <div class="card">
-      <p class="card-title">Tempo restante</p>
-      <div class="card-body">
-        <div class="countdown-wrap">
-        <div class="countdown-display" id="countdown-display">
-          <div class="cd-block">
-            <span class="cd-number" id="cd-days">00</span>
-            <span class="cd-unit">dias</span>
-          </div>
-          <span class="cd-sep">:</span>
-          <div class="cd-block">
-            <span class="cd-number" id="cd-hours">00</span>
-            <span class="cd-unit">horas</span>
-          </div>
-          <span class="cd-sep">:</span>
-          <div class="cd-block">
-            <span class="cd-number" id="cd-minutes">00</span>
-            <span class="cd-unit">min</span>
-          </div>
-          <span class="cd-sep">:</span>
-          <div class="cd-block">
-            <span class="cd-number" id="cd-seconds">00</span>
-            <span class="cd-unit">seg</span>
-          </div>
+    <div id="sorteios-section" class="tab-panel" style="display:none;">
+      <div class="card" id="promos-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
+        <div class="vip5-sorteio-section-header">
+          <p class="vip5-sorteio-section-title">Promoções e Sorteios</p>
+          <span class="vip5-sorteio-count-badge" id="promos-count" style="display:none"></span>
         </div>
-
-        <div class="progress-wrap">
-          <div class="progress-header">
-            <span class="progress-label">Consumido do plano</span>
-            <span class="progress-pct" id="progress-pct">—</span>
-          </div>
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+        <div class="vip5-sorteio-list" id="promos-list">
+          <div class="vip5-sorteio-loading">
+            <div class="vip5-sorteio-loading-dot"></div>
+            <div class="vip5-sorteio-loading-dot"></div>
+            <div class="vip5-sorteio-loading-dot"></div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- ── Promotions + Draws section ───────────────────────────────────── -->
-    <div class="card" id="promos-card" style="display:none;flex-direction:column;gap:16px">
-      <div class="vip5-sorteio-section-header">
-        <p class="vip5-sorteio-section-title">Promoções e Sorteios</p>
-        <span class="vip5-sorteio-count-badge" id="promos-count" style="display:none"></span>
-      </div>
-      <div class="vip5-sorteio-list" id="promos-list">
-        <div class="vip5-sorteio-loading">
-          <div class="vip5-sorteio-loading-dot"></div>
-          <div class="vip5-sorteio-loading-dot"></div>
-          <div class="vip5-sorteio-loading-dot"></div>
+      <div class="card" id="produtos-antecipados-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
+        <div class="vip5-sorteio-section-header">
+          <p class="vip5-sorteio-section-title">Produtos Antecipados</p>
+          <span class="vip5-sorteio-count-badge" id="produtos-count" style="display:none"></span>
         </div>
-      </div>
-    </div>
 
-    <div class="card" id="produtos-antecipados-card" style="display:none;flex-direction:column;gap:16px">
-      <div class="vip5-sorteio-section-header">
-        <p class="vip5-sorteio-section-title">Produtos Antecipados</p>
-        <span class="vip5-sorteio-count-badge" id="produtos-count" style="display:none"></span>
-      </div>
-
-      <div class="filter-toolbar">
-        <div class="filter-group">
-          <span class="filter-label">Pesquisar</span>
-          <input id="produtos-search-input" class="filter-control" type="text" placeholder="Pesquisar produto..." />
+        <div class="filter-toolbar">
+          <div class="filter-group">
+            <span class="filter-label">Pesquisar</span>
+            <input id="produtos-search-input" class="filter-control" type="text" placeholder="Pesquisar produto..." />
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Categoria</span>
+            <select id="produtos-category-filter" class="filter-control">
+              <option value="">Todas</option>
+              <option value="lancamentos">Lançamentos</option>
+              <option value="exclusivos">Exclusivos</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+          <button class="vip5-sorteio-button filter-action" type="button" onclick="pesquisarProdutosAntecipadosUsuario()">Buscar produtos</button>
         </div>
-        <div class="filter-group">
-          <span class="filter-label">Categoria</span>
-          <select id="produtos-category-filter" class="filter-control">
-            <option value="">Todas</option>
-            <option value="lancamentos">Lançamentos</option>
-            <option value="exclusivos">Exclusivos</option>
-            <option value="premium">Premium</option>
-          </select>
-        </div>
-        <button class="vip5-sorteio-button filter-action" type="button" onclick="pesquisarProdutosAntecipadosUsuario()">Buscar produtos</button>
-      </div>
 
-      <div class="vip5-sorteio-list" id="produtos-list">
-        <div class="vip5-sorteio-empty">
-          <span class="vip5-sorteio-empty-icon">🛍️</span>
-          Nenhum produto disponível.
+        <div class="vip5-sorteio-list" id="produtos-list">
+          <div class="vip5-sorteio-empty">
+            <span class="vip5-sorteio-empty-icon">🛍️</span>
+            Nenhum produto disponível.
+          </div>
         </div>
       </div>
     </div>
@@ -1210,6 +1260,32 @@
     } from "./vip5-sorteios-storage.js";
 
     let activePromocoesUsuarioCache = [];
+
+    function activateTab(targetId) {
+      const target = document.getElementById(targetId);
+      const overview = document.getElementById('overview-section');
+      const sorteios = document.getElementById('sorteios-section');
+
+      document.querySelectorAll('.tab-btn').forEach((item) => item.classList.remove('active'));
+      const activeBtn = document.querySelector(`.tab-btn[data-target="${targetId}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      if (target === sorteios) {
+        if (overview) overview.style.display = 'none';
+        if (sorteios) sorteios.style.display = 'flex';
+      } else {
+        if (sorteios) sorteios.style.display = 'none';
+        if (overview) overview.style.display = 'flex';
+      }
+
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => activateTab(btn.dataset.target));
+    });
 
     function _promoDiscountAmount(promo, amount) {
       const base = Number(amount || 0);
