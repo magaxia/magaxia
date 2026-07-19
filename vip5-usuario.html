@@ -446,8 +446,8 @@
     }
 
     .vip5-sorteio-card {
-      background: linear-gradient(160deg, #0d0d1c 0%, #0a0a16 100%);
-      border: 1px solid var(--border);
+      background: linear-gradient(160deg, rgba(14, 18, 36, 0.98) 0%, rgba(8, 10, 22, 0.98) 100%);
+      border: 1px solid rgba(245,158,11,0.16);
       border-radius: var(--radius-xl);
       padding: 22px;
       display: flex;
@@ -456,6 +456,8 @@
       position: relative;
       overflow: hidden;
       cursor: default;
+      min-height: 100%;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.22);
     }
 
     .vip5-sorteio-card::before {
@@ -484,6 +486,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      padding-bottom: 4px;
     }
 
     .vip5-sorteio-title-row {
@@ -500,17 +503,18 @@
 
     .vip5-sorteio-title {
       font-size: 15px;
-      font-weight: 700;
-      color: var(--text-1);
+      font-weight: 800;
+      color: #f8fafc;
       line-height: 1.4;
       flex: 1;
-      letter-spacing: -0.1px;
+      letter-spacing: -0.15px;
     }
 
     .vip5-sorteio-badges-row {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
+      align-items: center;
     }
 
     .vip5-sorteio-status-badge {
@@ -613,19 +617,25 @@
 
     .vip5-sorteio-divider {
       height: 1px;
-      background: rgba(255,255,255,0.05);
+      background: linear-gradient(90deg, rgba(245,158,11,0.25), rgba(255,255,255,0.05));
+      margin: 2px 0;
     }
 
     .vip5-sorteio-info-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 10px;
     }
 
     .vip5-sorteio-info-item {
       display: flex;
       flex-direction: column;
       gap: 5px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 10px;
+      min-height: 64px;
     }
 
     .vip5-sorteio-info-label {
@@ -642,7 +652,7 @@
     .vip5-sorteio-info-value {
       font-size: 12px;
       font-weight: 600;
-      color: var(--text-2);
+      color: #e2e8f0;
       line-height: 1.4;
     }
 
@@ -665,6 +675,7 @@
       position: relative;
       overflow: hidden;
       margin-top: 4px;
+      box-shadow: 0 8px 18px rgba(245,158,11,0.14);
     }
 
     .vip5-sorteio-button:disabled {
