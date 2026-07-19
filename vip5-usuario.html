@@ -1024,6 +1024,41 @@
       box-shadow: inset 0 0 0 1px rgba(245,158,11,0.22);
     }
 
+    .subtab-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      align-self: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .subtab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-3);
+      padding: 9px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .subtab-btn:hover {
+      color: var(--text-2);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .subtab-btn.active {
+      background: rgba(245,158,11,0.16);
+      color: #fef3c7;
+    }
+
     .tab-panel {
       display: flex;
       flex-direction: column;
@@ -1184,47 +1219,56 @@
     </div>
 
     <div id="sorteios-section" class="tab-panel" style="display:none;">
-      <div class="card" id="promos-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
-        <div class="vip5-sorteio-section-header">
-          <p class="vip5-sorteio-section-title">Promoções e Sorteios</p>
-          <span class="vip5-sorteio-count-badge" id="promos-count" style="display:none"></span>
-        </div>
-        <div class="vip5-sorteio-list" id="promos-list">
-          <div class="vip5-sorteio-loading">
-            <div class="vip5-sorteio-loading-dot"></div>
-            <div class="vip5-sorteio-loading-dot"></div>
-            <div class="vip5-sorteio-loading-dot"></div>
+      <div class="subtab-nav" role="tablist" aria-label="Subabas de sorteios">
+        <button class="subtab-btn active" type="button" data-subtarget="promos-panel">Promoções e Sorteios</button>
+        <button class="subtab-btn" type="button" data-subtarget="produtos-panel">Produtos Antecipados</button>
+      </div>
+
+      <div id="promos-panel" class="subtab-panel">
+        <div class="card" id="promos-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
+          <div class="vip5-sorteio-section-header">
+            <p class="vip5-sorteio-section-title">Promoções e Sorteios</p>
+            <span class="vip5-sorteio-count-badge" id="promos-count" style="display:none"></span>
+          </div>
+          <div class="vip5-sorteio-list" id="promos-list">
+            <div class="vip5-sorteio-loading">
+              <div class="vip5-sorteio-loading-dot"></div>
+              <div class="vip5-sorteio-loading-dot"></div>
+              <div class="vip5-sorteio-loading-dot"></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="card" id="produtos-antecipados-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
-        <div class="vip5-sorteio-section-header">
-          <p class="vip5-sorteio-section-title">Produtos Antecipados</p>
-          <span class="vip5-sorteio-count-badge" id="produtos-count" style="display:none"></span>
-        </div>
-
-        <div class="filter-toolbar">
-          <div class="filter-group">
-            <span class="filter-label">Pesquisar</span>
-            <input id="produtos-search-input" class="filter-control" type="text" placeholder="Pesquisar produto..." />
+      <div id="produtos-panel" class="subtab-panel" style="display:none;">
+        <div class="card" id="produtos-antecipados-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
+          <div class="vip5-sorteio-section-header">
+            <p class="vip5-sorteio-section-title">Produtos Antecipados</p>
+            <span class="vip5-sorteio-count-badge" id="produtos-count" style="display:none"></span>
           </div>
-          <div class="filter-group">
-            <span class="filter-label">Categoria</span>
-            <select id="produtos-category-filter" class="filter-control">
-              <option value="">Todas</option>
-              <option value="lancamentos">Lançamentos</option>
-              <option value="exclusivos">Exclusivos</option>
-              <option value="premium">Premium</option>
-            </select>
-          </div>
-          <button class="vip5-sorteio-button filter-action" type="button" onclick="pesquisarProdutosAntecipadosUsuario()">Buscar produtos</button>
-        </div>
 
-        <div class="vip5-sorteio-list" id="produtos-list">
-          <div class="vip5-sorteio-empty">
-            <span class="vip5-sorteio-empty-icon">🛍️</span>
-            Nenhum produto disponível.
+          <div class="filter-toolbar">
+            <div class="filter-group">
+              <span class="filter-label">Pesquisar</span>
+              <input id="produtos-search-input" class="filter-control" type="text" placeholder="Pesquisar produto..." />
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Categoria</span>
+              <select id="produtos-category-filter" class="filter-control">
+                <option value="">Todas</option>
+                <option value="lancamentos">Lançamentos</option>
+                <option value="exclusivos">Exclusivos</option>
+                <option value="premium">Premium</option>
+              </select>
+            </div>
+            <button class="vip5-sorteio-button filter-action" type="button" onclick="pesquisarProdutosAntecipadosUsuario()">Buscar produtos</button>
+          </div>
+
+          <div class="vip5-sorteio-list" id="produtos-list">
+            <div class="vip5-sorteio-empty">
+              <span class="vip5-sorteio-empty-icon">🛍️</span>
+              Nenhum produto disponível.
+            </div>
           </div>
         </div>
       </div>
@@ -1285,6 +1329,20 @@
 
     document.querySelectorAll('.tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => activateTab(btn.dataset.target));
+    });
+
+    function activateSubtab(targetId) {
+      document.querySelectorAll('.subtab-btn').forEach((btn) => btn.classList.remove('active'));
+      const activeBtn = document.querySelector(`.subtab-btn[data-subtarget="${targetId}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.querySelectorAll('.subtab-panel').forEach((panel) => {
+        panel.style.display = panel.id === targetId ? 'block' : 'none';
+      });
+    }
+
+    document.querySelectorAll('.subtab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => activateSubtab(btn.dataset.subtarget));
     });
 
     function _promoDiscountAmount(promo, amount) {
