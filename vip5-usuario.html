@@ -622,10 +622,10 @@
     }
 
     .vip5-sorteio-info-grid {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
-      align-items: stretch;
+      align-items: start;
     }
 
     .vip5-sorteio-info-item {
@@ -638,8 +638,9 @@
       border-radius: 12px;
       padding: 12px 12px 11px;
       min-height: 72px;
-      flex: 1 1 140px;
-      min-width: 140px;
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .vip5-sorteio-info-label {
@@ -660,6 +661,7 @@
       line-height: 1.4;
       word-break: break-word;
       overflow-wrap: anywhere;
+      margin-top: 2px;
     }
 
     .vip5-sorteio-button {
@@ -854,10 +856,19 @@
       }
     }
 
+    @media (max-width: 900px) {
+      .vip5-sorteio-info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
     @media (max-width: 640px) {
       .vip5-sorteio-list {
         grid-template-columns: 1fr;
         gap: 12px;
+      }
+      .vip5-sorteio-info-grid {
+        grid-template-columns: 1fr;
       }
     }
 
