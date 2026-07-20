@@ -1,39 +1,28 @@
-# Magaxia - Backend Modular e Profissional
+# Gerador de Números da Sorte
 
-## Objetivo
+Aplicação web local para gerar jogos aleatórios de loterias com interface moderna, tema claro/escuro, histórico, favoritos e armazenamento local no navegador.
 
-Criar uma camada backend segura e modular para a aplicação existente, preservando o funcionamento atual do frontend estático.
+## Funcionalidades
 
-## Etapas planejadas
+- Geração de jogos para Mega-Sena, Lotofácil, Quina, Lotomania, Timemania, Dia de Sorte, Dupla Sena e +Milionária.
+- Organização de jogos em cartões com ações de copiar, favoritar e gerar novamente.
+- Histórico e favoritos salvos no LocalStorage.
+- Menu lateral com navegação por seções.
+- Tema claro e escuro.
 
-1. Backend seguro e modular
-2. 2FA admin + sessões seguras
-3. Antifraude score em tempo real
-4. Ledger financeiro profissional
-5. Dashboard executivo
-6. CI/CD + backup + monitoramento
-7. UX premium
+## Como executar
 
-## Como usar
+1. Abra o arquivo index.html em um navegador moderno.
+2. Ou use um servidor local simples, como Python:
+   - `python -m http.server 8000`
+   - Acesse http://localhost:8000
 
-1. Instale dependências:
-   ```bash
-   npm install
-   ```
-2. Copie o arquivo de ambiente:
-   ```bash
-   cp .env.example .env
-   ```
-3. Configure as variáveis e inicie:
-   ```bash
-   npm start
-   ```
+## Estrutura
 
-## Stage 1 - Backend Modular
-
-- `index.js`: servidor Express com headers de segurança, rate limiting e rotas modulares.
-- `routes/auth.js`: autenticação centralizada e sessão segura via cookie.
-- `routes/antifraud.js`: API de score e eventos antifraude.
-- `routes/ledger.js`: registros financeiros com ledger seguro.
-
-> O servidor novo é um acréscimo. O servidor estático atual (`server.js`) continua disponível para testes conservadores.
+- index.html
+- css/style.css
+- js/app.js
+- js/generator.js
+- js/storage.js
+- js/ui.js
+- assets/logo.png

@@ -1,0 +1,206 @@
+﻿[
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\esm\\index.esm2017.js",
+        "Pattern":  "firebase\\.app\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\esm\\index.esm2017.js",
+        "Pattern":  "firebase\\.storage\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\esm\\index.esm5.js",
+        "Pattern":  "firebase\\.app\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\esm\\index.esm5.js",
+        "Pattern":  "firebase\\.storage\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\index.cjs.js",
+        "Pattern":  "firebase\\.app\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\index.cjs.js",
+        "Pattern":  "firebase\\.storage\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\index.lite.esm5.js",
+        "Pattern":  "firebase\\.app\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\index.lite.esm5.js",
+        "Pattern":  "firebase\\.storage\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\index.lite.js",
+        "Pattern":  "firebase\\.app\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\app-compat\\dist\\index.lite.js",
+        "Pattern":  "firebase\\.storage\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\browser-cjs\\index-c1730032.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\cordova\\popup_redirect-064215a6.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\esm2017\\index-454a0f5f.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\esm5\\index-06d75b75.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\index.webworker.esm5.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\node\\totp-e2052706.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\node-esm\\totp-7e96920d.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\rn\\index-c0c65a97.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\web-extension-cjs\\register-53c64555.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth\\dist\\web-extension-esm2017\\register-86bd9afd.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth-compat\\dist\\esm\\index.node.esm.js",
+        "Pattern":  "firebase\\.app\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth-compat\\dist\\esm\\index.node.esm.js",
+        "Pattern":  "firebase\\.auth\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth-compat\\dist\\firebase-auth.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth-compat\\dist\\index.esm.js",
+        "Pattern":  "firebase\\.app\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth-compat\\dist\\index.esm.js",
+        "Pattern":  "firebase\\.auth\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth-compat\\dist\\index.esm2017.js",
+        "Pattern":  "firebase\\.app\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\auth-compat\\dist\\index.esm2017.js",
+        "Pattern":  "firebase\\.auth\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\database\\dist\\index.cjs.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\database\\dist\\index.esm2017.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\database\\dist\\index.esm5.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\database\\dist\\index.node.cjs.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\database\\dist\\index.standalone.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\database\\dist\\node-esm\\index.node.esm.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\database-compat\\dist\\index.standalone.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\firestore-compat\\dist\\index.cjs.js",
+        "Pattern":  "firebase\\.firestore\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\firestore-compat\\dist\\index.esm2017.js",
+        "Pattern":  "firebase\\.firestore\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\firestore-compat\\dist\\index.esm5.js",
+        "Pattern":  "firebase\\.firestore\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\firestore-compat\\dist\\index.node.cjs.js",
+        "Pattern":  "firebase\\.firestore\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\firestore-compat\\dist\\index.rn.js",
+        "Pattern":  "firebase\\.firestore\\s*\\("
+    },
+    {
+        "File":  "node_modules\\@firebase\\firestore-compat\\dist\\node-esm\\index.node.esm.js",
+        "Pattern":  "firebase\\.firestore\\s*\\("
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-app-compat.js",
+        "Pattern":  "firebase-app-compat"
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-auth.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-auth-compat.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-auth-compat.js",
+        "Pattern":  "firebase-auth-compat"
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-auth-cordova.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-auth-web-extension.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-compat.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-compat.js",
+        "Pattern":  "firebase-compat"
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-database.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-database-compat.js",
+        "Pattern":  "firebase\\.initializeApp\\s*\\("
+    },
+    {
+        "File":  "node_modules\\firebase\\firebase-firestore-compat.js",
+        "Pattern":  "firebase-firestore-compat"
+    }
+]
