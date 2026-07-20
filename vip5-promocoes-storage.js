@@ -15,9 +15,9 @@
  *   faça o deploy do arquivo firestore.indexes.json fornecido junto.
  *
  * Coleções Firestore:
- *   vip5_promocoes                — documentos de promoção
- *   vip5_promocoes_participacoes  — participações (ID: {promoId}_{uid})
- *   vip5_logs                     — auditoria de ações admin
+ *   vip5_promocoes                  — documentos de promoção
+ *   vip5_promocoes_participantes   — participações (ID: {promoId}_{uid})
+ *   vip5_promocoes_logs            — auditoria de ações admin
  */
 
 import { db } from "./vip5-firebase.js";
@@ -42,9 +42,9 @@ import {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const COL_PROMOS  = "vip5_promocoes";
-const COL_PARTS   = "vip5_promocoes_participacoes";
+const COL_PARTS   = "vip5_promocoes_participantes";
 const COL_USES    = "vip5_promocoes_usos";
-const COL_LOGS    = "vip5_logs";
+const COL_LOGS    = "vip5_promocoes_logs";
 const MODULE      = "vip5_promocoes";
 const DEF_LIMIT   = 20;
 const MAX_LIMIT   = 200;
@@ -1276,7 +1276,7 @@ export async function applyPromotionToPurchase({ uid, productId = null, amount =
  *
  * CORREÇÃO: orderBy("criadoEm", "desc") removido do Firestore.
  * where("promoId", "==", ...) + orderBy() exigia índice composto em
- * vip5_promocoes_participacoes. Agora ordenação é feita client-side.
+ * vip5_promocoes_participantes. Agora ordenação é feita client-side.
  *
  * @param {string} promoId
  * @param {object} opts — { limit, startAfter }
@@ -1319,7 +1319,7 @@ export async function fetchParticipations(promoId, { limit: lim = DEF_LIMIT } = 
  *
  * CORREÇÃO: orderBy("timestamp", "desc") removido do Firestore.
  * where("module", "==", ...) + orderBy() exigia índice composto em
- * vip5_logs. Agora ordenação é feita client-side.
+ * vip5_promocoes_logs. Agora ordenação é feita client-side.
  *
  * @param {object} opts — { promoId, limit, startAfter }
  */

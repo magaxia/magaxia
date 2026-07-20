@@ -1,7 +1,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "vip5_logs",
+      "collectionGroup": "vip5_promocoes_logs",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "module",  "order": "ASCENDING" },
@@ -17,7 +17,7 @@
       ]
     },
     {
-      "collectionGroup": "vip5_promocoes_participacoes",
+      "collectionGroup": "vip5_promocoes_participantes",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "promoId",  "order": "ASCENDING"  },
@@ -25,7 +25,7 @@
       ]
     },
     {
-      "collectionGroup": "vip5_logs",
+      "collectionGroup": "vip5_promocoes_logs",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "module",    "order": "ASCENDING"  },
@@ -33,12 +33,36 @@
       ]
     },
     {
-      "collectionGroup": "vip5_logs",
+      "collectionGroup": "vip5_promocoes_logs",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "module",    "order": "ASCENDING"  },
         { "fieldPath": "promoId",   "order": "ASCENDING"  },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "depositos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saques",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "dataSaque", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "compras",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "produtoId", "order": "ASCENDING" }
       ]
     }
   ],
