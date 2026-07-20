@@ -1256,30 +1256,6 @@
           </div>
         </div>
       </div>
-
-      <div class="card">
-        <p class="card-title">Cadastrar código</p>
-        <div class="card-body">
-          <div style="display: flex; flex-direction: column; gap: 14px;">
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <label style="font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: 0.8px; text-transform: uppercase;">Código</label>
-              <input id="register-code-input" type="text" placeholder="Digite o código..." style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(245,158,11,0.16); border-radius: 12px; color: #e2e8f0; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);" />
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <label style="font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: 0.8px; text-transform: uppercase;">Sorteio (opcional)</label>
-              <select id="register-code-sorteio" style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(245,158,11,0.16); border-radius: 12px; color: #e2e8f0; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);">
-                <option value="">-- Nenhum sorteio específico --</option>
-              </select>
-            </div>
-            <button class="vip5-sorteio-button" type="button" onclick="window.location.href='gerador.html'" style="margin: 0;">
-              <span aria-hidden="true">🎲</span>
-              <span>Gerador de Códigos</span>
-            </button>
-            <button id="register-code-btn" type="button" style="margin: 0; padding: 12px 14px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);">Confirmar</button>
-            <p id="register-code-status" style="margin: 0; font-size: 12px; color: var(--text-3); text-align: center; display: none;"></p>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div id="sorteios-section" class="tab-panel" style="display:none;">
@@ -1377,20 +1353,12 @@
 
     // ── Sorteios (coleção vip5_sorteios) ─────────────────────────────────────
     import {
-      subscribeToActiveSorteios,
+      fetchVisibleSorteios,
       canParticipate        as canParticipateSorteio,
       registerParticipation as registerParticipationSorteio,
       fetchSorteioById,
       fetchSorteioResults,
     } from "./vip5-sorteios-storage.js";
-
-    // ── VIP (coleção vip5_codigos) ──────────────────────────────────────────
-    import {
-      getCode,
-      activateVipCode,
-      getUserVip,
-    } from "./vip5-storage.js";
-    import { isCodeUsed, getCodeDays } from "./vip5-code-utils.mjs";
 
     let activePromocoesUsuarioCache = [];
 
@@ -1508,20 +1476,6 @@
     let countdownTimer = null;
     let _currentUser   = null;
     let _currentVip    = null;
-    let activeSorteiosUnsubscribe = null;
-
-    function cleanupActiveSorteiosListener() {
-      if (typeof activeSorteiosUnsubscribe === "function") {
-        try {
-          activeSorteiosUnsubscribe();
-        } catch (err) {
-          console.warn("[VIP5-USUARIO] Falha ao cancelar listener de sorteios ativos:", err);
-        }
-      }
-      activeSorteiosUnsubscribe = null;
-    }
-
-    window.addEventListener("beforeunload", cleanupActiveSorteiosListener);
 
     function getCurrentProductContext() {
       const params = new URLSearchParams(window.location.search);
@@ -2120,11 +2074,14 @@
       const productId = getCurrentProductContext();
       console.log("[VIP5-USUARIO] Carregando promoções e sorteios. isVip:", isVipAtivo, "productId:", productId);
 
-      let promoResult;
+      let promoResult, sorteioResult;
       try {
-        promoResult = await fetchVisiblePromotions({ isVip: isVipAtivo, limit: 20, productId });
+        [promoResult, sorteioResult] = await Promise.all([
+          fetchVisiblePromotions({ isVip: isVipAtivo, limit: 20, productId }),
+          fetchVisibleSorteios({ isVip: isVipAtivo, limit: 20 }),
+        ]);
       } catch (err) {
-        console.error("[VIP5-USUARIO] Erro ao buscar promoções:", err.message, err);
+        console.error("[VIP5-USUARIO] Erro ao buscar itens:", err.message, err);
         promosList.innerHTML = `<div class="vip5-sorteio-empty">
           <span class="vip5-sorteio-empty-icon">⚠️</span>
           Erro ao carregar. Tente recarregar a página.
@@ -2137,41 +2094,17 @@
       }
 
       const promos = Array.isArray(promoResult?.data?.items) ? promoResult.data.items : [];
-      if (!promoResult.success) console.warn("[VIP5-USUARIO] fetchVisiblePromotions falhou:", promoResult.error);
+      const sorteios = Array.isArray(sorteioResult?.data?.items) ? sorteioResult.data.items : [];
 
-      const promoItems = promos.map(p => ({ ...p, tipo: "promocao" }));
+      if (!promoResult.success)   console.warn("[VIP5-USUARIO] fetchVisiblePromotions falhou:", promoResult.error);
+      if (!sorteioResult.success) console.warn("[VIP5-USUARIO] fetchVisibleSorteios falhou:", sorteioResult.error);
 
-      cleanupActiveSorteiosListener();
-      activeSorteiosUnsubscribe = subscribeToActiveSorteios({
-        isVip: isVipAtivo,
-        limit: 20,
-        onChange: (sorteios) => {
-          const sorteioItems = Array.isArray(sorteios) ? sorteios.map((item) => ({ ...item, tipo: "sorteio" })) : [];
-
-          _tipoMap.clear();
-          promoItems.forEach((item) => _tipoMap.set(item.id, item.tipo));
-          sorteioItems.forEach((item) => _tipoMap.set(item.id, item.tipo));
-
-          renderVip5ItemsList({
-            listElement: sorteiosList,
-            countElement: sorteiosCount,
-            items: sorteioItems,
-            uid,
-            vipData,
-            productId,
-            emptyMessage: `<div class="vip5-sorteio-empty">
-              <span class="vip5-sorteio-empty-icon">🎟️</span>
-              Nenhum sorteio disponível no momento.
-            </div>`,
-            itemTypeLabel: "sorteio"
-          }).catch((err) => {
-            console.warn("[VIP5-USUARIO] Falha ao renderizar lista de sorteios em tempo real:", err);
-          });
-        },
-      });
+      const promoItems   = promos.map(p => ({ ...p, tipo: "promocao" }));
+      const sorteioItems = sorteios.map(s => ({ ...s, tipo: "sorteio" }));
 
       _tipoMap.clear();
       promoItems.forEach(item => _tipoMap.set(item.id, item.tipo));
+      sorteioItems.forEach(item => _tipoMap.set(item.id, item.tipo));
 
       await renderVip5ItemsList({
         listElement: promosList,
@@ -2187,6 +2120,19 @@
         itemTypeLabel: "promoção"
       });
 
+      await renderVip5ItemsList({
+        listElement: sorteiosList,
+        countElement: sorteiosCount,
+        items: sorteioItems,
+        uid,
+        vipData,
+        productId,
+        emptyMessage: `<div class="vip5-sorteio-empty">
+          <span class="vip5-sorteio-empty-icon">🎟️</span>
+          Nenhum sorteio disponível no momento.
+        </div>`,
+        itemTypeLabel: "sorteio"
+      });
     }
 
     async function carregarProdutosAntecipadosUsuario(uid) {
@@ -2515,188 +2461,6 @@
     const id = setInterval(tick, 1000);
     cdElem._timerId = id;
   }
-
-    // ── Cadastrar Código ────────────────────────────────────────────────────────
-    const registerCodeInput = document.getElementById("register-code-input");
-    const registerCodeSorteio = document.getElementById("register-code-sorteio");
-    const registerCodeBtn = document.getElementById("register-code-btn");
-    const registerCodeStatus = document.getElementById("register-code-status");
-
-    // Populate sorteios dropdown com os sorteios ativos
-    let activeSorteiosForCodeReg = [];
-    if (registerCodeSorteio) {
-      const unsubscribeSorteios = subscribeToActiveSorteios({
-        isVip: true,
-        limit: 20,
-        onChange: (sorteios) => {
-          activeSorteiosForCodeReg = sorteios || [];
-          console.log("[VIP5-USUARIO] Sorteios ativos atualizados para dropdown:", activeSorteiosForCodeReg.length);
-          
-          // Limpar opções existentes (mantém placeholder)
-          while (registerCodeSorteio.options.length > 1) {
-            registerCodeSorteio.remove(1);
-          }
-          
-          // Adicionar sorteios
-          activeSorteiosForCodeReg.forEach((s) => {
-            const option = document.createElement("option");
-            option.value = s.id;
-            option.textContent = `${s.nome || "Sorteio"} (${s.id})`;
-            registerCodeSorteio.appendChild(option);
-          });
-        }
-      });
-      
-      // Armazenar unsubscribe para cleanup
-      window._codeRegSorteiosUnsub = unsubscribeSorteios;
-    }
-
-    if (registerCodeBtn && registerCodeInput) {
-      registerCodeBtn.addEventListener("click", async () => {
-        const code = registerCodeInput.value.trim().toUpperCase();
-        const selectedSorteioId = registerCodeSorteio?.value?.trim() || null;
-
-        // Validar código vazio
-        if (!code) {
-          registerCodeStatus.textContent = "⚠ Digite um código válido.";
-          registerCodeStatus.style.color = "#ef4444";
-          registerCodeStatus.style.display = "block";
-          return;
-        }
-
-        registerCodeBtn.disabled = true;
-        registerCodeBtn.textContent = "Verificando...";
-        registerCodeStatus.textContent = "";
-        registerCodeStatus.style.display = "none";
-
-        try {
-          if (!_currentUser) {
-            throw new Error("Usuário não autenticado.");
-          }
-
-          console.log("[VIP5-USUARIO] Validando código:", code);
-          const codeData = await getCode(code);
-
-          // 1. Validar: Existe
-          if (!codeData) {
-            throw new Error("❌ Código não encontrado.");
-          }
-
-          console.log("[VIP5-USUARIO] Código encontrado:", codeData);
-
-          // 2. Validar: Está ativo
-          if (codeData.status !== "ativo") {
-            throw new Error(`❌ Código inativo (status: ${codeData.status}).`);
-          }
-
-          // 3. Validar: Não foi utilizado
-          if (isCodeUsed(codeData)) {
-            throw new Error("❌ Este código já foi utilizado.");
-          }
-
-          // 4. Validar: Pertence ao sorteio escolhido (se aplicável)
-          if (codeData.sorteioId) {
-            // Código está vinculado a um sorteio específico
-            if (selectedSorteioId && selectedSorteioId !== codeData.sorteioId) {
-              throw new Error(`❌ Este código pertence a outro sorteio. Selecione: ${codeData.sorteioId}`);
-            }
-            console.log("[VIP5-USUARIO] Código vinculado ao sorteio:", codeData.sorteioId);
-          }
-
-          const days = getCodeDays(codeData, 30);
-          if (!Number.isFinite(days) || days < 1) {
-            throw new Error("❌ Código com configuração inválida.");
-          }
-
-          // Todos os validações passaram - proceder com ativação
-          console.log("[VIP5-USUARIO] Validações OK. Ativando código...");
-          registerCodeBtn.textContent = "Ativando...";
-
-          // Ativar código e salvar VIP do usuário em uma operação atômica
-          console.log("[VIP5-USUARIO] Ativando código e salvando VIP por", days, "dias...");
-          const expiresAt = await activateVipCode(code, _currentUser.uid, days);
-          console.log("[VIP5-USUARIO] Código ativado com sucesso. expiresAt=", expiresAt);
-
-          // Recarregar o estado VIP mais recente para não depender de uma cópia antiga em memória
-          const refreshedVipData = await getUserVip(_currentUser.uid);
-          if (refreshedVipData) {
-            _currentVip = refreshedVipData;
-          }
-
-          // Registrar participação automaticamente se sorteio foi selecionado ou vinculado ao código
-          const sorteioParticipacao = codeData.sorteioId || selectedSorteioId;
-          if (sorteioParticipacao) {
-            console.log("[VIP5-USUARIO] Registrando participação no sorteio:", sorteioParticipacao);
-            registerCodeBtn.textContent = "Registrando participação...";
-            
-            try {
-              // Verificar se já é participante
-              const checkResult = await canParticipateSorteio(sorteioParticipacao, _currentUser.uid, _currentVip);
-              console.log("[VIP5-USUARIO] Verificação de elegibilidade:", checkResult);
-
-              if (checkResult.success && checkResult.data?.canParticipate === true) {
-                // Registrar participação
-                const participationResult = await registerParticipationSorteio(
-                  sorteioParticipacao,
-                  _currentUser.uid,
-                  {
-                    viaCode: true,
-                    codeUsed: code,
-                    activatedAt: new Date().toISOString()
-                  }
-                );
-
-                if (participationResult.success) {
-                  console.log("[VIP5-USUARIO] Participação registrada com sucesso:", participationResult.data);
-                  registerCodeStatus.textContent = `✅ Código ativado e você foi registrado no sorteio!`;
-                } else {
-                  // Participação não registrada, mas código foi ativado
-                  console.warn("[VIP5-USUARIO] Aviso ao registrar participação:", participationResult.error);
-                  registerCodeStatus.textContent = `✅ Código ativado! (Participação: ${participationResult.error})`;
-                }
-              } else {
-                // Não pode participar (já é participante, vagas esgotadas, etc)
-                console.log("[VIP5-USUARIO] Usuário não elegível para participação:", checkResult.data?.reason);
-                const reason = checkResult.data?.reason || "Não elegível para participação";
-                registerCodeStatus.textContent = `✅ Código ativado! (${reason})`;
-              }
-            } catch (participationError) {
-              console.error("[VIP5-USUARIO] Erro ao registrar participação:", participationError.message);
-              // Código foi ativado, mas participação falhou - mostrar aviso, não erro
-              registerCodeStatus.textContent = `✅ Código ativado! (Erro ao registrar sorteio)`;
-            }
-          } else {
-            registerCodeStatus.textContent = `✅ Código ativado com sucesso!`;
-          }
-
-          registerCodeStatus.style.color = "#10b981";
-          registerCodeStatus.style.display = "block";
-
-          // Limpar input e recarregar após 2s
-          registerCodeInput.value = "";
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        } catch (err) {
-          console.error("[VIP5-USUARIO] Erro ao ativar código:", err.message, err);
-          const errorMsg = err.message || "Erro desconhecido. Tente novamente.";
-          registerCodeStatus.textContent = errorMsg;
-          registerCodeStatus.style.color = "#ef4444";
-          registerCodeStatus.style.display = "block";
-        } finally {
-          registerCodeBtn.disabled = false;
-          registerCodeBtn.textContent = "Confirmar";
-        }
-      });
-    }
-
-    // ── Cleanup on page unload ──────────────────────────────────────────────────
-    window.addEventListener("beforeunload", () => {
-      console.log("[VIP5-USUARIO] Limpando listeners antes de descarregar...");
-      if (window._codeRegSorteiosUnsub && typeof window._codeRegSorteiosUnsub === "function") {
-        window._codeRegSorteiosUnsub();
-      }
-    });
 
   </script>
 </body>

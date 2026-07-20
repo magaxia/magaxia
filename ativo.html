@@ -247,7 +247,7 @@
                         function formatarDataInicio(valor) {
                             if (!valor) return 'Data indisponível';
                             try {
-                                if (valor.toDate) {
+                     7           if (valor.toDate) {
                                     const dataObj = valor.toDate();
                                     return dataObj.toLocaleString('pt-BR', {
                                         day: '2-digit',

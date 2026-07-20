@@ -14,15 +14,18 @@ const firebaseConfig = {
 window.FirebaseHelper = window.FirebaseHelper || {};
 
 window.FirebaseHelper.initializeFirebase = function() {
-  const firebaseModule = window.__VIP5_FIREBASE__ || window.firebase;
-  if (!firebaseModule?.db || !firebaseModule?.auth) {
-    console.error('Firebase modular não encontrado.');
-    return this;
+  if (!firebase || typeof firebase.initializeApp !== 'function') {
+    console.error('Firebase não encontrado.');
+    return;
   }
 
-  this.db = firebaseModule.firestoreCompat || firebaseModule.db;
-  this.auth = firebaseModule.auth;
-  this.firebase = window.firebase || firebaseModule;
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+
+  this.db = firebase.firestore();
+  this.auth = firebase.auth();
+  this.firebase = firebase;
   return this;
 };
 
@@ -280,7 +283,7 @@ window.FirebaseHelper.verificarComportamentoFinanceiro = async function(uidUsuar
   if (!uidUsuario) return false;
   const db = this.getDB();
   try {
-    const corte = window.__VIP5_FIREBASE__?.timestamp?.fromMillis(Date.now() - janelaHoras * 60 * 60 * 1000) || Date.now();
+    const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - janelaHoras * 60 * 60 * 1000);
     const [depSnap, saqueSnap] = await Promise.all([
       db.collection('depositos').where('uid', '==', uidUsuario).where('data', '>=', corte).get(),
       db.collection('saques').where('uid', '==', uidUsuario).where('dataSaque', '>=', corte).get()
@@ -352,7 +355,7 @@ window.FirebaseHelper.registrarAuditoriaAntifraude = async function(uidUsuario, 
       acao,
       motivo,
       meta,
-      criadoEm: window.__VIP5_FIREBASE__?.fieldValue?.serverTimestamp()
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
   } catch (error) {
     console.warn('Erro ao registrar auditoria antifraude:', error);
@@ -383,7 +386,7 @@ window.FirebaseHelper.marcarContaMonitorada = async function(uidUsuario, motivo,
       status: 'monitorado',
       motivoBloqueio: motivo,
       scoreBloqueio: score,
-      ultimaAcaoAntifraude: window.__VIP5_FIREBASE__?.fieldValue?.serverTimestamp()
+      ultimaAcaoAntifraude: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     return await this.criarNotificacaoSuspeita({
@@ -460,7 +463,7 @@ window.FirebaseHelper.verificarSpamRecarga = async function(uidUsuario, janelaMi
   const db = this.getDB();
   if (!db || !uidUsuario) return 0;
   try {
-    const corte = window.__VIP5_FIREBASE__?.timestamp?.fromMillis(Date.now() - janelaMinutos * 60 * 1000) || Date.now();
+    const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - janelaMinutos * 60 * 1000);
     const snapshot = await db.collection('depositos')
       .where('uid', '==', uidUsuario)
       .where('data', '>=', corte)
@@ -578,7 +581,7 @@ window.FirebaseHelper.calcularScoreSuspeita = async function(uidUsuario, dias = 
   const db = this.getDB();
   if (!db || !uidUsuario) return 0;
 
-    const corte = window.__VIP5_FIREBASE__?.timestamp?.fromMillis(Date.now() - dias * 24 * 60 * 60 * 1000) || Date.now();
+  const corte = firebase.firestore.Timestamp.fromMillis(Date.now() - dias * 24 * 60 * 60 * 1000);
   try {
     const snapshot = await db.collection('notificacoes')
       .where('uidUsuario', '==', uidUsuario)
@@ -743,8 +746,8 @@ window.FirebaseHelper.criarNotificacaoSuspeita = async function(options = {}) {
     ip: ip || geo.ip || 'desconhecido',
     pais: pais || geo.country_name || geo.country || 'desconhecido',
     contexto,
-    data: window.__VIP5_FIREBASE__?.fieldValue?.serverTimestamp(),
-    expiresEm: window.__VIP5_FIREBASE__?.timestamp?.fromDate(expiresEm),
+    data: firebase.firestore.FieldValue.serverTimestamp(),
+    expiresEm: firebase.firestore.Timestamp.fromDate(expiresEm),
     lida: false,
     resolvido: false,
     extra: typeof extra === 'object' ? extra : { extra }
