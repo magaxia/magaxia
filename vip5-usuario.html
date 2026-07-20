@@ -646,6 +646,10 @@
       overflow: hidden;
     }
 
+    .vip5-sorteio-info-item--wide {
+      grid-column: span 2;
+    }
+
     .vip5-sorteio-info-label {
       font-size: 9px;
       font-weight: 700;
@@ -1992,7 +1996,7 @@
                 <div class="vip5-sorteio-info-label"> Participantes</div>
                 <div class="vip5-sorteio-info-value">${participantesCount} / ${totalVagas === 0 ? '∞' : totalVagas}</div>
               </div>
-              <div class="vip5-sorteio-info-item">
+              <div class="vip5-sorteio-info-item vip5-sorteio-info-item--wide">
                 <div class="vip5-sorteio-info-label">⏳ Tempo</div>
                 <div class="vip5-sorteio-info-value" id="countdown-${item.id}" data-end="${item.dataFinal ? (item.dataFinal.toDate ? item.dataFinal.toDate().toISOString() : item.dataFinal) : ''}" style="white-space: nowrap;">${dataFim}</div>
               </div>
