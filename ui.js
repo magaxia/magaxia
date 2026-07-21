@@ -56,6 +56,23 @@ function renderSorteios(state) {
     .join('');
 }
 
+function renderSorteioOptions(state) {
+  const lotterySelect = document.getElementById('lottery-type');
+  if (!lotterySelect) return;
+
+  const options = (state.sorteios || []).map((sorteio) => {
+    const title = sorteio.titulo || sorteio.id || 'Sorteio sem título';
+    return `<option value="${escapeHTML(sorteio.id)}">${escapeHTML(title)}</option>`;
+  });
+
+  if (!options.length) {
+    options.push('<option value="">Nenhum sorteio ativo disponível</option>');
+  }
+
+  lotterySelect.innerHTML = options.join('');
+  lotterySelect.value = state.settings.selectedSorteioId || '';
+}
+
 export function showToast(message) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
@@ -181,6 +198,7 @@ export function renderAll(state) {
     resultsArea.innerHTML = renderGames(state.generatedGames, state, {});
   }
 
+  renderSorteioOptions(state);
   renderSorteios(state);
   renderHistory(state);
   renderFavorites(state);
