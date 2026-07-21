@@ -1,4 +1,5 @@
 import { generateGames, LOTTERIES } from './generator.js';
+import { fetchVisibleSorteios } from './vip5-sorteios-storage.js';
 import {
   clearAllStorage,
   loadFavorites,
@@ -11,12 +12,43 @@ import {
 import { initUI, renderAll, showToast } from './ui.js';
 
 const state = {
-  settings: loadSettings(),
+  settings: {
+    ...loadSettings(),
+    selectedSorteioId: loadSettings()?.selectedSorteioId || ''
+  },
   history: loadHistory(),
   favorites: loadFavorites(),
   generatedGames: [],
+  sorteios: [],
   activeView: 'home'
 };
+
+async function loadSorteios() {
+  try {
+    const result = await fetchVisibleSorteios({ limit: 50 });
+    state.sorteios = result?.success && Array.isArray(result.data?.items) ? result.data.items : [];
+    if (!state.settings.selectedSorteioId && state.sorteios.length) {
+      state.settings.selectedSorteioId = state.sorteios[0].id;
+    }
+  } catch (error) {
+    state.sorteios = [];
+    console.error('Erro ao carregar sorteios:', error);
+  }
+  renderAll(state);
+}
+
+function getSelectedSorteio() {
+  return state.sorteios.find((sorteio) => sorteio.id === state.settings.selectedSorteioId) || null;
+}
+
+function resolveLotteryTypeForSorteio(sorteio) {
+  if (!sorteio) return state.settings.lotteryType || LOTTERIES[0].value;
+  const candidate = String(sorteio.tipoSorteio || sorteio.tipo || '').trim().toLowerCase();
+  const normalizedCandidate = candidate.replace(/\s+/g, '-');
+  const found = LOTTERIES.find((lottery) => lottery.value === normalizedCandidate || lottery.label.toLowerCase() === candidate);
+  return found ? found.value : state.settings.lotteryType || LOTTERIES[0].value;
+}
+
 
 function createHistoryEntry(type, games) {
   return {
@@ -126,12 +158,15 @@ function updateTheme(theme) {
 
 initUI({
   state,
-  lotteries: LOTTERIES,
-  onGenerate: (type, count) => {
-    state.settings.lotteryType = type;
+  lotteries: [],
+  onGenerate: (selectedSorteioId, count) => {
+    state.settings.selectedSorteioId = selectedSorteioId;
     state.settings.gamesCount = count;
+    const selectedSorteio = getSelectedSorteio();
+    const lotteryType = resolveLotteryTypeForSorteio(selectedSorteio);
+    state.settings.lotteryType = lotteryType;
     persistState();
-    generateAndSave(type, count);
+    generateAndSave(lotteryType, count);
   },
   onViewChange: setView,
   onFavoriteToggle: favoriteGame,
@@ -143,3 +178,4 @@ initUI({
 });
 
 renderAll(state);
+loadSorteios();

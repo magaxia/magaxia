@@ -9,6 +9,53 @@ function escapeHTML(value) {
     .replaceAll("'", '&#39;');
 }
 
+function formatDisplayDate(value) {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') {
+    return value.toDate().toLocaleString('pt-BR');
+  }
+  if (value instanceof Date) {
+    return value.toLocaleString('pt-BR');
+  }
+  if (typeof value === 'number') {
+    return new Date(value).toLocaleString('pt-BR');
+  }
+  if (typeof value === 'string' && !Number.isNaN(Date.parse(value))) {
+    return new Date(value).toLocaleString('pt-BR');
+  }
+  return String(value);
+}
+
+function renderSorteios(state) {
+  const container = document.getElementById('sorteios-list');
+  if (!container) return;
+
+  if (!Array.isArray(state.sorteios) || state.sorteios.length === 0) {
+    container.innerHTML = '<div class="empty-state">Nenhum sorteio encontrado.</div>';
+    return;
+  }
+
+  container.innerHTML = state.sorteios
+    .map((item) => {
+      const title = item.titulo || item.id || 'Sorteio sem título';
+      const subtitle = item.premio ? `Prêmio: ${escapeHTML(item.premio)}` : `ID: ${escapeHTML(item.id)}`;
+      const status = item.status ? `Status: ${escapeHTML(item.status)}` : '';
+      const dataFinal = formatDisplayDate(item.dataFinal);
+      const dataText = dataFinal ? `Data final: ${escapeHTML(dataFinal)}` : '';
+      return `
+        <article class="history-item">
+          <div class="card-header">
+            <h3>${escapeHTML(title)}</h3>
+            <span class="eyebrow">${escapeHTML(status)}</span>
+          </div>
+          <p>${escapeHTML(subtitle)}</p>
+          ${dataText ? `<p>${escapeHTML(dataText)}</p>` : ''}
+        </article>
+      `;
+    })
+    .join('');
+}
+
 export function showToast(message) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
@@ -124,7 +171,7 @@ export function renderAll(state) {
   }
 
   if (lotterySelect) {
-    lotterySelect.value = state.settings.lotteryType;
+    lotterySelect.value = state.settings.selectedSorteioId || '';
   }
   if (gamesInput) {
     gamesInput.value = state.settings.gamesCount || 6;
@@ -134,6 +181,7 @@ export function renderAll(state) {
     resultsArea.innerHTML = renderGames(state.generatedGames, state, {});
   }
 
+  renderSorteios(state);
   renderHistory(state);
   renderFavorites(state);
 
@@ -161,17 +209,25 @@ export function initUI({ state, lotteries, onGenerate, onViewChange, onFavoriteT
   document.body.classList.toggle('theme-light', state.settings.theme === 'light');
 
   if (lotterySelect) {
-    lotterySelect.innerHTML = lotteries
-      .map((lottery) => `<option value="${lottery.value}">${lottery.label}</option>`)
-      .join('');
+    const selectOptions = (state.sorteios || []).map((sorteio) => {
+      const title = sorteio.titulo || sorteio.id || 'Sorteio sem título';
+      return `<option value="${escapeHTML(sorteio.id)}">${escapeHTML(title)}</option>`;
+    });
+
+    if (!selectOptions.length) {
+      selectOptions.push('<option value="">Nenhum sorteio ativo disponível</option>');
+    }
+
+    lotterySelect.innerHTML = selectOptions.join('');
+    lotterySelect.value = state.settings.selectedSorteioId || lotterySelect.value;
   }
 
   if (form) {
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      const type = lotterySelect?.value || state.settings.lotteryType;
+      const selectedId = lotterySelect?.value || state.settings.selectedSorteioId || '';
       const count = Number(gamesInput?.value || state.settings.gamesCount || 6);
-      onGenerate(type, count);
+      onGenerate(selectedId, count);
     });
   }
 
