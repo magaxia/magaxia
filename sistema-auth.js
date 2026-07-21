@@ -18,24 +18,21 @@ window.SistemaAuth = {
     firebase: null,
     usuarioLogado: null,
 
+
     inicializar: function() {
         try {
-            if (typeof firebase === 'undefined') {
+            const firebaseModule = window.__VIP5_FIREBASE__ || window.firebase;
+            if (!firebaseModule?.db || !firebaseModule?.auth) {
                 console.error("❌ Firebase não carregado em SistemaAuth.inicializar");
                 return;
             }
 
-            if (firebase.apps.length === 0) {
-                firebase.initializeApp(this.firebaseConfig);
-            }
-
-            this.db = firebase.firestore();
-            this.auth = firebase.auth();
-            this.firebase = firebase;
+            this.db = firebaseModule.firestoreCompat || firebaseModule.db;
+            this.auth = firebaseModule.auth;
+            this.firebase = window.firebase || firebaseModule;
             this.usuarioLogado = this.usuarioLogado || this._carregarUsuarioLocal();
 
             if (window.SistemaAuth) {
-                window.SistemaAuth.db = this.db;
                 window.SistemaAuth.auth = this.auth;
                 window.SistemaAuth.firebase = this.firebase;
                 window.SistemaAuth.usuarioLogado = this.usuarioLogado;
@@ -83,17 +80,17 @@ window.SistemaAuth = {
             const agoraMs = Date.now();
             const ultimoFalhaMs = this.parseTimestampToMs(usuario.ultimoFalhaLogin);
             let falhas = Number.isFinite(Number(usuario.loginFalhas)) ? Number(usuario.loginFalhas) : 0;
-            if (!ultimoFalhaMs || agoraMs - ultimoFalhaMs > 15 * 60 * 1000) {
-                falhas = 0;
-            }
+
             falhas += 1;
             const updates = {
                 loginFalhas: falhas,
-                ultimoFalhaLogin: firebase.firestore.FieldValue.serverTimestamp()
+                ultimoFalhaLogin: this.firebase?.firestore?.FieldValue?.serverTimestamp ? this.firebase.firestore.FieldValue.serverTimestamp() : null
             };
             if (falhas >= 5) {
-                updates.loginBloqueadoAte = firebase.firestore.Timestamp.fromMillis(agoraMs + 10 * 60 * 1000);
+                updates.loginBloqueadoAte = this.firebase?.firestore?.Timestamp?.fromMillis ? this.firebase.firestore.Timestamp.fromMillis(agoraMs + 10 * 60 * 1000) : null;
                 await this.criarNotificacaoSuspeita({
+                    uidUsuario: uid,
+                    subtipo: 'brute_force_detectado',
                     uidUsuario: uid,
                     subtipo: 'brute_force_detectado',
                     titulo: 'Tentativas de login suspeitas',
@@ -194,7 +191,7 @@ window.SistemaAuth = {
                     disponivel: disponivelAtual,
                     historico: historicoAtual
                 },
-                atualizadoEm: this.firebase.firestore.FieldValue.serverTimestamp()
+                atualizadoEm: this.firebase?.firestore?.FieldValue?.serverTimestamp ? this.firebase.firestore.FieldValue.serverTimestamp() : null
             }, { merge: true });
         });
         // After transaction completes, read and log vip value
@@ -268,6 +265,22 @@ window.SistemaAuth = {
             });
     },
 
+    validarCodigo2FA: async function(uid, usuario, codigo, callback) {
+        if (!uid || !usuario) {
+            callback(false, "Dados de autenticação inválidos");
+            return;
+        }
+
+        const codigoInformado = String(codigo || '').trim();
+        const codigoEsperado = String(usuario.twoFactorCode || '').trim();
+        if (!codigoInformado || !codigoEsperado || codigoInformado !== codigoEsperado) {
+            callback(false, "Código 2FA inválido");
+            return;
+        }
+
+        await this._completarLogin(uid, usuario, usuario.senha || '', callback);
+    },
+
     _validarELogin: async function(uid, usuario, senha, callback) {
         const status = usuario.status || "ativo";
         if (status === "suspenso" || usuario.suspenso === true) {
@@ -305,7 +318,7 @@ window.SistemaAuth = {
                 } catch (e) {
                     console.warn('[TRACE] _validarELogin 2FA before read failed', e);
                 }
-                await userRef.set({ last2faChallenge: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+                await userRef.set({ last2faChallenge: this.firebase?.firestore?.FieldValue?.serverTimestamp ? this.firebase.firestore.FieldValue.serverTimestamp() : null }, { merge: true });
                 try {
                     const afterSnap = await userRef.get();
                     console.log('[TRACE] _validarELogin 2FA after vip5Active:', afterSnap.exists ? afterSnap.data().vip5Active : undefined);
@@ -318,6 +331,7 @@ window.SistemaAuth = {
             }
             callback(false, "2FA_REQUIRED", {
                 uid,
+                usuario,
                 nome: usuario.nome || usuario.email || uid,
                 email: usuario.email,
                 telefone: usuario.telefone
@@ -352,11 +366,11 @@ window.SistemaAuth = {
         const totalLogins = Number.isFinite(Number(usuario.totalLogins)) ? Number(usuario.totalLogins) + 1 : 1;
         const userRef = this.db.collection("users").doc(uid);
         const updates = {
-            ultimoLogin: firebase.firestore.FieldValue.serverTimestamp(),
+            ultimoLogin: this.firebase?.firestore?.FieldValue?.serverTimestamp ? this.firebase.firestore.FieldValue.serverTimestamp() : null,
             online: true,
-            ultimaAtualizacaoPresenca: firebase.firestore.FieldValue.serverTimestamp(),
-            ultimaPresenca: firebase.firestore.FieldValue.serverTimestamp(),
-            totalLogins: firebase.firestore.FieldValue.increment(1),
+            ultimaAtualizacaoPresenca: this.firebase?.firestore?.FieldValue?.serverTimestamp ? this.firebase.firestore.FieldValue.serverTimestamp() : null,
+            ultimaPresenca: this.firebase?.firestore?.FieldValue?.serverTimestamp ? this.firebase.firestore.FieldValue.serverTimestamp() : null,
+            totalLogins: this.firebase?.firestore?.FieldValue?.increment ? this.firebase.firestore.FieldValue.increment(1) : 1,
             dispositivoAtual: dispositivoAtual,
             deviceId: deviceId,
             fingerprint: deviceFingerprint,
@@ -513,22 +527,11 @@ window.SistemaAuth = {
             await firebaseHelper.atualizarStatusAntifraude(uid, {
                 riscoAtual: score,
                 ultimoScoreAntifraude: score,
-                ultimaAnaliseAntifraude: firebase.firestore.FieldValue.serverTimestamp()
+                ultimaAnaliseAntifraude: this.firebase?.firestore?.FieldValue?.serverTimestamp ? this.firebase.firestore.FieldValue.serverTimestamp() : null
             });
 
             if (score >= 90 && !isModoTeste) {
                 await firebaseHelper.marcarBloqueioAutomatico(uid, `Score alto: ${score}`, score, {
-                    dispositivoAtual,
-                    deviceId,
-                    ip: geo.ip,
-                    pais: paisAtual,
-                    contexto: `Score de alerta recente ${score}`
-                });
-                callback(false, "Sua conta foi bloqueada por atividade suspeita");
-                return;
-            }
-            if (score >= 75 && !isModoTeste) {
-                await firebaseHelper.marcarContaMonitorada(uid, `Score elevado: ${score}`, score, {
                     dispositivoAtual,
                     deviceId,
                     ip: geo.ip,
@@ -560,12 +563,13 @@ window.SistemaAuth = {
 
     verificarLogin: function(callback) {
         if (!this.auth || !this.db) {
-            if (typeof firebase !== 'undefined') {
+            const firebaseModule = window.__VIP5_FIREBASE__ || window.firebase;
+            if (firebaseModule?.auth) {
                 this.inicializar();
             }
         }
 
-        const currentUser = this.auth?.currentUser || (typeof firebase !== 'undefined' && firebase.auth ? firebase.auth().currentUser : null);
+        const currentUser = this.auth?.currentUser || null;
 
         if (currentUser) {
             const uid = currentUser.uid;
