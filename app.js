@@ -1,6 +1,6 @@
 import { generateGames, LOTTERIES } from './generator.js';
 import { fetchVisibleSorteios } from './vip5-sorteios-storage.js';
-import { saveGeneratorCodes } from './vip5-storage.js';
+import { saveGeneratorCodes } from './gerador-storage.js';
 import {
   clearAllStorage,
   loadFavorites,
@@ -73,16 +73,27 @@ async function generateAndSave(type, count, sorteioId = null) {
   renderAll(state);
 
   try {
-    const codes = await saveGeneratorCodes({ generatedGames: games, days: 30, uid: null, sorteioId });
+    const selectedSorteio = getSelectedSorteio();
+    const sorteioNome = selectedSorteio?.titulo || selectedSorteio?.id || null;
+    const codes = await saveGeneratorCodes({
+      generatedGames: games.map((numbers) => ({
+        numbers,
+        tipo: state.settings.lotteryType,
+        sorteioId,
+        sorteioNome,
+        createdBy: null
+      }))
+    });
+
     state.generatedGames = games.map((numbers, index) => ({
       numbers,
-      vipCode: codes[index] || null
+      generatorCode: codes[index] || null
     }));
     renderAll(state);
     showToast('Jogos gerados e códigos salvos com sucesso!');
   } catch (error) {
     console.error('Erro ao salvar os códigos do Gerador no Firestore:', error);
-    state.generatedGames = games.map((numbers) => ({ numbers, vipCode: null }));
+    state.generatedGames = games.map((numbers) => ({ numbers, generatorCode: null }));
     renderAll(state);
     showToast('Jogos gerados, mas falha ao salvar os códigos.');
   }
@@ -111,7 +122,7 @@ function favoriteGame(index) {
 
 function regenerateGame(index) {
   const game = generateGames(state.settings.lotteryType, 1)[0];
-  state.generatedGames[index] = { numbers: game, vipCode: null };
+  state.generatedGames[index] = { numbers: game, generatorCode: null };
   state.history = [createHistoryEntry(state.settings.lotteryType, state.generatedGames.map((item) => item.numbers || item)), ...state.history].slice(0, 20);
   persistState();
   renderAll(state);

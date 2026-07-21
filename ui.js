@@ -93,7 +93,7 @@ function renderGames(cards, state, handlers) {
   return cards
     .map((item, index) => {
       const numbers = Array.isArray(item.numbers) ? item.numbers : item.games?.[0] || item;
-      const vipCode = item?.vipCode || null;
+      const generatorCode = item?.generatorCode || null;
       const label = item.type ? item.type : state.settings.lotteryType;
       const title = label.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
       const gameIndex = index;
@@ -108,10 +108,10 @@ function renderGames(cards, state, handlers) {
           <div class="numbers-grid">
             ${numbers.map((number) => `<span class="number-pill">${number}</span>`).join('')}
           </div>
-          ${vipCode ? `<div class="vip-code-row"><strong>Código VIP:</strong> <span class="vip-code-value">${escapeHTML(vipCode)}</span></div>` : ''}
+          ${generatorCode ? `<div class="vip-code-row"><strong>Código do Gerador:</strong> <span class="vip-code-value">${escapeHTML(generatorCode)}</span></div>` : ''}
           <div class="card-footer">
             <button class="icon-btn ${isFavorite ? 'active' : ''}" data-action="favorite" data-index="${gameIndex}">❤️</button>
-            <button class="icon-btn" data-action="copy" data-vip-code="${escapeHTML(vipCode || '')}" data-numbers="${escapeHTML(numbers.join(','))}">📋 Copiar</button>
+            <button class="icon-btn" data-action="copy" data-generator-code="${escapeHTML(generatorCode || '')}">📋 Copiar</button>
             <button class="icon-btn" data-action="regenerate" data-index="${gameIndex}">🔁 Gerar novamente</button>
           </div>
         </article>
@@ -282,13 +282,10 @@ export function initUI({ state, lotteries, onGenerate, onViewChange, onFavoriteT
       onRegenerate(Number(target.dataset.index));
     }
     if (action === 'copy') {
-      const vipCode = target.dataset.vipCode?.trim();
-      if (vipCode) {
-        onCopy(vipCode);
-        return;
+      const generatorCode = target.dataset.generatorCode?.trim();
+      if (generatorCode) {
+        onCopy(generatorCode);
       }
-      const numbers = target.dataset.numbers ? target.dataset.numbers.split(',') : [];
-      onCopy(numbers);
     }
   });
 }
