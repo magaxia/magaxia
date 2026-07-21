@@ -1951,6 +1951,133 @@
         .replace(/'/g, "&#39;");
     }
 
+    function buildGeradorValidationMarkup(itemId) {
+      return `
+        <div style="margin-top: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 14px; background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(45,212,191,0.10)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);">
+          <div style="display:flex; align-items:center; gap:8px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fbbf24; margin-bottom: 10px;">
+            <span style="font-size: 16px;">🎟️</span>
+            Código do Gerador
+          </div>
+          <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">Digite o código gerado:</div>
+          <input id="gerador-code-input-${itemId}" type="text" placeholder="Digite o código..." style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: #f8fafc; font-size: 13px; box-sizing: border-box;" />
+          <button class="vip5-sorteio-button" type="button" onclick="window.validarCodigoGeradorUsuario('${itemId}', this)" style="margin-top: 10px; width: 100%; font-weight: 700; border-radius: 10px;">VALIDAR CÓDIGO</button>
+          <div id="gerador-feedback-${itemId}" style="margin-top: 10px; font-size: 13px; color: #cbd5e1; line-height: 1.4;"></div>
+          <div id="gerador-numeros-${itemId}" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
+        </div>
+      `;
+    }
+
+    window.validarCodigoGeradorUsuario = async function (sorteioId, buttonElement) {
+      const currentUid = window.__vip5GeradorCurrentUid || null;
+      const input = document.getElementById(`gerador-code-input-${sorteioId}`);
+      const feedback = document.getElementById(`gerador-feedback-${sorteioId}`);
+      const numerosContainer = document.getElementById(`gerador-numeros-${sorteioId}`);
+      const cardElement = document.getElementById(`promo-${sorteioId}`);
+      const sorteioTitle = cardElement?.querySelector('.vip5-sorteio-title')?.textContent?.trim() || "Sorteio selecionado";
+
+      if (!input || !feedback || !numerosContainer) return;
+      if (!currentUid) {
+        feedback.innerHTML = "<div style='color:#fda4af;'>⚠️ Usuário não autenticado.</div>";
+        return;
+      }
+
+      const codigo = String(input.value || "").trim().toUpperCase();
+      if (!codigo) {
+        feedback.innerHTML = "<div style='color:#fda4af;'>❌ Código inválido ou inexistente.</div>";
+        return;
+      }
+
+      const codePattern = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{16}$/;
+      if (!codePattern.test(codigo)) {
+        feedback.innerHTML = "<div style='color:#fda4af;'>❌ Código inválido ou inexistente.</div>";
+        return;
+      }
+
+      if (buttonElement) {
+        buttonElement.disabled = true;
+        buttonElement.innerHTML = '<span class="btn-label">VALIDANDO...</span>';
+      }
+      feedback.innerHTML = "<div style='color:#cbd5e1;'>Validando código...</div>";
+      numerosContainer.innerHTML = "";
+
+      try {
+        const codeRef = doc(collection(db, "vip5_gerador_codigos"), codigo);
+        const codeSnap = await getDoc(codeRef);
+
+        if (!codeSnap.exists()) {
+          throw new Error("❌ Código inválido ou inexistente.");
+        }
+
+        const codeData = codeSnap.data();
+        if (String(codeData.status || "").toLowerCase() !== "ativo") {
+          throw new Error("❌ Código inválido ou inexistente.");
+        }
+        if (codeData.usado === true) {
+          throw new Error("⚠️ Este código já foi utilizado.");
+        }
+
+        const userRef = doc(db, "users", currentUid);
+        await runTransaction(db, async (transaction) => {
+          const freshCodeSnap = await transaction.get(codeRef);
+          if (!freshCodeSnap.exists()) {
+            throw new Error("❌ Código não encontrado.");
+          }
+
+          const refreshedCodeData = freshCodeSnap.data();
+          if (String(refreshedCodeData.status || "").toLowerCase() !== "ativo") {
+            throw new Error("❌ Código inválido ou inexistente.");
+          }
+          if (refreshedCodeData.usado === true) {
+            throw new Error("⚠️ Este código já foi utilizado.");
+          }
+
+          const userSnap = await transaction.get(userRef);
+          const existingAssociations = userSnap.exists() ? (userSnap.data().geradorValidacoes || {}) : {};
+          const updatedAssociations = {
+            ...existingAssociations,
+            [String(sorteioId)]: {
+              sorteioId: String(sorteioId),
+              codigo,
+              numeros: Array.isArray(refreshedCodeData.numeros) ? refreshedCodeData.numeros : [],
+              validadoEm: serverTimestamp(),
+              status: "validado"
+            }
+          };
+
+          transaction.update(codeRef, {
+            usado: true,
+            usadoPor: currentUid,
+            usadoEm: serverTimestamp(),
+            status: "usado"
+          });
+
+          transaction.set(userRef, {
+            geradorValidacoes: updatedAssociations
+          }, { merge: true });
+        });
+
+        const numbers = Array.isArray(codeData.numeros) ? codeData.numeros : [];
+        feedback.innerHTML = `
+          <div style="color: #86efac; font-weight: 700;">✅ Código validado com sucesso!</div>
+          <div style="margin-top: 4px; color: #e2e8f0;">Este código pertence a este sorteio.</div>
+          <div style="margin-top: 4px; color: #f8fafc; font-weight: 600;">Sorteio: ${escapeHtml(sorteioTitle)}</div>
+          <div style="margin-top: 2px; color: #cbd5e1;">Status: ${escapeHtml(String(codeData.status || "ativo"))}</div>
+        `;
+        feedback.style.color = "#86efac";
+        numerosContainer.innerHTML = numbers.length
+          ? numbers.map((number) => `<span style="padding: 6px 8px; border-radius: 999px; background: rgba(45,212,191,0.16); color: #99f6e4; font-size: 12px; font-weight: 700;">${escapeHtml(String(number))}</span>`).join("")
+          : '<span style="font-size: 12px; color: #cbd5e1;">Nenhum número disponível.</span>';
+      } catch (err) {
+        feedback.textContent = err.message || "Erro ao validar código.";
+        feedback.style.color = "#fda4af";
+      } finally {
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          buttonElement.innerHTML = '<span class="btn-label">VALIDAR CÓDIGO</span>';
+        }
+      }
+    };
+
     async function renderVip5ItemsList({ listElement, countElement, items, uid, vipData, productId, emptyMessage, itemTypeLabel }) {
       if (!listElement || !countElement) return;
 
@@ -2054,6 +2181,7 @@
               <div class="vip5-sorteio-info-value">${descricaoMarkup}</div>
             </div>
             ${regulamentoMarkup}
+            ${isSorteio ? buildGeradorValidationMarkup(item.id) : ""}
             <button class="vip5-sorteio-button" id="btn-part-${item.id}" onclick="vip5SorteioParticipar('${item.id}', this)"><span class="btn-label">Participar</span></button>
           `;
 
@@ -2103,6 +2231,8 @@
 
     // ── Carrega e exibe promoções + sorteios ──────────────────────────────────
     async function vip5SorteioLoadItems(uid, vipData) {
+      window.__vip5GeradorCurrentUid = uid || null;
+
       const promosCard = document.getElementById("promos-card");
       const promosList = document.getElementById("promos-list");
       const promosCount = document.getElementById("promos-count");

@@ -1,162 +1,157 @@
-[debug] [2026-06-15T20:14:19.567Z] ----------------------------------------------------------------------
-[debug] [2026-06-15T20:14:19.573Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions:vip5Activate,functions:vip5ActivateHttp --project vastbitloud-2872a
-[debug] [2026-06-15T20:14:19.575Z] CLI Version:   15.15.0
-[debug] [2026-06-15T20:14:19.575Z] Platform:      win32
-[debug] [2026-06-15T20:14:19.575Z] Node Version:  v25.8.2
-[debug] [2026-06-15T20:14:19.576Z] Time:          Mon Jun 15 2026 17:14:19 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-15T20:14:19.576Z] ----------------------------------------------------------------------
+[debug] [2026-07-21T19:00:27.007Z] ----------------------------------------------------------------------
+[debug] [2026-07-21T19:00:27.013Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start --only firestore auth --project vastbitloud-2872a
+[debug] [2026-07-21T19:00:27.014Z] CLI Version:   15.15.0
+[debug] [2026-07-21T19:00:27.014Z] Platform:      win32
+[debug] [2026-07-21T19:00:27.014Z] Node Version:  v25.8.2
+[debug] [2026-07-21T19:00:27.015Z] Time:          Tue Jul 21 2026 16:00:27 GMT-0300 (Horário Padrão de Brasília)
+[debug] [2026-07-21T19:00:27.015Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2026-06-15T20:14:19.580Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[debug] [2026-06-15T20:14:23.019Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-06-15T20:14:23.789Z] Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
-    at GoogleAuth.getApplicationDefaultAsync (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:287:15)
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async GoogleAuth._GoogleAuth_determineClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:834:32)
-    at async GoogleAuth.getClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:698:20)
-    at async GoogleAuth.getAccessToken (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:722:24)
-    at async autoAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:28:19)
-    at async requireAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:90:20)
-    at async requirePermissions (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requirePermissions.js:17:5)
-    at async C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\command.js:271:17
-[error] 
-[error] Error: Failed to authenticate, have you run firebase login?
-[debug] [2026-06-15T20:16:09.149Z] ----------------------------------------------------------------------
-[debug] [2026-06-15T20:16:09.155Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js logout
-[debug] [2026-06-15T20:16:09.155Z] CLI Version:   15.15.0
-[debug] [2026-06-15T20:16:09.155Z] Platform:      win32
-[debug] [2026-06-15T20:16:09.156Z] Node Version:  v25.8.2
-[debug] [2026-06-15T20:16:09.156Z] Time:          Mon Jun 15 2026 17:16:09 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-15T20:16:09.156Z] ----------------------------------------------------------------------
-[debug] 
-[debug] [2026-06-15T20:16:09.160Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[info] No need to logout, not logged in
-[debug] [2026-06-15T20:16:15.923Z] Error: Timed out.
-    at Timeout._onTimeout (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\utils.js:309:49)
-    at listOnTimeout (node:internal/timers:605:17)
-    at process.processTimers (node:internal/timers:541:7)
-[error] 
-[error] Error: An unexpected error has occurred.
-[debug] [2026-06-15T20:16:17.607Z] ----------------------------------------------------------------------
-[debug] [2026-06-15T20:16:17.613Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login --reauth --no-localhost
-[debug] [2026-06-15T20:16:17.613Z] CLI Version:   15.15.0
-[debug] [2026-06-15T20:16:17.613Z] Platform:      win32
-[debug] [2026-06-15T20:16:17.614Z] Node Version:  v25.8.2
-[debug] [2026-06-15T20:16:17.614Z] Time:          Mon Jun 15 2026 17:16:17 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-15T20:16:17.614Z] ----------------------------------------------------------------------
-[debug] 
-[debug] [2026-06-15T20:16:17.618Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[debug] [2026-06-15T20:16:18.063Z] >>> [apiv2][query] POST https://auth.firebase.tools/attest [none]
-[debug] [2026-06-15T20:16:18.063Z] >>> [apiv2][body] POST https://auth.firebase.tools/attest {"session_id":"08637d23-dac7-408c-b5c6-f2be1c5a0561"}
-[debug] [2026-06-15T20:16:38.985Z] *** [apiv2] error from fetch(https://firebase-public.firebaseio.com/cli.json, {"headers":{},"method":"GET"}): FetchError: request to https://firebase-public.firebaseio.com/cli.json failed, reason: 
-[warn] !  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection. 
-[debug] [2026-06-15T20:16:38.987Z] Failed to fetch MOTD FirebaseError: Failed to make request to https://firebase-public.firebaseio.com/cli.json
-[debug] [2026-06-15T20:16:43.048Z] *** [apiv2] error from fetch(https://auth.firebase.tools/attest, {"headers":{},"method":"POST","body":"{\"session_id\":\"08637d23-dac7-408c-b5c6-f2be1c5a0561\"}"}): FetchError: request to https://auth.firebase.tools/attest failed, reason: 
-[debug] [2026-06-15T20:36:03.917Z] ----------------------------------------------------------------------
-[debug] [2026-06-15T20:36:03.923Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions:vip5Activate,functions:vip5ActivateHttp --project vastbitloud-2872a
-[debug] [2026-06-15T20:36:03.923Z] CLI Version:   15.15.0
-[debug] [2026-06-15T20:36:03.924Z] Platform:      win32
-[debug] [2026-06-15T20:36:03.924Z] Node Version:  v25.8.2
-[debug] [2026-06-15T20:36:03.924Z] Time:          Mon Jun 15 2026 17:36:03 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-15T20:36:03.925Z] ----------------------------------------------------------------------
-[debug] 
-[debug] [2026-06-15T20:36:03.929Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[debug] [2026-06-15T20:36:07.148Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-06-15T20:36:08.161Z] Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
-    at GoogleAuth.getApplicationDefaultAsync (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:287:15)
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async GoogleAuth._GoogleAuth_determineClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:834:32)
-    at async GoogleAuth.getClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:698:20)
-    at async GoogleAuth.getAccessToken (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:722:24)
-    at async autoAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:28:19)
-    at async requireAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:90:20)
-    at async requirePermissions (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requirePermissions.js:17:5)
-    at async C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\command.js:271:17
-[error] 
-[error] Error: Failed to authenticate, have you run firebase login?
-[debug] [2026-06-20T19:38:02.591Z] ----------------------------------------------------------------------
-[debug] [2026-06-20T19:38:02.606Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions:vip5Activate,functions:vip5ActivateHttp --project vastbitloud-2872a
-[debug] [2026-06-20T19:38:02.607Z] CLI Version:   15.15.0
-[debug] [2026-06-20T19:38:02.607Z] Platform:      win32
-[debug] [2026-06-20T19:38:02.607Z] Node Version:  v25.8.2
-[debug] [2026-06-20T19:38:02.608Z] Time:          Sat Jun 20 2026 16:38:02 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-20T19:38:02.608Z] ----------------------------------------------------------------------
-[debug] 
-[debug] [2026-06-20T19:38:02.613Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[debug] [2026-06-20T19:38:12.169Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-06-20T19:38:12.687Z] Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
-    at GoogleAuth.getApplicationDefaultAsync (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:287:15)
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async GoogleAuth._GoogleAuth_determineClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:834:32)
-    at async GoogleAuth.getClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:698:20)
-    at async GoogleAuth.getAccessToken (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:722:24)
-    at async autoAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:28:19)
-    at async requireAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:90:20)
-    at async requirePermissions (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requirePermissions.js:17:5)
-    at async C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\command.js:271:17
-[error] 
-[error] Error: Failed to authenticate, have you run firebase login?
-[debug] [2026-06-20T19:40:35.058Z] ----------------------------------------------------------------------
-[debug] [2026-06-20T19:40:35.064Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login --reauth
-[debug] [2026-06-20T19:40:35.064Z] CLI Version:   15.15.0
-[debug] [2026-06-20T19:40:35.065Z] Platform:      win32
-[debug] [2026-06-20T19:40:35.065Z] Node Version:  v25.8.2
-[debug] [2026-06-20T19:40:35.065Z] Time:          Sat Jun 20 2026 16:40:35 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-20T19:40:35.066Z] ----------------------------------------------------------------------
-[debug] 
-[debug] [2026-06-20T19:40:35.071Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[error] 
-[error] Error: Cannot run login in non-interactive mode. See login:ci to generate a token for use in non-interactive environments.
-[debug] [2026-06-20T20:07:56.991Z] ----------------------------------------------------------------------
-[debug] [2026-06-20T20:07:56.996Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login:list
-[debug] [2026-06-20T20:07:56.997Z] CLI Version:   15.15.0
-[debug] [2026-06-20T20:07:56.997Z] Platform:      win32
-[debug] [2026-06-20T20:07:56.997Z] Node Version:  v25.8.2
-[debug] [2026-06-20T20:07:56.997Z] Time:          Sat Jun 20 2026 17:07:56 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-20T20:07:56.997Z] ----------------------------------------------------------------------
-[debug] 
-[debug] [2026-06-20T20:07:57.007Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[warn] !  No authorized accounts, run "firebase login" 
-[debug] [2026-06-20T20:07:57.012Z] ----------------------------------------------------------------------
-[debug] [2026-06-20T20:07:57.018Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js functions:log --only vip5Activate,vip5ActivateHttp --project vastbitloud-2872a -n 30
-[debug] [2026-06-20T20:07:57.018Z] CLI Version:   15.15.0
-[debug] [2026-06-20T20:07:57.019Z] Platform:      win32
-[debug] [2026-06-20T20:07:57.019Z] Node Version:  v25.8.2
-[debug] [2026-06-20T20:07:57.019Z] Time:          Sat Jun 20 2026 17:07:57 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-20T20:07:57.019Z] ----------------------------------------------------------------------
-[debug] 
-[debug] [2026-06-20T20:07:57.026Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[debug] [2026-06-20T20:07:57.680Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-06-20T20:07:57.022Z] ----------------------------------------------------------------------
-[debug] [2026-06-20T20:07:57.028Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js functions:list --project vastbitloud-2872a
-[debug] [2026-06-20T20:07:57.029Z] CLI Version:   15.15.0
-[debug] [2026-06-20T20:07:57.029Z] Platform:      win32
-[debug] [2026-06-20T20:07:57.029Z] Node Version:  v25.8.2
-[debug] [2026-06-20T20:07:57.030Z] Time:          Sat Jun 20 2026 17:07:57 GMT-0300 (Horário Padrão de Brasília)
-[debug] [2026-06-20T20:07:57.030Z] ----------------------------------------------------------------------
-[debug] 
-[debug] [2026-06-20T20:07:57.035Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
-[debug] [2026-06-20T20:07:57.743Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-06-20T20:07:58.076Z] Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
-    at GoogleAuth.getApplicationDefaultAsync (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:287:15)
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async GoogleAuth._GoogleAuth_determineClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:834:32)
-    at async GoogleAuth.getClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:698:20)
-    at async GoogleAuth.getAccessToken (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:722:24)
-    at async autoAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:28:19)
-    at async requireAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:90:20)
-    at async Object.requirePermissions [as fn] (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requirePermissions.js:17:5)
-    at async C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\command.js:271:17
-[error] 
-[error] Error: Failed to authenticate, have you run firebase login?
-[debug] [2026-06-20T20:07:58.110Z] Error: Could not load the default credentials. Browse to https://cloud.google.com/docs/authentication/getting-started for more information.
-    at GoogleAuth.getApplicationDefaultAsync (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:287:15)
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async GoogleAuth._GoogleAuth_determineClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:834:32)
-    at async GoogleAuth.getClient (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:698:20)
-    at async GoogleAuth.getAccessToken (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\node_modules\google-auth-library\build\src\auth\googleauth.js:722:24)
-    at async autoAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:28:19)
-    at async requireAuth (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requireAuth.js:90:20)
-    at async Object.requirePermissions [as fn] (C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\requirePermissions.js:17:5)
-    at async C:\Users\Kalebi\AppData\Roaming\npm\node_modules\firebase-tools\lib\command.js:271:17
-[error] 
-[error] Error: Failed to authenticate, have you run firebase login?
+[debug] [2026-07-21T19:00:27.022Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-07-21T19:00:37.700Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] Failed to authenticate, have you run firebase login?
+[warn] !  emulators: You are not currently authenticated so some features may not work correctly. Please run firebase login to authenticate the CLI. 
+[debug] [2026-07-21T19:00:39.058Z] openjdk version "21.0.11" 2026-04-21 LTS
+
+[debug] [2026-07-21T19:00:39.059Z] OpenJDK Runtime Environment Temurin-21.0.11+10 (build 21.0.11+10-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.11+10 (build 21.0.11+10-LTS, mixed mode, sharing)
+
+[debug] [2026-07-21T19:00:39.116Z] Parsed Java major version: 21
+[info] i  emulators: Starting emulators: auth, firestore {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, firestore"}}
+[debug] [2026-07-21T19:00:39.143Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-21T19:00:39.143Z] [auth] Authentication Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-07-21T19:00:39.143Z] assigned listening specs for emulators {"user":{"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-07-21T19:00:39.161Z] Write emulator hub locator at C:\Users\Kalebi\AppData\Local\Temp\hub-vastbitloud-2872a.json
+[warn] !  firestore: Cloud Firestore Emulator does not support multiple databases yet. {"metadata":{"emulator":{"name":"firestore"},"message":"Cloud Firestore Emulator does not support multiple databases yet."}}
+[warn] !  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file. {"metadata":{"emulator":{"name":"firestore"},"message":"Did not find a Cloud Firestore rules file specified in a firebase.json config file."}}
+[warn] !  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration. {"metadata":{"emulator":{"name":"firestore"},"message":"The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration."}}
+[debug] [2026-07-21T19:00:39.253Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2026-07-21T19:00:39.253Z] Ignoring unsupported arg: single_project_mode_error {"metadata":{"emulator":{"name":"firestore"},"message":"Ignoring unsupported arg: single_project_mode_error"}}
+[debug] [2026-07-21T19:00:39.254Z] Starting Firestore Emulator with command {"binary":"java","args":["-Dgoogle.cloud_firestore.debug_log_level=FINE","-Duser.language=en","-jar","C:\\Users\\Kalebi\\.cache\\firebase\\emulators\\cloud-firestore-emulator-v1.20.4.jar","--host","127.0.0.1","--port",8080,"--websocket_port",9150,"--database-edition","standard","--project_id","vastbitloud-2872a","--single_project_mode",true],"optionalArgs":["port","webchannel_port","host","rules","websocket_port","database-edition","functions_emulator","seed_from_export","project_id","single_project_mode"],"joinArgs":false,"shell":false,"port":8080} {"metadata":{"emulator":{"name":"firestore"},"message":"Starting Firestore Emulator with command {\"binary\":\"java\",\"args\":[\"-Dgoogle.cloud_firestore.debug_log_level=FINE\",\"-Duser.language=en\",\"-jar\",\"C:\\\\Users\\\\Kalebi\\\\.cache\\\\firebase\\\\emulators\\\\cloud-firestore-emulator-v1.20.4.jar\",\"--host\",\"127.0.0.1\",\"--port\",8080,\"--websocket_port\",9150,\"--database-edition\",\"standard\",\"--project_id\",\"vastbitloud-2872a\",\"--single_project_mode\",true],\"optionalArgs\":[\"port\",\"webchannel_port\",\"host\",\"rules\",\"websocket_port\",\"database-edition\",\"functions_emulator\",\"seed_from_export\",\"project_id\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":8080}"}}
+[info] i  firestore: Firestore Emulator logging to firestore-debug.log {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator logging to \u001b[1mfirestore-debug.log\u001b[22m"}}
+[debug] [2026-07-21T19:00:39.281Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-07-21T19:00:39.281Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-07-21T19:00:43.646Z] Jul 21, 2026 4:00:43 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+INFO: Started WebSocket server on ws://127.0.0.1:9150
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:00:43 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start\r\nINFO: Started WebSocket server on ws://127.0.0.1:9150\r\n"}}
+[debug] [2026-07-21T19:00:43.761Z] 
+API endpoint: http:// {"metadata":{"emulator":{"name":"firestore"},"message":"\nAPI endpoint: http://"}}
+[debug] [2026-07-21T19:00:43.762Z] 127.0.0.1:8080
+Database Edition: STANDARD
+Database Mode: CLOUD_FIRESTORE
+
+If you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:
+
+   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+
+If you are running a Firestore in Datastore Mode project, run:
+
+   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080
+
+Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
+Dev App Server is now running.
+
+ {"metadata":{"emulator":{"name":"firestore"},"message":"127.0.0.1:8080\nDatabase Edition: STANDARD\nDatabase Mode: CLOUD_FIRESTORE\n\nIf you are using a library that supports the FIRESTORE_EMULATOR_HOST environment variable, run:\r\n\n   export FIRESTORE_EMULATOR_HOST=127.0.0.1:8080\n\nIf you are running a Firestore in Datastore Mode project, run:\r\n\n   export DATASTORE_EMULATOR_HOST=127.0.0.1:8080\n\nNote: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.\r\nDev App Server is now running.\n\r\n"}}
+[info] +  firestore: Firestore Emulator was started in standard edition. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator was started in standard edition."}}
+[info] +  firestore: Firestore Emulator UI websocket is running on 9150. {"metadata":{"emulator":{"name":"firestore"},"message":"Firestore Emulator UI websocket is running on 9150."}}
+[debug] [2026-07-21T19:01:02.802Z] Jul 21, 2026 4:00:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+Jul 21, 2026 4:00:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:00:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\nJul 21, 2026 4:00:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:01:02.842Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase SQL Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┬─────────────────────────────────┐
+│ Emulator       │ Host:Port      │ View in Emulator UI             │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Authentication │ 127.0.0.1:9099 │ http://127.0.0.1:4000/auth      │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Firestore      │ 127.0.0.1:8080 │ http://127.0.0.1:4000/firestore │
+└────────────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500, 9150
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2026-07-21T19:01:20.997Z] Jul 21, 2026 4:01:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:01:20 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:01:21.002Z] Jul 21, 2026 4:01:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:01:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:01:51.011Z] Jul 21, 2026 4:01:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:01:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:01:51.015Z] Jul 21, 2026 4:01:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:01:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:02:21.020Z] Jul 21, 2026 4:02:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:02:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:02:21.024Z] Jul 21, 2026 4:02:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:02:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:02:51.025Z] Jul 21, 2026 4:02:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:02:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:02:51.027Z] Jul 21, 2026 4:02:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:02:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:03:21.029Z] Jul 21, 2026 4:03:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:03:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:03:21.031Z] Jul 21, 2026 4:03:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:03:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:03:51.043Z] Jul 21, 2026 4:03:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:03:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:03:51.046Z] Jul 21, 2026 4:03:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:03:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:04:21.057Z] Jul 21, 2026 4:04:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:04:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:04:21.059Z] Jul 21, 2026 4:04:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:04:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:04:51.055Z] Jul 21, 2026 4:04:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:04:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:04:51.057Z] Jul 21, 2026 4:04:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:04:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:05:21.073Z] Jul 21, 2026 4:05:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:05:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:05:21.074Z] Jul 21, 2026 4:05:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:05:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:05:51.082Z] Jul 21, 2026 4:05:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:05:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:05:51.083Z] Jul 21, 2026 4:05:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:05:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:06:21.090Z] Jul 21, 2026 4:06:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:06:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:06:21.092Z] Jul 21, 2026 4:06:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:06:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:06:51.092Z] Jul 21, 2026 4:06:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:06:51 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:06:51.095Z] Jul 21, 2026 4:06:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:06:51 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
+[debug] [2026-07-21T19:07:21.116Z] Jul 21, 2026 4:07:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+INFO: Detected non-HTTP/2 connection.
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:07:21 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead\r\nINFO: Detected non-HTTP/2 connection.\r\n"}}
+[debug] [2026-07-21T19:07:21.118Z] Jul 21, 2026 4:07:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest
+INFO: Unknown request URI: /v1/health
+ {"metadata":{"emulator":{"name":"firestore"},"message":"Jul 21, 2026 4:07:21 PM io.gapi.emulators.netty.NotFoundHandler handleRequest\r\nINFO: Unknown request URI: /v1/health\r\n"}}
