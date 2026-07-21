@@ -2,8 +2,7 @@ console.log("[VIP5] vip5.js carregando...");
 
 import { auth } from "./vip5-firebase.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getCode, activateVipCode, getUserVip } from "./vip5-storage.js";
-import { isCodeUsed, getCodeDays } from "./vip5-code-utils.mjs";
+import { getCode, markCodeUsed, saveUserVip, getUserVip } from "./vip5-storage.js";
 
 console.log("[VIP5] Módulos importados com sucesso.");
 
@@ -66,7 +65,7 @@ form.addEventListener("submit", async (e) => {
   showMessage("");
 
   try {
-    console.log("[VIP5] Buscando código no Firestore: vip5_codigos/" + code);
+    console.log("[VIP5] Buscando código no Firestore: vip5_codes/" + code);
     const codeData = await getCode(code);
 
     if (!codeData) {
@@ -77,25 +76,29 @@ form.addEventListener("submit", async (e) => {
     }
 
     console.log("[VIP5] Dados do código:", codeData);
-    console.log("[VIP5] used=" + isCodeUsed(codeData) + " | days=" + codeData.days + " | tipo de days=" + typeof codeData.days);
+    console.log("[VIP5] used=" + codeData.used + " | days=" + codeData.days + " | tipo de days=" + typeof codeData.days);
 
-    if (isCodeUsed(codeData)) {
+    if (codeData.used === true) {
       console.warn("[VIP5] Código já foi utilizado.");
       showMessage("Este código já foi utilizado.", true);
       setLoading(false);
       return;
     }
 
-    const days = getCodeDays(codeData, 30);
-    if (!Number.isFinite(days) || days < 1) {
+    if (!codeData.days || isNaN(Number(codeData.days))) {
       console.error("[VIP5] Campo 'days' inválido ou ausente no documento:", codeData.days);
       showMessage("Erro: código com configuração inválida.", true);
       setLoading(false);
       return;
     }
 
-    console.log("[VIP5] Ativando código e salvando VIP em uma operação atômica...");
-    await activateVipCode(code, user.uid, days);
+    const days = Number(codeData.days);
+
+    console.log("[VIP5] Marcando código como usado...");
+    await markCodeUsed(code, user.uid);
+
+    console.log("[VIP5] Gravando VIP em users/" + user.uid + " por " + days + " dias...");
+    await saveUserVip(user.uid, code, days);
 
     showMessage("Código ativado com sucesso! Redirecionando...");
     console.log("[VIP5] VIP gravado. Redirecionando para vip5-usuario.html em 1.5s...");
