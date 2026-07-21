@@ -1,5 +1,6 @@
 import { generateGames, LOTTERIES } from './generator.js';
 import { fetchVisibleSorteios } from './vip5-sorteios-storage.js';
+import { saveGeneratorCodes } from './vip5-storage.js';
 import {
   clearAllStorage,
   loadFavorites,
@@ -65,13 +66,20 @@ function persistState() {
   saveFavorites(state.favorites);
 }
 
-function generateAndSave(type, count) {
+async function generateAndSave(type, count, sorteioId = null) {
   const games = generateGames(type, count);
   state.generatedGames = games;
   state.history = [createHistoryEntry(type, games), ...state.history].slice(0, 20);
   persistState();
   renderAll(state);
-  showToast('Jogos gerados com sucesso!');
+
+  try {
+    await saveGeneratorCodes({ generatedGames: games, days: 30, uid: null, sorteioId });
+    showToast('Jogos gerados e códigos salvos com sucesso!');
+  } catch (error) {
+    console.error('Erro ao salvar os códigos do Gerador no Firestore:', error);
+    showToast('Jogos gerados, mas falha ao salvar os códigos.');
+  }
 }
 
 function favoriteGame(index) {
@@ -166,7 +174,7 @@ initUI({
     const lotteryType = resolveLotteryTypeForSorteio(selectedSorteio);
     state.settings.lotteryType = lotteryType;
     persistState();
-    generateAndSave(lotteryType, count);
+    generateAndSave(lotteryType, count, selectedSorteioId);
   },
   onViewChange: setView,
   onFavoriteToggle: favoriteGame,

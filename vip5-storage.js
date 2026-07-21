@@ -105,6 +105,81 @@ export async function generateVipCodes({ prefix = "", qty = 1, days = 30, uid = 
   }
 }
 
+export async function saveGeneratorCodes({ generatedGames = [], days = 30, uid = null, sorteioId = null, existingCodes = [] } = {}) {
+  try {
+    const safeDays = Number.isFinite(Number(days)) ? Math.max(1, Math.floor(Number(days))) : 30;
+    const safeUid = uid ? String(uid).trim() : null;
+    const safeSorteioId = sorteioId ? String(sorteioId).trim() : null;
+    const existingSet = new Set(
+      (existingCodes || [])
+        .map((value) => String(value || "").trim().toUpperCase())
+        .filter(Boolean)
+    );
+
+    const codesToSave = [];
+    const seen = new Set();
+    const maxAttempts = Math.max((generatedGames || []).length * 100, 1000);
+
+    for (const game of generatedGames) {
+      let code = null;
+      let attempts = 0;
+
+      while (attempts < maxAttempts) {
+        const candidate = buildCodeCandidate();
+        if (existingSet.has(candidate) || seen.has(candidate)) {
+          attempts += 1;
+          continue;
+        }
+
+        const candidateRef = doc(db, CODE_COLLECTION, candidate);
+        const candidateSnap = await getDoc(candidateRef);
+        if (!candidateSnap.exists()) {
+          code = candidate;
+          break;
+        }
+
+        attempts += 1;
+      }
+
+      if (!code) {
+        throw new Error("Não foi possível gerar código VIP único para um dos jogos do Gerador.");
+      }
+
+      codesToSave.push({ code });
+      seen.add(code);
+      existingSet.add(code);
+    }
+
+    if (!codesToSave.length) {
+      throw new Error("Nenhum código gerado novo foi encontrado para salvar.");
+    }
+
+    const batch = writeBatch(db);
+    codesToSave.forEach(({ code }) => {
+      const ref = doc(db, CODE_COLLECTION, code);
+      batch.set(ref, {
+        codigo: code,
+        uid: safeUid,
+        sorteioId: safeSorteioId,
+        dataCriacao: serverTimestamp(),
+        status: "ativo",
+        usado: false,
+        usadoPor: null,
+        dataUso: null,
+        days: safeDays,
+        createdAt: serverTimestamp()
+      });
+    });
+
+    await batch.commit();
+    console.log("[VIP5-STORAGE] Códigos do Gerador salvos com sucesso:", codesToSave.map((item) => item.code));
+    return codesToSave.map((item) => item.code);
+  } catch (err) {
+    console.error("[VIP5-STORAGE] Erro ao salvar códigos do Gerador:", err.message, err);
+    throw new Error(`Erro ao salvar códigos do Gerador: ${err.message}`);
+  }
+}
+
 export async function getCode(code) {
   try {
     if (!code || !String(code).trim()) {
