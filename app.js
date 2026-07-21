@@ -68,31 +68,38 @@ function persistState() {
 
 async function generateAndSave(type, count, sorteioId = null) {
   const games = generateGames(type, count);
-  state.generatedGames = games;
   state.history = [createHistoryEntry(type, games), ...state.history].slice(0, 20);
   persistState();
   renderAll(state);
 
   try {
-    await saveGeneratorCodes({ generatedGames: games, days: 30, uid: null, sorteioId });
+    const codes = await saveGeneratorCodes({ generatedGames: games, days: 30, uid: null, sorteioId });
+    state.generatedGames = games.map((numbers, index) => ({
+      numbers,
+      vipCode: codes[index] || null
+    }));
+    renderAll(state);
     showToast('Jogos gerados e códigos salvos com sucesso!');
   } catch (error) {
     console.error('Erro ao salvar os códigos do Gerador no Firestore:', error);
+    state.generatedGames = games.map((numbers) => ({ numbers, vipCode: null }));
+    renderAll(state);
     showToast('Jogos gerados, mas falha ao salvar os códigos.');
   }
 }
 
 function favoriteGame(index) {
   const target = state.generatedGames[index];
-  const existing = state.favorites.find((item) => item.id === `${state.generatedGames[index].join('-')}-${index}`);
+  const numbers = Array.isArray(target) ? target : (target?.numbers || []);
+  const existing = state.favorites.find((item) => item.id === `${numbers.join('-')}-${index}`);
   if (existing) {
-    state.favorites = state.favorites.filter((item) => item.id !== `${target.join('-')}-${index}`);
+    state.favorites = state.favorites.filter((item) => item.id !== `${numbers.join('-')}-${index}`);
   } else {
     state.favorites = [
       {
-        id: `${target.join('-')}-${index}`,
+        id: `${numbers.join('-')}-${index}`,
         type: state.settings.lotteryType,
-        numbers: target,
+        numbers,
         createdAt: new Date().toISOString()
       },
       ...state.favorites
@@ -104,15 +111,15 @@ function favoriteGame(index) {
 
 function regenerateGame(index) {
   const game = generateGames(state.settings.lotteryType, 1)[0];
-  state.generatedGames[index] = game;
-  state.history = [createHistoryEntry(state.settings.lotteryType, state.generatedGames), ...state.history].slice(0, 20);
+  state.generatedGames[index] = { numbers: game, vipCode: null };
+  state.history = [createHistoryEntry(state.settings.lotteryType, state.generatedGames.map((item) => item.numbers || item)), ...state.history].slice(0, 20);
   persistState();
   renderAll(state);
   showToast('Jogo regenerado.');
 }
 
-function copyNumbers(numbers) {
-  const text = numbers.join(' • ');
+function copyNumbers(value) {
+  const text = typeof value === 'string' ? value : Array.isArray(value) ? value.join(' • ') : String(value || '');
   const fallbackCopy = () => {
     const textarea = document.createElement('textarea');
     textarea.value = text;
@@ -126,15 +133,15 @@ function copyNumbers(numbers) {
   };
 
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).then(() => showToast('Números copiados!')).catch(() => {
+    navigator.clipboard.writeText(text).then(() => showToast('Código copiado!')).catch(() => {
       fallbackCopy();
-      showToast('Números copiados!');
+      showToast('Código copiado!');
     });
     return;
   }
 
   fallbackCopy();
-  showToast('Números copiados!');
+  showToast('Código copiado!');
 }
 
 function clearData() {
