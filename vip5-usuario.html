@@ -1,0 +1,2703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Área VIP5</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & tokens ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #07070f;
+      --bg-card:     #0e0e1a;
+      --bg-card-2:   #11111e;
+      --border:      rgba(255,255,255,0.06);
+      --border-h:    rgba(255,255,255,0.11);
+      --gold:        #f59e0b;
+      --gold-dim:    rgba(245,158,11,0.15);
+      --gold-glow:   rgba(245,158,11,0.08);
+      --blue:        #3b82f6;
+      --blue-dim:    rgba(59,130,246,0.14);
+      --green:       #10b981;
+      --green-dim:   rgba(16,185,129,0.13);
+      --red:         #ef4444;
+      --red-dim:     rgba(239,68,68,0.13);
+      --amber:       #f59e0b;
+      --amber-dim:   rgba(245,158,11,0.13);
+      --text-1:      #f1f5f9;
+      --text-2:      #94a3b8;
+      --text-3:      #475569;
+      --text-4:      #2d3a4f;
+      --radius-sm:   8px;
+      --radius-md:   12px;
+      --radius-lg:   16px;
+      --radius-xl:   20px;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4);
+      --shadow-glow: 0 0 0 1px rgba(245,158,11,0.12), 0 8px 32px rgba(245,158,11,0.06);
+      --transition:  cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 64px;
+    }
+
+    /* ── Background subtle grid ─────────────────────────────────────────────── */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Loading screen ─────────────────────────────────────────────────────── */
+    #loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      color: var(--text-3);
+      z-index: 1;
+    }
+
+    #loading span {
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+
+    .header-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+      animation: pulse-dot 2.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(16,185,129,0.2); }
+      50%       { box-shadow: 0 0 0 6px rgba(16,185,129,0.08); }
+    }
+
+    .header-eyebrow-text {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--green);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-1);
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-3);
+      font-weight: 400;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #1a1208 0%, #1f1a08 100%);
+      border: 1px solid rgba(245,158,11,0.35);
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 100px;
+      flex-shrink: 0;
+      margin-top: 4px;
+      box-shadow: 0 0 16px rgba(245,158,11,0.12);
+    }
+
+    .badge::before {
+      content: "★";
+      font-size: 10px;
+    }
+
+    /* ── Section divider ────────────────────────────────────────────────────── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-4);
+    }
+
+    .section-label::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Card base ──────────────────────────────────────────────────────────── */
+    .card {
+      background: rgba(10, 14, 32, 0.95);
+      border: 1px solid rgba(245,158,11,0.18);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.24);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--text-4);
+      margin-bottom: 14px;
+    }
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* ── Info rows ──────────────────────────────────────────────────────────── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(245,158,11,0.16);
+      border-radius: 16px;
+      padding: 18px 20px;
+      min-height: 84px;
+    }
+
+    .info-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-3);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .info-value {
+      font-size: 14px;
+      color: #e2e8f0;
+      word-break: break-word;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.4;
+    }
+
+    .info-value.highlight {
+      font-size: 18px;
+      font-weight: 800;
+      color: #facc15;
+      letter-spacing: -0.3px;
+    }
+
+    .vip-alert {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #fff4e5;
+      color: #bf360c;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #ffcc80;
+      font-weight: bold;
+      margin: 0 20px 15px;
+    }
+
+    .produto-img {
+      width: 100%;
+      height: 110px; /* compact thumbnail for antecipados */
+      object-fit: cover;
+      border-bottom: none;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .chip {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      color: #333;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      backdrop-filter: blur(10px);
+      max-width: 85%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .valor {
+      font-size: 1.65rem;
+      font-weight: bold;
+      color: #4CAF50;
+      text-align: center;
+      margin: 14px 0 10px;
+      letter-spacing: -0.5px;
+    }
+
+    .info {
+      padding: 0 16px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: #666;
+      line-height: 1.4;
+    }
+
+    .destaque {
+      color: #667eea;
+      font-weight: bold;
+      font-size: 1.15rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px 14px;
+      background: linear-gradient(135deg, #2196F3, #1976D2);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      margin: 0 16px 16px 16px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 -28px;
+    }
+
+    /* ── Countdown ──────────────────────────────────────────────────────────── */
+    .countdown-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .countdown-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .cd-block {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(245,158,11,0.14);
+      border-radius: 18px;
+      padding: 16px 16px;
+      min-width: 100px;
+      flex: 1 1 120px;
+      justify-content: center;
+    }
+
+    .cd-number {
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--text-1);
+      letter-spacing: -0.6px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .cd-unit {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-3);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .cd-sep {
+      display: none;
+    }
+
+    .countdown-expired {
+      font-size: 14px;
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    /* ── Progress ───────────────────────────────────────────────────────────── */
+    .progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .progress-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-3);
+    }
+
+    .progress-pct {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: rgba(245,158,11,0.14);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--gold) 0%, #ef8c0a 100%);
+      transition: width 0.8s var(--transition);
+      box-shadow: 0 0 10px rgba(245,158,11,0.35);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       VIP5 SORTEIOS MODULE (ISOLADO)
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .vip5-sorteio-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 0;
+      min-height: 120px;
+      align-items: stretch;
+      align-content: start;
+    }
+
+    .vip5-sorteio-card {
+      background: linear-gradient(160deg, rgba(14, 18, 36, 0.98) 0%, rgba(8, 10, 22, 0.98) 100%);
+      border: 1px solid rgba(245,158,11,0.16);
+      border-radius: var(--radius-xl);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+      min-height: 100%;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.22);
+    }
+
+    .vip5-sorteio-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--gold) 0%, transparent 100%);
+      border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+    }
+
+    .vip5-sorteio-card::after {
+      content: "";
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(245,158,11,0.07) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .vip5-sorteio-card-header {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-bottom: 4px;
+    }
+
+    .vip5-sorteio-title-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .vip5-sorteio-icon {
+      font-size: 20px;
+      line-height: 1.2;
+      flex-shrink: 0;
+    }
+
+    .vip5-sorteio-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.4;
+      flex: 1;
+      letter-spacing: -0.15px;
+    }
+
+    .vip5-sorteio-badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .vip5-sorteio-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .vip5-sorteio-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .vip5-sorteio-badge-vip {
+      background: rgba(245,158,11,0.1);
+      color: var(--gold);
+      border: 1px solid rgba(245,158,11,0.25);
+    }
+
+    .vip5-sorteio-badge-publica {
+      background: rgba(99,102,241,0.1);
+      color: #a5b4fc;
+      border: 1px solid rgba(99,102,241,0.22);
+    }
+
+    .vip5-sorteio-status-badge.badge-ativa {
+      background: rgba(16,185,129,0.12);
+      color: #34d399;
+      border: 1px solid rgba(16,185,129,0.22);
+    }
+
+    .vip5-sorteio-status-badge.badge-ativa::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 4px rgba(16,185,129,0.6);
+      animation: ping 1.8s ease-in-out infinite;
+    }
+
+    .vip5-sorteio-status-badge.badge-programada {
+      background: rgba(59,130,246,0.12);
+      color: #60a5fa;
+      border: 1px solid rgba(59,130,246,0.22);
+    }
+
+    .vip5-sorteio-status-badge.badge-programada::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #3b82f6;
+    }
+
+    .vip5-sorteio-status-badge.badge-pausada {
+      background: rgba(245,158,11,0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245,158,11,0.22);
+    }
+
+    .vip5-sorteio-status-badge.badge-pausada::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #f59e0b;
+    }
+
+    .vip5-sorteio-status-badge.badge-encerrada {
+      background: rgba(239,68,68,0.12);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.22);
+    }
+
+    .vip5-sorteio-status-badge.badge-encerrada::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+
+    .vip5-sorteio-divider {
+      height: 1px;
+      background: linear-gradient(90deg, rgba(245,158,11,0.25), rgba(255,255,255,0.05));
+      margin: 2px 0;
+    }
+
+    .vip5-sorteio-info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .vip5-sorteio-info-item {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
+      gap: 6px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 12px 12px 11px;
+      min-height: 86px;
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .vip5-sorteio-info-item--wide {
+      grid-column: span 2;
+    }
+
+    .vip5-sorteio-info-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      line-height: 1.2;
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    .vip5-sorteio-info-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+      line-height: 1.3;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      width: 100%;
+      display: block;
+    }
+
+    .vip5-sorteio-button {
+      width: 100%;
+      padding: 13px 20px;
+      background: linear-gradient(135deg, #c87d07 0%, #d4890f 40%, #b86a05 100%);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      margin-top: 4px;
+      box-shadow: 0 8px 18px rgba(245,158,11,0.14);
+    }
+
+    .vip5-sorteio-button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: rgba(255,255,255,0.04);
+      border-color: var(--border);
+      transform: none;
+    }
+
+    .vip5-sorteio-button.success {
+      background: linear-gradient(135deg, #047857, #059669 50%, #0d9488 100%);
+      border-color: rgba(16,185,129,0.3);
+      opacity: 1;
+      cursor: default;
+      transform: none;
+    }
+
+    .vip5-sorteio-button.loading {
+      cursor: wait;
+    }
+
+    .vip5-sorteio-feedback {
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      min-height: 16px;
+      line-height: 1.5;
+      padding: 0;
+      border-radius: var(--radius-sm);
+    }
+
+    .vip5-sorteio-feedback:empty { display: none; }
+
+    .vip5-sorteio-feedback.ok {
+      color: #34d399;
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.15);
+      padding: 9px 12px;
+    }
+
+    .vip5-sorteio-feedback.err {
+      color: #fb923c;
+      background: rgba(251,146,60,0.08);
+      border: 1px solid rgba(251,146,60,0.15);
+      padding: 9px 12px;
+    }
+
+    .vip5-sorteio-feedback.warn {
+      color: #fbbf24;
+      background: rgba(251,191,36,0.08);
+      border: 1px solid rgba(251,191,36,0.15);
+      padding: 9px 12px;
+    }
+
+    .vip5-sorteio-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .vip5-sorteio-section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-4);
+    }
+
+    .vip5-sorteio-section-title::before {
+      content: "✦";
+      color: var(--gold);
+      font-size: 13px;
+    }
+
+    .vip5-sorteio-count-badge {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      background: rgba(245,158,11,0.12);
+      color: var(--gold);
+      border: 1px solid rgba(245,158,11,0.22);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+
+    .vip5-sorteio-loading {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-3);
+      font-size: 13px;
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .vip5-sorteio-loading-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--gold);
+      border-radius: 50%;
+      animation: bounce-dot 1.2s ease-in-out infinite;
+    }
+
+    .vip5-sorteio-loading-dot:nth-child(2) { animation-delay: 0.18s; }
+    .vip5-sorteio-loading-dot:nth-child(3) { animation-delay: 0.36s; }
+
+    .vip5-sorteio-empty {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-3);
+      font-size: 14px;
+      font-weight: 500;
+      background: rgba(255,255,255,0.02);
+      border: 1px dashed rgba(255,255,255,0.07);
+      border-radius: var(--radius-xl);
+      grid-column: 1 / -1;
+    }
+
+    .vip5-sorteio-empty-icon {
+      font-size: 36px;
+      display: block;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    .vip5-sorteio-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .vip5-sorteio-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .vip5-sorteio-pill strong {
+      color: var(--text-2);
+      font-weight: 800;
+    }
+
+    @media (max-width: 1200px) {
+      .vip5-sorteio-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .vip5-sorteio-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .vip5-sorteio-info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .vip5-sorteio-list {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .vip5-sorteio-info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Logout button ──────────────────────────────────────────────────────── */
+    .btn-logout {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-md);
+      color: var(--text-3);
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      letter-spacing: 0.1px;
+    }
+
+    .btn-logout:hover {
+      background: rgba(255,255,255,0.04);
+      color: var(--text-2);
+      border-color: rgba(255,255,255,0.12);
+    }
+
+    /* ── Error message ──────────────────────────────────────────────────────── */
+    #error-msg {
+      display: none;
+      text-align: center;
+      color: #f87171;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 24px;
+      background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.15);
+      border-radius: var(--radius-lg);
+      max-width: 480px;
+      z-index: 1;
+    }
+
+    /* ── Layout geral ─────────────────────────────────────────────────────── */
+    #content {
+      width: min(100%, 1100px);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      padding: 6px 4px 2px;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      gap: 18px;
+      color: var(--text-3);
+      z-index: 1;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid rgba(245,158,11,0.16);
+      border-top-color: var(--gold);
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .filter-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      padding: 4px 0 2px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex: 1;
+      min-width: 220px;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(8px);
+    }
+
+    .filter-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      white-space: nowrap;
+    }
+
+    .filter-control {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.7);
+      color: var(--text-1);
+      padding: 10px 12px;
+      outline: none;
+      font: inherit;
+    }
+
+    .filter-control::placeholder {
+      color: var(--text-4);
+    }
+
+    .filter-control:focus {
+      border-color: rgba(245,158,11,0.4);
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.14);
+    }
+
+    .filter-action {
+      width: auto;
+      min-width: 160px;
+      margin: 0;
+    }
+
+    .tab-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(8px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+      align-self: flex-start;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-3);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-2);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(245,158,11,0.24), rgba(245,158,11,0.14));
+      color: #fef3c7;
+      box-shadow: inset 0 0 0 1px rgba(245,158,11,0.22);
+    }
+
+    .subtab-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      align-self: flex-start;
+      margin-bottom: 4px;
+    }
+
+    .subtab-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-3);
+      padding: 9px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .subtab-btn:hover {
+      color: var(--text-2);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .subtab-btn.active {
+      background: rgba(245,158,11,0.16);
+      color: #fef3c7;
+    }
+
+    .tab-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .card {
+        border-radius: 16px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+      }
+      .produto-img {
+        height: 160px;
+      }
+      .valor {
+        font-size: 1.5rem;
+        margin: 12px 0 8px;
+      }
+      .info {
+        font-size: 0.85rem;
+        padding: 0 14px;
+      }
+      button {
+        margin: 0 14px 14px 14px;
+      }
+      .vip-alert {
+        margin: 0 16px 12px;
+      }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 24px 12px 48px; }
+      h1 { font-size: 22px; }
+      .card { padding: 0; }
+      .divider { margin: 0 -20px; }
+      .cd-number { font-size: 32px; }
+      .cd-sep { font-size: 22px; }
+      .vip5-sorteio-info-grid { grid-template-columns: repeat(2, 1fr); }
+      .info-grid { grid-template-columns: 1fr; }
+      .info-row:first-child { grid-column: 1; }
+      .produto-img { height: 150px; }
+      .chip { font-size: 0.8rem; padding: 7px 12px; }
+      .valor { font-size: 1.4rem; }
+      button { padding: 12px; font-size: 0.9rem; }
+      .filter-toolbar { flex-direction: column; align-items: stretch; }
+      .filter-group { min-width: 0; }
+      .filter-action { width: 100%; }
+    }
+
+    @media (max-width: 360px) {
+      h1 { font-size: 19px; }
+      .cd-number { font-size: 26px; }
+      .cd-unit { font-size: 9px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Loading ─────────────────────────────────────────────────────────── -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <span>Verificando acesso VIP...</span>
+  </div>
+
+  <!-- ── Authenticated content ───────────────────────────────────────────── -->
+  <div id="content">
+
+    <!-- Page header -->
+    <div class="header">
+      <div class="header-left">
+        <div class="header-eyebrow">
+          <div class="header-dot"></div>
+          <span class="header-eyebrow-text">Acesso ativo</span>
+        </div>
+        <h1>Área VIP5</h1>
+        <p class="subtitle">Seu acesso está ativo e válido</p>
+      </div>
+      <span class="badge" id="badge-vip">VIP5</span>
+    </div>
+
+    <div class="tab-nav" role="tablist" aria-label="Navegação da área VIP">
+      <button class="tab-btn active" type="button" data-target="overview-section">Resumo</button>
+      <button class="tab-btn" type="button" data-target="sorteios-section">Sorteios</button>
+    </div>
+
+    <div id="overview-section" class="tab-panel">
+      <div class="card">
+        <p class="card-title">Informações do acesso</p>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-row">
+              <span class="info-label">UID do usuário</span>
+              <span class="info-value" id="uid-value">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Código VIP</span>
+              <span class="info-value highlight" id="code-value">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Nível VIP</span>
+              <span class="info-value" id="nivel-vip-value">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Data de ativação</span>
+              <span class="info-value" id="activated-value">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Data de expiração</span>
+              <span class="info-value" id="expires-value">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Tempo restante</p>
+        <div class="card-body">
+          <div class="countdown-wrap">
+            <div class="countdown-display" id="countdown-display">
+              <div class="cd-block">
+                <span class="cd-number" id="cd-days">00</span>
+                <span class="cd-unit">dias</span>
+              </div>
+              <span class="cd-sep">:</span>
+              <div class="cd-block">
+                <span class="cd-number" id="cd-hours">00</span>
+                <span class="cd-unit">horas</span>
+              </div>
+              <span class="cd-sep">:</span>
+              <div class="cd-block">
+                <span class="cd-number" id="cd-minutes">00</span>
+                <span class="cd-unit">min</span>
+              </div>
+              <span class="cd-sep">:</span>
+              <div class="cd-block">
+                <span class="cd-number" id="cd-seconds">00</span>
+                <span class="cd-unit">seg</span>
+              </div>
+            </div>
+
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label">Consumido do plano</span>
+                <span class="progress-pct" id="progress-pct">—</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Cadastrar código</p>
+        <div class="card-body">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: 0.8px; text-transform: uppercase;">Código</label>
+              <input id="register-code-input" type="text" placeholder="Digite o código..." style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(245,158,11,0.16); border-radius: 12px; color: #e2e8f0; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);" />
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: 0.8px; text-transform: uppercase;">Sorteio (opcional)</label>
+              <select id="register-code-sorteio" style="width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(245,158,11,0.16); border-radius: 12px; color: #e2e8f0; font-size: 14px; font-family: 'Inter', sans-serif; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);">
+                <option value="">-- Nenhum sorteio específico --</option>
+              </select>
+            </div>
+            <button class="vip5-sorteio-button" type="button" onclick="window.location.href='gerador.html'" style="margin: 0;">
+              <span aria-hidden="true">🎲</span>
+              <span>Gerador de Códigos</span>
+            </button>
+            <button id="register-code-btn" type="button" style="margin: 0; padding: 12px 14px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; border-radius: 12px; color: white; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);">Confirmar</button>
+            <p id="register-code-status" style="margin: 0; font-size: 12px; color: var(--text-3); text-align: center; display: none;"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sorteios-section" class="tab-panel" style="display:none;">
+      <div class="subtab-nav" role="tablist" aria-label="Subabas de sorteios">
+        <button class="subtab-btn active" type="button" data-subtarget="promos-panel">Promoções</button>
+        <button class="subtab-btn" type="button" data-subtarget="sorteios-panel">Sorteios</button>
+        <button class="subtab-btn" type="button" data-subtarget="produtos-panel">Produtos Antecipados</button>
+      </div>
+
+      <div id="promos-panel" class="subtab-panel">
+        <div class="card" id="promos-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
+          <div class="vip5-sorteio-section-header">
+            <p class="vip5-sorteio-section-title">Promoções</p>
+            <span class="vip5-sorteio-count-badge" id="promos-count" style="display:none"></span>
+          </div>
+          <div class="vip5-sorteio-list" id="promos-list">
+            <div class="vip5-sorteio-loading">
+              <div class="vip5-sorteio-loading-dot"></div>
+              <div class="vip5-sorteio-loading-dot"></div>
+              <div class="vip5-sorteio-loading-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="sorteios-panel" class="subtab-panel" style="display:none;">
+        <div class="card" id="sorteios-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
+          <div class="vip5-sorteio-section-header">
+            <p class="vip5-sorteio-section-title">Sorteios</p>
+            <span class="vip5-sorteio-count-badge" id="sorteios-count" style="display:none"></span>
+          </div>
+          <div class="vip5-sorteio-list" id="sorteios-list">
+            <div class="vip5-sorteio-loading">
+              <div class="vip5-sorteio-loading-dot"></div>
+              <div class="vip5-sorteio-loading-dot"></div>
+              <div class="vip5-sorteio-loading-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="produtos-panel" class="subtab-panel" style="display:none;">
+        <div class="card" id="produtos-antecipados-card" style="display:none;flex-direction:column;gap:16px;box-shadow:none;border:none;padding:0;background:transparent;">
+          <div class="vip5-sorteio-section-header">
+            <p class="vip5-sorteio-section-title">Produtos Antecipados</p>
+            <span class="vip5-sorteio-count-badge" id="produtos-count" style="display:none"></span>
+          </div>
+
+          <div class="filter-toolbar">
+            <div class="filter-group">
+              <span class="filter-label">Pesquisar</span>
+              <input id="produtos-search-input" class="filter-control" type="text" placeholder="Pesquisar produto..." />
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Categoria</span>
+              <select id="produtos-category-filter" class="filter-control">
+                <option value="">Todas</option>
+                <option value="lancamentos">Lançamentos</option>
+                <option value="exclusivos">Exclusivos</option>
+                <option value="premium">Premium</option>
+              </select>
+            </div>
+            <button class="vip5-sorteio-button filter-action" type="button" onclick="pesquisarProdutosAntecipadosUsuario()">Buscar produtos</button>
+          </div>
+
+          <div class="vip5-sorteio-list" id="produtos-list">
+            <div class="vip5-sorteio-empty">
+              <span class="vip5-sorteio-empty-icon">🛍️</span>
+              Nenhum produto disponível.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logout -->
+    <button class="btn-logout" id="btn-logout">Sair da conta</button>
+  </div>
+
+  <p id="error-msg"></p>
+
+  <script type="module">
+    import { auth, db } from "./vip5-firebase.js";
+    import { signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { collection, doc, getDocs, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { checkVipExpiration } from "./vip5-expiration-manager.js";
+
+    // ── Promoções (coleção vip5_promocoes) ───────────────────────────────────
+    import {
+      fetchVisiblePromotions,
+      canParticipate        as canParticipatePromocao,
+      registerParticipation as registerParticipationPromocao,
+      applyPromotionToPurchase,
+    } from "./vip5-promocoes-storage.js";
+
+    // ── Sorteios (coleção vip5_sorteios) ─────────────────────────────────────
+    import {
+      subscribeToActiveSorteios,
+      canParticipate        as canParticipateSorteio,
+      registerParticipation as registerParticipationSorteio,
+      fetchSorteioById,
+      fetchSorteioResults,
+    } from "./vip5-sorteios-storage.js";
+
+    // ── VIP (coleção vip5_codigos) ──────────────────────────────────────────
+    import {
+      getCode,
+      activateVipCode,
+      getUserVip,
+    } from "./vip5-storage.js";
+    import { isCodeUsed, getCodeDays } from "./vip5-code-utils.mjs";
+
+    let activePromocoesUsuarioCache = [];
+
+    function activateTab(targetId) {
+      const target = document.getElementById(targetId);
+      const overview = document.getElementById('overview-section');
+      const sorteios = document.getElementById('sorteios-section');
+
+      document.querySelectorAll('.tab-btn').forEach((item) => item.classList.remove('active'));
+      const activeBtn = document.querySelector(`.tab-btn[data-target="${targetId}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      if (target === sorteios) {
+        if (overview) overview.style.display = 'none';
+        if (sorteios) sorteios.style.display = 'flex';
+      } else {
+        if (sorteios) sorteios.style.display = 'none';
+        if (overview) overview.style.display = 'flex';
+      }
+
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => activateTab(btn.dataset.target));
+    });
+
+    function activateSubtab(targetId) {
+      document.querySelectorAll('.subtab-btn').forEach((btn) => btn.classList.remove('active'));
+      const activeBtn = document.querySelector(`.subtab-btn[data-subtarget="${targetId}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.querySelectorAll('.subtab-panel').forEach((panel) => {
+        panel.style.display = panel.id === targetId ? 'block' : 'none';
+      });
+    }
+
+    document.querySelectorAll('.subtab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => activateSubtab(btn.dataset.subtarget));
+    });
+
+    function _promoDiscountAmount(promo, amount) {
+      const base = Number(amount || 0);
+      if (base <= 0 || !promo) return 0;
+      const value = Number(promo?.valorDesconto || 0);
+      if (promo?.tipoDesconto === 'fixo') {
+        return Math.min(base, value);
+      }
+      return Math.min(base, (base * value) / 100);
+    }
+
+    function getBestPromoForProduct(produto) {
+      if (!produto || !activePromocoesUsuarioCache.length) return null;
+      const now = new Date();
+      const vipNivel = Number(_currentVip?.vipNivel || 0);
+      const precoBase = Number(produto.preco || produto.valor || produto.valorOriginal || 0);
+
+      const candidatos = activePromocoesUsuarioCache.filter((promo) => {
+        if (!promo || promo.status !== 'ativa') return false;
+        if (promo.restante !== undefined && Number(promo.restante) <= 0) return false;
+        if (promo.vipMinimo > 0 && vipNivel < Number(promo.vipMinimo || 0)) return false;
+
+        const inicio = promo.inicio ? new Date(promo.inicio.toDate ? promo.inicio.toDate() : promo.inicio) : null;
+        const fim = promo.fim ? new Date(promo.fim.toDate ? promo.fim.toDate() : promo.fim) : null;
+        if (inicio && inicio > now) return false;
+        if (fim && fim < now) return false;
+
+        const selected = Array.isArray(promo.produtosSelecionados) ? promo.produtosSelecionados.filter(Boolean) : [];
+        if (selected.length && !produto?.docId) return false;
+        if (selected.length && !selected.some((item) => String(item) === String(produto.docId))) return false;
+
+        return true;
+      }).map((promo) => {
+        const desconto = _promoDiscountAmount(promo, precoBase);
+        return {
+          promo,
+          desconto,
+          precoPromocional: Math.max(0, precoBase - desconto),
+          discountPercent: promo.tipoDesconto === 'fixo'
+            ? desconto > 0 ? Math.round((desconto / precoBase) * 100) : 0
+            : Number(promo.valorDesconto || 0),
+        };
+      }).filter((item) => item.desconto > 0);
+
+      if (!candidatos.length) return null;
+
+      candidatos.sort((a, b) => {
+        if (b.desconto !== a.desconto) return b.desconto - a.desconto;
+        return (_toMs(b.promo.criadoEm) || 0) - (_toMs(a.promo.criadoEm) || 0);
+      });
+
+      return candidatos[0];
+    }
+
+    async function carregarPromocoesAtivasUsuario(isVip) {
+      try {
+        const result = await fetchVisiblePromotions({ isVip: Boolean(isVip), limit: 200, productId: null });
+        if (result.success && Array.isArray(result.data?.items)) {
+          activePromocoesUsuarioCache = result.data.items;
+          console.log("[VIP5-USUARIO] Promoções ativas para produtos carregadas:", activePromocoesUsuarioCache.length);
+        } else {
+          activePromocoesUsuarioCache = [];
+          console.warn("[VIP5-USUARIO] Falha ao carregar promoções ativas:", result.error);
+        }
+      } catch (err) {
+        activePromocoesUsuarioCache = [];
+        console.warn("[VIP5-USUARIO] Erro ao carregar promoções ativas:", err);
+      }
+    }
+
+    console.log("[VIP5-USUARIO] Página carregada. Verificando expiração VIP...");
+
+    let countdownTimer = null;
+    let _currentUser   = null;
+    let _currentVip    = null;
+    let activeSorteiosUnsubscribe = null;
+
+    function cleanupActiveSorteiosListener() {
+      if (typeof activeSorteiosUnsubscribe === "function") {
+        try {
+          activeSorteiosUnsubscribe();
+        } catch (err) {
+          console.warn("[VIP5-USUARIO] Falha ao cancelar listener de sorteios ativos:", err);
+        }
+      }
+      activeSorteiosUnsubscribe = null;
+    }
+
+    window.addEventListener("beforeunload", cleanupActiveSorteiosListener);
+
+    function getCurrentProductContext() {
+      const params = new URLSearchParams(window.location.search);
+      const candidates = [
+        params.get("productId"),
+        params.get("produtoId"),
+        window.__currentProductId,
+        window.currentProductId,
+        window.selectedProductId,
+        document.querySelector("[data-product-id]")?.dataset?.productId,
+      ].filter(Boolean);
+      return candidates[0] || null;
+    }
+
+    // Mapeia id → tipo ("promocao" | "sorteio") para despacho no participar()
+    const _tipoMap = new Map();
+    let produtosAntecipadosUsuario = [];
+    const ITEM_STATUS_LABELS = {
+      ativa: "Ativa",
+      programada: "Programada",
+      pausada: "Pausada",
+      encerrada: "Encerrada",
+    };
+
+    // ── Utilitários ───────────────────────────────────────────────────────────
+    function pad(n) {
+      return String(Math.floor(n)).padStart(2, "0");
+    }
+
+    function formatDate(ts) {
+      return new Date(ts).toLocaleString("pt-BR", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function fmtDateShort(v) {
+      if (!v) return "—";
+      const d = typeof v.toDate === "function" ? v.toDate() : (v instanceof Date ? v : new Date(v));
+      return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+
+    /**
+     * Converte qualquer representação de timestamp para milissegundos.
+     * Suporta Firestore Timestamp, Date, number, { seconds, nanoseconds }.
+     */
+    function _toMs(value) {
+      if (!value) return 0;
+      if (typeof value.toMillis === "function") return value.toMillis();
+      if (typeof value.toDate   === "function") return value.toDate().getTime();
+      if (typeof value === "number") return value;
+      if (typeof value === "object" && typeof value.seconds === "number") {
+        return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
+      }
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? 0 : d.getTime();
+    }
+
+    function normalizeProdutoAntecipadoUsuario(item) {
+      const p = item || {};
+      const tipoNormalizado = String(p.tipo || p.abaProduto || p.aba || p.categoria || "eventos").toLowerCase();
+      const tipo = ["diario", "vip", "fixo", "eventos"].includes(tipoNormalizado) ? tipoNormalizado : "eventos";
+      const nome = String(p.nome || p.titulo || p.title || "Produto");
+      const categoria = String(p.categoria || p.categoriaInfo?.nome || p.categoriaProduto || p.abaProduto || p.aba || p.tipo || "Geral");
+      const descricao = String(p.descricao || p.descricaoProduto || p.description || p.observacoes || p.obs || "");
+      const codigo = String(p.codigo || p.code || p.sku || p.codigoProduto || "");
+      const preco = Number(p.preco ?? p.valor ?? p.valorProduto ?? p.price ?? p.precoProduto ?? 0);
+      const precoPromocional = Number(p.precoPromocional ?? p.valorPromocional ?? p.promocional ?? p.precoPromo ?? p.valorPromo ?? 0);
+      const desconto = Number(p.desconto ?? p.descontoPercentual ?? p.percentualDesconto ?? p.discount ?? p.descontoProduto ?? 0);
+      const ciclo = Number(p.ciclo ?? p.cicloDias ?? p.dias ?? p.days ?? p.periodo ?? 0);
+      const rendaDiaria = Number(p.rendaDiaria ?? p.valorRendimento ?? p.renda ?? p.rendimento ?? p.valorRenda ?? 0);
+      const valorRendimento = Number(p.valorRendimento ?? p.rendaDiaria ?? p.renda ?? p.rendimento ?? p.valorLucro ?? p.lucro ?? p.valor_lucro ?? p.valorRenda ?? 0);
+      const tipoRetorno = String(p.tipoRetorno || p.tipoRendimento || p.retorno || "").toLowerCase();
+      const tipoRendimento = tipoRetorno === "lucro"
+        ? "lucro"
+        : (tipoRetorno === "renda" || tipoRetorno === "rendadiaria" || tipoRetorno === "rendaDiaria" || tipoRetorno === "renda_diaria" || tipoRetorno === "renda diaria" ? "rendaDiaria" : (p.tipoRendimento === "lucro" ? "lucro" : ""));
+      const imagem = p.imagem || p.imagemPrincipal || p.imagemUrl || p.imageUrl || p.image || "https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto";
+      const requiredVip = Number(p.requiredVip ?? p.nivelVip ?? p.vipNivel ?? p.vip ?? p.requiredVipNivel ?? 0);
+      const exclusivoVip5 = Boolean(p.exclusivoVip5 === true || p.exclusivoVip5 === "true" || p.exclusivoVip5 === 1 || p.exclusivoVip5 === "1");
+      const status = String(p.status || "").toLowerCase();
+      const statusInativo = ["inativo", "desativado", "pausado"].includes(status);
+
+      return {
+        ...p,
+        id: p.id || p.docId || `produtos_antecipados_${p.id || p.docId || ""}`,
+        docId: p.docId || p.id || "",
+        origem: "produtos_antecipados",
+        tipo,
+        categoria,
+        nome,
+        descricao,
+        codigo,
+        preco,
+        precoPromocional,
+        desconto,
+        valor: preco,
+        ciclo,
+        rendaDiaria,
+        valorRendimento,
+        tipoRendimento,
+        tipoRetorno,
+        imagem,
+        imagemPrincipal: p.imagemPrincipal || p.imagem || p.imagemUrl || p.imageUrl || imagem,
+        requiredVip,
+        nivelVip: requiredVip,
+        exclusivoVip5,
+        ativo: p.ativo !== false,
+        status,
+        statusInativo,
+        aberturaVip: _toMs(p.aberturaVip),
+        aberturaPublica: _toMs(p.aberturaPublica),
+        encerramento: _toMs(p.encerramento ?? p.dataExpiracao ?? p.dataEncerramento),
+        criadoEm: _toMs(p.criadoEm ?? p.createdAt ?? p.dataCriacao),
+        ordem: Number(p.ordem ?? 0)
+      };
+    }
+
+    function getCorTipo(tipo) {
+      const cores = {
+        diario: "#2196F3",
+        vip: "#FFD700",
+        fixo: "#4CAF50",
+        eventos: "#9C27B0"
+      };
+      return cores[tipo] || "#9C27B0";
+    }
+
+    function getGradienteTipo(tipo) {
+      const gradientes = {
+        diario: "linear-gradient(135deg, #2196F3, #1976D2)",
+        vip: "linear-gradient(135deg, #FFD700, #FFC700)",
+        fixo: "linear-gradient(135deg, #4CAF50, #388E3C)",
+        eventos: "linear-gradient(135deg, #9C27B0, #7B1FA2)"
+      };
+      return gradientes[tipo] || gradientes.eventos;
+    }
+
+    function criarCardProdutoAntecipado(produto) {
+      const nomeSeguro = String(produto.nome || "").replace(/'/g, "\\'");
+      const categoriaTexto = produto.categoria || "Geral";
+      const statusTexto = produto.statusInativo ? "Inativo" : (produto.ativo ? "Ativo" : "Inativo");
+      const vipTexto = produto.requiredVip > 0 ? `VIP ${produto.requiredVip}` : "VIP 0";
+      const codigoTexto = produto.codigo ? `<div class="info">🧾 Código: ${produto.codigo}</div>` : "";
+      const descricaoTexto = produto.descricao ? `<div class="info">📝 ${produto.descricao}</div>` : "";
+      const categoriaLinha = `<div class="info">📂 Categoria: ${categoriaTexto}</div>`;
+      const vipLinha = `<div class="info">🔐 Nível VIP: ${vipTexto}</div>`;
+      const statusLinha = `<div class="info">🔄 Status: ${statusTexto}</div>`;
+
+      const userVipNivel = Number(_currentVip?.vipNivel ?? 0);
+      const bloqueadoPorVIP = produto.requiredVip > 0 && userVipNivel < produto.requiredVip;
+      let textoBot = "🛒 Comprar Agora";
+      let avisoVip = "";
+      let botaoAtributos = "";
+      let botaoClass = "";
+
+      if (produto.exclusivoVip5 && _currentVip?.vip5Active !== true) {
+        textoBot = "🔒 Bloqueado";
+        avisoVip = `<div class="vip-alert">🔒 Exclusivo VIP5</div>`;
+        botaoAtributos = " disabled";
+        botaoClass = "bloqueado";
+      }
+
+      if (bloqueadoPorVIP) {
+        textoBot = "🔒 Bloqueado";
+        avisoVip = `<div class="vip-alert">🔒 Necessário VIP ${produto.requiredVip}</div>`;
+        botaoAtributos = " disabled";
+        botaoClass = "bloqueado";
+      }
+
+      const valorExibido = Number(produto.tipoRendimento === "lucro" ? produto.valorRendimento : produto.rendaDiaria);
+      const totalRendimento = produto.tipoRendimento === "lucro"
+        ? Number(valorExibido)
+        : Number(valorExibido * produto.ciclo);
+      const corTipo = getCorTipo(produto.tipo);
+      const gradienteTipo = getGradienteTipo(produto.tipo);
+      const promo = produto.promoPreview || null;
+      const precoOriginal = Number(produto.preco || 0);
+      const precoPromo = promo ? Number(promo.precoPromocional || 0) : precoOriginal;
+      const descontoTexto = promo ? `<div class="info" style="color:#2e7d32;">Economize R$ ${Number(promo.desconto || 0).toFixed(2)} (${promo.discountPercent}% off)</div>` : "";
+      const promoBadge = promo ? `<div class="vip5-sorteio-badge vip5-sorteio-badge-vip" style="background: linear-gradient(135deg, #f44336, #d32f2f); color:#fff; display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:0.82rem; font-weight:700; margin-bottom:10px;">🔥 Promoção ativa</div>` : "";
+
+      const card = document.createElement("div");
+      card.className = "card" + (botaoClass ? " bloqueado" : "");
+      card.id = "card_" + produto.id;
+      card.innerHTML = `
+        <img src="${produto.imagem}" alt="${produto.nome}" class="produto-img" onerror="this.src='https://via.placeholder.com/300x200/667eea/FFFFFF?text=Produto'">
+        <div class="chip" style="background: ${gradienteTipo}; color: ${produto.tipo === 'vip' ? '#000' : 'white'}; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">${produto.nome}</div>
+        ${promoBadge}
+        <div class="info">${promo ? `<span class="price-old" style="text-decoration:line-through;color:#888;">R$ ${precoOriginal.toFixed(2)}</span> <strong style="color:#d32f2f;">R$ ${precoPromo.toFixed(2)}</strong>` : `<span class="destaque" style="color: ${corTipo};">R$ ${precoOriginal.toFixed(2)}</span>`}</div>
+        ${descontoTexto}
+        ${codigoTexto}
+        ${descricaoTexto}
+        ${vipLinha}
+        <div class="info">💰 Lucro: <span class="destaque" style="color: ${corTipo};">R$ ${valorExibido.toFixed(2)}</span></div>
+        <div class="info">⏰ Ciclo: ${produto.ciclo} dias</div>
+        <div class="info">📈 Total: R$ ${totalRendimento.toFixed(2)}</div>
+        ${avisoVip}
+        <button class="card-cta ${botaoClass}" style="background: ${gradienteTipo};" onclick="comprarProduto('${produto.docId}', '${nomeSeguro}', ${produto.preco}, ${valorExibido}, ${produto.ciclo}, '${produto.tipo}', ${produto.requiredVip})" ${botaoAtributos}>
+          ${textoBot}
+        </button>
+      `;
+      return card;
+    }
+
+    window.comprarProduto = async function (id, nome, preco, renda, ciclo, tipo, requiredVip) {
+      if (!_currentUser) {
+        alert("Usuário não autenticado. Faça login novamente.");
+        return;
+      }
+
+      const uid = _currentUser.uid;
+      const userRef = doc(db, "users", uid);
+      const precoNumero = Number(preco || 0);
+
+      if (precoNumero <= 0) {
+        alert("Preço do produto inválido.");
+        return;
+      }
+
+      try {
+        const result = await runTransaction(db, async (transaction) => {
+          const userSnapshot = await transaction.get(userRef);
+          if (!userSnapshot.exists()) {
+            throw new Error("Documento do usuário não encontrado.");
+          }
+
+          const userData = userSnapshot.data() || {};
+          const saldoDeposito = Number(userData.saldoDeposito || 0);
+          const saldoSaque = Number(userData.saldoSaque || 0);
+          const saldoTotal = saldoDeposito + saldoSaque;
+          const valorOriginal = precoNumero;
+
+          const previewPromo = getBestPromoForProduct({ docId: id, preco: precoNumero, tipo, requiredVip });
+          const precoPreview = previewPromo ? Number(previewPromo.precoPromocional || 0) : valorOriginal;
+          const preferredPromoId = previewPromo?.promo?.id || null;
+
+          if (saldoTotal < precoPreview) {
+            throw new Error("Saldo insuficiente");
+          }
+
+          console.log("[VIP5-USUARIO] Promoção preview antes do checkout", {
+            previewPromoId: preferredPromoId,
+            previewPromo,
+            precoPreview,
+            valorOriginal,
+            requiredVip,
+          });
+
+          let promoResult = null;
+          try {
+            promoResult = await applyPromotionToPurchase({
+              uid,
+              productId: id,
+              amount: precoNumero,
+              vipData: _currentVip,
+              preferredPromoId,
+              selectedPromo: previewPromo?.promo || null,
+              expectedFinalAmount: precoPreview,
+              extra: {
+                produtoNome: nome || "",
+                tipoProduto: tipo || "",
+              },
+              transaction,
+            });
+          } catch (promoError) {
+            throw new Error("Erro ao aplicar promoção: " + promoError.message);
+          }
+
+          console.log("[VIP5-USUARIO] Resultado da promoção no checkout", { promoResult });
+
+          if (!promoResult || !promoResult.success) {
+            if (promoResult && promoResult.error) {
+              throw new Error("Erro na promoção: " + promoResult.error);
+            }
+            promoResult = { success: true, data: { applicable: false, discountAmount: 0, finalAmount: valorOriginal, reason: "Promoção não retornou resultado válido." } };
+          }
+
+          if (previewPromo && !promoResult.data?.applicable) {
+            const reason = promoResult.data?.reason || promoResult.error || "Promoção não aplicável no checkout.";
+            throw new Error(`Promoção NÃO aplicável no checkout: ${String(reason)} (previewPromoId=${previewPromo?.promo?.id || null})`);
+          }
+
+          const descontoAplicado = promoResult.data?.applicable ? Number(promoResult.data.discountAmount || 0) : 0;
+          const valorFinal = promoResult.data?.applicable ? Number(promoResult.data.finalAmount || 0) : valorOriginal;
+          const promoId = promoResult.data?.promoId || null;
+
+          const debitoDeposito = Math.min(saldoDeposito, valorFinal);
+          const debitoSaque = Math.max(0, valorFinal - debitoDeposito);
+
+          console.log("[VIP5-USUARIO] Compra promo audit",
+            { valorOriginal, precoPreview, valorFinal, descontoAplicado, promoId, preferredPromoId, debitoDeposito, debitoSaque, saldoDeposito, saldoSaque, saldoTotal });
+
+          if (valorFinal !== precoPreview) {
+            console.warn("[VIP5-USUARIO] discrepância detectada: precoPreview != valorFinal", { precoPreview, valorFinal, promoId, preferredPromoId });
+          }
+
+          let novoSaldoDeposito = saldoDeposito;
+          let novoSaldoSaque = saldoSaque;
+
+          if (saldoDeposito >= valorFinal) {
+            novoSaldoDeposito = saldoDeposito - valorFinal;
+          } else {
+            const restante = valorFinal - saldoDeposito;
+            novoSaldoDeposito = 0;
+            novoSaldoSaque = Math.max(0, saldoSaque - restante);
+          }
+
+          console.log("[VIP5-USUARIO] Débito efetivo",
+            { novoSaldoDeposito, novoSaldoSaque, saldoDeposito, saldoSaque, valorFinal, debitoDeposito, debitoSaque });
+
+          transaction.update(userRef, {
+            saldoDeposito: novoSaldoDeposito,
+            saldoSaque: novoSaldoSaque
+          });
+
+          const comprasRef = collection(db, "compras");
+          const compraRef = doc(comprasRef);
+          const cicloDias = Number(ciclo || 0);
+          const dataAgora = new Date();
+          const dataFinalizacao = new Date(dataAgora.getTime() + cicloDias * 24 * 60 * 60 * 1000);
+
+          transaction.set(compraRef, {
+            userId: uid,
+            produtoId: id,
+            nome: nome || "",
+            valor: valorOriginal,
+            valorOriginal: valorOriginal,
+            valorFinal: valorFinal,
+            descontoAplicado: descontoAplicado,
+            promocaoId: promoId,
+            rendaDiaria: Number(renda || 0),
+            ciclo: cicloDias,
+            tipo: tipo || "",
+            status: "ativo",
+            data: serverTimestamp(),
+            ultimaRendaGerada: null,
+            dataFinalizacao,
+            totalGerado: 0
+          });
+
+          return {
+            novoSaldoDeposito,
+            novoSaldoSaque,
+            descontoAplicado,
+            valorFinal,
+            promoId: promoResult.data?.promoId || null,
+          };
+          });
+
+        const mensagem = result.descontoAplicado > 0
+          ? `✅ Compra realizada com desconto!\nValor original: R$ ${precoNumero.toFixed(2)}\nDesconto: R$ ${result.descontoAplicado.toFixed(2)}\nValor final: R$ ${result.valorFinal.toFixed(2)}\nSaldo depósito: R$ ${result.novoSaldoDeposito.toFixed(2)}\nSaldo saque: R$ ${result.novoSaldoSaque.toFixed(2)}`
+          : `✅ Compra realizada!\nSaldo depósito: R$ ${result.novoSaldoDeposito.toFixed(2)}\nSaldo saque: R$ ${result.novoSaldoSaque.toFixed(2)}`;
+
+        alert(mensagem);
+        console.log("[VIP5-USUARIO] Compra realizada com sucesso", { id, nome, preco: precoNumero, ...result });
+      } catch (err) {
+        console.error("[VIP5-USUARIO] Erro ao comprar produto antecipado:", err);
+        if (String(err.message || "").toLowerCase().includes("insuficiente")) {
+          alert("Saldo insuficiente para comprar este produto.");
+        } else {
+          alert("Erro ao processar a compra: " + (err.message || "Tente novamente."));
+        }
+      }
+    };
+
+    function showError(msg) {
+      console.error("[VIP5-USUARIO] Erro:", msg);
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      document.getElementById("loading").style.display = "none";
+      const errEl = document.getElementById("error-msg");
+      errEl.textContent = msg;
+      errEl.style.display = "block";
+    }
+
+    // ── Contagem regressiva ───────────────────────────────────────────────────
+    function startCountdown(expiresAt, activatedAt) {
+      const totalMs = expiresAt - activatedAt;
+
+      function tick() {
+        const now         = Date.now();
+        const remainingMs = expiresAt - now;
+
+        if (remainingMs <= 0) {
+          console.warn("[VIP5-USUARIO] Contagem chegou a zero. Verificando expiração...");
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+
+          document.getElementById("cd-days").textContent    = "00";
+          document.getElementById("cd-hours").textContent   = "00";
+          document.getElementById("cd-minutes").textContent = "00";
+          document.getElementById("cd-seconds").textContent = "00";
+          document.getElementById("progress-fill").style.width = "100%";
+          document.getElementById("progress-pct").textContent  = "100% consumido";
+
+          checkVipExpiration("vip5.html").catch((err) => {
+            console.error("[VIP5-USUARIO] Erro ao re-verificar expiração:", err.code, err.message, err);
+          });
+          return;
+        }
+
+        const seconds = remainingMs / 1000;
+        const minutes = seconds / 60;
+        const hours   = minutes / 60;
+        const days    = hours / 24;
+
+        document.getElementById("cd-days").textContent    = pad(days);
+        document.getElementById("cd-hours").textContent   = pad(hours % 24);
+        document.getElementById("cd-minutes").textContent = pad(minutes % 60);
+        document.getElementById("cd-seconds").textContent = pad(seconds % 60);
+
+        const usedMs = now - activatedAt;
+        const pct    = Math.min(100, Math.round((usedMs / totalMs) * 100));
+        document.getElementById("progress-fill").style.width = pct + "%";
+        document.getElementById("progress-pct").textContent  = pct + "% consumido";
+      }
+
+      tick();
+      countdownTimer = setInterval(tick, 1000);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    async function renderVip5ItemsList({ listElement, countElement, items, uid, vipData, productId, emptyMessage, itemTypeLabel }) {
+      if (!listElement || !countElement) return;
+
+      if (!items.length) {
+        countElement.textContent = "0 disponível";
+        countElement.style.display = "inline-flex";
+        listElement.innerHTML = emptyMessage;
+        return;
+      }
+
+      const total = items.length;
+      countElement.textContent = total + (total === 1 ? " disponível" : " disponíveis");
+      countElement.style.display = "inline-flex";
+      listElement.innerHTML = "";
+
+      const now = new Date();
+
+      await Promise.all(items.map(async (item) => {
+        try {
+          const isSorteio = item.tipo === "sorteio";
+
+          const normalizedStatus = String(item.status || "").toLowerCase();
+          const statusCls = "badge-" + (normalizedStatus || "encerrada");
+          const statusTxt = ITEM_STATUS_LABELS[normalizedStatus] || item.status || "—";
+
+          const vipDate = item.dataVip
+            ? (typeof item.dataVip.toDate === "function" ? item.dataVip.toDate() : new Date(item.dataVip))
+            : null;
+          const isVipEarly = vipDate && vipDate <= now;
+          const accessCls  = isVipEarly ? "vip5-sorteio-badge-vip"  : "vip5-sorteio-badge-publica";
+          const accessTxt  = isVipEarly ? "⭐ VIP"           : "🌐 Público";
+
+          const dataVipFmt = fmtDateShort(item.dataVip);
+          const dataPublicaFmt = fmtDateShort(item.dataPublica);
+          const dataSorteioFmt = fmtDateShort(item.dataSorteio);
+          const dataFinal = item.dataFinal || item.dataSorteio || item.dataPublica || null;
+          const dataFim = fmtDateShort(dataFinal);
+
+          const titulo = item.titulo || item.title || (isSorteio ? "Sorteio VIP" : "Promoção VIP");
+          const bannerUrl = item.banner || item.imagem || item.imageUrl || item.image || "";
+          const descricao = String(item.descricao || item.descricaoDetalhada || item.details || "").trim();
+          const premioText = item.premio ? String(item.premio) : (item.premioTexto || item.valor || "—");
+          const qtdGanhadores = Number(item.quantidadeGanhadores || item.ganhadores || item.qtdGanhadores || 1) || 1;
+          const participantesCount = Number(isSorteio ? (item.participacoesCount || 0) : (item.participacoes || 0)) || 0;
+          const totalVagas = Number(item.quantidade || item.vagas || item.vaga || 0) || 0;
+          const regulamento = String(item.regulamento || item.regras || item.termos || "").trim();
+          const destaque = item.destaque === true || item.destaque === "true" || item.destaque === 1;
+
+          const tipoBadge = item.tipoSorteio ? `<span class="vip5-sorteio-badge vip5-sorteio-badge-type">${escapeHtml(String(item.tipoSorteio))}</span>` : "";
+          const destaqueBadge = destaque ? `<span class="vip5-sorteio-badge vip5-sorteio-badge-vip" style="background: linear-gradient(135deg, #ffb300, #f57c00); color:#fff;">⭐ Destaque</span>` : "";
+          const bannerMarkup = bannerUrl
+            ? `<img src="${escapeHtml(bannerUrl)}" alt="${escapeHtml(titulo)}" style="width:100%;height:140px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,0.12);margin-bottom:10px;">`
+            : "";
+          const summaryRows = [
+            premioText && premioText !== "—" ? `<span class="vip5-sorteio-pill">🏆 <strong>${escapeHtml(String(premioText))}</strong></span>` : "",
+            qtdGanhadores > 1 ? `<span class="vip5-sorteio-pill">👑 ${qtdGanhadores} ganhadores</span>` : `<span class="vip5-sorteio-pill">👑 ${qtdGanhadores} ganhador</span>`,
+          ].filter(Boolean).join("");
+          const sorteioSummary = isSorteio && summaryRows ? `<div class="vip5-sorteio-summary">${summaryRows}</div>` : "";
+          const descricaoMarkup = descricao ? escapeHtml(descricao) : "Acompanhe a novidade e participe quando a oportunidade estiver disponível.";
+          const regulamentoMarkup = regulamento ? `<div class="vip5-sorteio-info-item"><div class="vip5-sorteio-info-label">📜 Regulamento</div><div class="vip5-sorteio-info-value">${escapeHtml(regulamento)}</div></div>` : "";
+          const dataInfoMarkup = isSorteio ? `
+            <div class="vip5-sorteio-info-item">
+              <div class="vip5-sorteio-info-label">🎯 Sorteio</div>
+              <div class="vip5-sorteio-info-value">${dataSorteioFmt}</div>
+            </div>
+          ` : "";
+
+          const div = document.createElement("div");
+          div.className = "vip5-sorteio-card";
+          div.id = `promo-${item.id}`;
+
+          div.innerHTML = `
+            <div class="vip5-sorteio-card-header">
+              <div class="vip5-sorteio-title-row">
+                <span class="vip5-sorteio-icon">${isSorteio ? '🎟️' : '🎁'}</span>
+                <div class="vip5-sorteio-title">${escapeHtml(titulo)}</div>
+              </div>
+              <div class="vip5-sorteio-badges-row">
+                <span class="vip5-sorteio-status-badge ${statusCls}">${escapeHtml(statusTxt)}</span>
+                <span class="vip5-sorteio-badge ${accessCls}">${accessTxt}</span>
+                ${tipoBadge}
+                ${destaqueBadge}
+              </div>
+            </div>
+            <div class="vip5-sorteio-divider"></div>
+            ${bannerMarkup}
+            <div class="vip5-sorteio-info-grid">
+              <div class="vip5-sorteio-info-item">
+                <div class="vip5-sorteio-info-label"> Participantes</div>
+                <div class="vip5-sorteio-info-value">${participantesCount} / ${totalVagas === 0 ? '∞' : totalVagas}</div>
+              </div>
+              <div class="vip5-sorteio-info-item vip5-sorteio-info-item--wide">
+                <div class="vip5-sorteio-info-label">⏳ Tempo</div>
+                <div class="vip5-sorteio-info-value" id="countdown-${item.id}" data-end="${item.dataFinal ? (item.dataFinal.toDate ? item.dataFinal.toDate().toISOString() : item.dataFinal) : ''}" style="white-space: nowrap;">${dataFim}</div>
+              </div>
+            </div>
+            ${dataInfoMarkup}
+            ${sorteioSummary}
+            <div class="vip5-sorteio-info-item">
+              <div class="vip5-sorteio-info-label">📝 ${isSorteio ? 'Descrição' : 'Detalhes'}</div>
+              <div class="vip5-sorteio-info-value">${descricaoMarkup}</div>
+            </div>
+            ${regulamentoMarkup}
+            <button class="vip5-sorteio-button" id="btn-part-${item.id}" onclick="vip5SorteioParticipar('${item.id}', this)"><span class="btn-label">Participar</span></button>
+          `;
+
+          listElement.appendChild(div);
+
+          try {
+            const cdElem = div.querySelector('#countdown-' + item.id);
+            if (cdElem) { vip5SorteioInitCountdownElement(cdElem); }
+          } catch (e) {
+            console.warn('[VIP5-USUARIO] init card UI error', e);
+          }
+
+          const btn   = div.querySelector(`#btn-part-${item.id}`);
+          const fb    = div.querySelector(`#feedback-${item.id}`);
+          const label = btn ? btn.querySelector('.btn-label') : null;
+
+          const check = isSorteio
+            ? await canParticipateSorteio(item.id, uid, vipData)
+            : await canParticipatePromocao(item.id, uid, vipData, productId);
+
+          const canPart = check.success ? (check.data?.canParticipate === true) : false;
+          const reason  = check.success ? (check.data?.reason || "") : (check.error || "");
+
+          if (!canPart && btn) {
+            btn.disabled = true;
+
+            if (/encerr/i.test(reason)) {
+              if (label) label.textContent = "Encerrado";
+              if (fb) { fb.className = "vip5-sorteio-feedback warn"; fb.textContent = "⚠ Encerrado."; }
+            } else if (/limite|já partici/i.test(reason)) {
+              btn.classList.add("success");
+              if (label) label.textContent = "✔ Já participando";
+              if (fb) { fb.className = "vip5-sorteio-feedback ok"; fb.textContent = "✔ Você já está participando."; }
+            } else if (/vaga|esgot/i.test(reason)) {
+              if (label) label.textContent = "⚠ Vagas esgotadas";
+              if (fb) { fb.className = "vip5-sorteio-feedback warn"; fb.textContent = "⚠ Todas as vagas foram preenchidas."; }
+            } else if (reason) {
+              if (label) label.textContent = "Indisponível";
+              if (fb) { fb.className = "vip5-sorteio-feedback err"; fb.textContent = reason; }
+            }
+          }
+        } catch (err) {
+          console.warn('[VIP5-USUARIO] Falha ao renderizar item do módulo de sorteios:', item?.id, err);
+        }
+      }));
+    }
+
+    // ── Carrega e exibe promoções + sorteios ──────────────────────────────────
+    async function vip5SorteioLoadItems(uid, vipData) {
+      const promosCard = document.getElementById("promos-card");
+      const promosList = document.getElementById("promos-list");
+      const promosCount = document.getElementById("promos-count");
+      const sorteiosCard = document.getElementById("sorteios-card");
+      const sorteiosList = document.getElementById("sorteios-list");
+      const sorteiosCount = document.getElementById("sorteios-count");
+
+      if (!promosCard || !promosList || !promosCount || !sorteiosCard || !sorteiosList || !sorteiosCount) return;
+      promosCard.style.display = "flex";
+      sorteiosCard.style.display = "flex";
+
+      const isVipAtivo = vipData?.vip5Active === true
+        && (!vipData.vip5ExpiresAt || vipData.vip5ExpiresAt > Date.now());
+
+      const productId = getCurrentProductContext();
+      console.log("[VIP5-USUARIO] Carregando promoções e sorteios. isVip:", isVipAtivo, "productId:", productId);
+
+      let promoResult;
+      try {
+        promoResult = await fetchVisiblePromotions({ isVip: isVipAtivo, limit: 20, productId });
+      } catch (err) {
+        console.error("[VIP5-USUARIO] Erro ao buscar promoções:", err.message, err);
+        promosList.innerHTML = `<div class="vip5-sorteio-empty">
+          <span class="vip5-sorteio-empty-icon">⚠️</span>
+          Erro ao carregar. Tente recarregar a página.
+        </div>`;
+        sorteiosList.innerHTML = `<div class="vip5-sorteio-empty">
+          <span class="vip5-sorteio-empty-icon">⚠️</span>
+          Erro ao carregar. Tente recarregar a página.
+        </div>`;
+        return;
+      }
+
+      const promos = Array.isArray(promoResult?.data?.items) ? promoResult.data.items : [];
+      if (!promoResult.success) console.warn("[VIP5-USUARIO] fetchVisiblePromotions falhou:", promoResult.error);
+
+      const promoItems = promos.map(p => ({ ...p, tipo: "promocao" }));
+
+      cleanupActiveSorteiosListener();
+      activeSorteiosUnsubscribe = subscribeToActiveSorteios({
+        isVip: isVipAtivo,
+        limit: 20,
+        onChange: (sorteios) => {
+          const sorteioItems = Array.isArray(sorteios) ? sorteios.map((item) => ({ ...item, tipo: "sorteio" })) : [];
+
+          _tipoMap.clear();
+          promoItems.forEach((item) => _tipoMap.set(item.id, item.tipo));
+          sorteioItems.forEach((item) => _tipoMap.set(item.id, item.tipo));
+
+          renderVip5ItemsList({
+            listElement: sorteiosList,
+            countElement: sorteiosCount,
+            items: sorteioItems,
+            uid,
+            vipData,
+            productId,
+            emptyMessage: `<div class="vip5-sorteio-empty">
+              <span class="vip5-sorteio-empty-icon">🎟️</span>
+              Nenhum sorteio disponível no momento.
+            </div>`,
+            itemTypeLabel: "sorteio"
+          }).catch((err) => {
+            console.warn("[VIP5-USUARIO] Falha ao renderizar lista de sorteios em tempo real:", err);
+          });
+        },
+      });
+
+      _tipoMap.clear();
+      promoItems.forEach(item => _tipoMap.set(item.id, item.tipo));
+
+      await renderVip5ItemsList({
+        listElement: promosList,
+        countElement: promosCount,
+        items: promoItems,
+        uid,
+        vipData,
+        productId,
+        emptyMessage: `<div class="vip5-sorteio-empty">
+          <span class="vip5-sorteio-empty-icon">🎁</span>
+          Nenhuma promoção disponível no momento.
+        </div>`,
+        itemTypeLabel: "promoção"
+      });
+
+    }
+
+    async function carregarProdutosAntecipadosUsuario(uid) {
+      console.log("[VIP5-USUARIO] carregarProdutosAntecipadosUsuario: carregando lista de produtos antecipados para ", uid);
+      try {
+        const snap = await getDocs(collection(db, "produtos_antecipados"));
+        /* Ler vipNível real do usuário do Firestore - priorizar vipNivel */
+        const vipLevel = Number(_currentVip?.vipNivel ?? _currentVip?.vipLevel ?? _currentVip?.nivelVip ?? _currentVip?.level ?? 0);
+        const vipAtivo = _currentVip?.vip5Active === true && (!_currentVip?.vip5ExpiresAt || _currentVip.vip5ExpiresAt > Date.now());
+        const now = Date.now();
+
+        console.log("[VIP5-USUARIO] VIP do usuário: nível", vipLevel, '| ativo:', vipAtivo);
+
+        produtosAntecipadosUsuario = snap.docs
+          .map((docSnap) => normalizeProdutoAntecipadoUsuario({ id: docSnap.id, ...docSnap.data() }))
+          .filter((item) => {
+            const nomeProduto = item.nome || item.titulo || '(sem nome)';
+            const docId = item.docId || item.id || '';
+            const aberturaVip = _toMs(item.aberturaVip);
+            const aberturaPublica = _toMs(item.aberturaPublica);
+            const encerramento = _toMs(item.encerramento ?? item.dataExpiracao ?? item.dataEncerramento);
+            const requiredVip = Number(item.requiredVip ?? item.nivelVip ?? 0);
+            const exclusivoVip = item.exclusivoVip5 === true;
+            const vip5Active = _currentVip?.vip5Active === true;
+            const vip5ExpiresAt = _currentVip?.vip5ExpiresAt;
+            const isTarget = nomeProduto === 'Golden Empire Elite #077';
+            const logBase = {
+              nome: nomeProduto,
+              docId,
+              aberturaVip: item.aberturaVip,
+              aberturaPublica: item.aberturaPublica,
+              encerramento: item.encerramento ?? item.dataExpiracao ?? item.dataEncerramento,
+              requiredVip,
+              usuarioVipNivel: vipLevel,
+              vipAtivo,
+              vip5Active,
+              vip5ExpiresAt,
+              exclusivoVip5: exclusivoVip,
+              now: new Date().toLocaleString()
+            };
+
+            if (isTarget) {
+              console.groupCollapsed(`[AUDIT] ${nomeProduto}`);
+              console.log('[AUDIT] base', logBase);
+            }
+
+            // 1️⃣ REMOVER INATIVOS
+            if (item.ativo === false || item.status === "inativo" || item.status === "desativado") {
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 1: inativo/desativado');
+                console.log('[AUDIT] motivo: item.ativo === false || item.status === "inativo" || item.status === "desativado"');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: inativo`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+            if (isTarget) console.log('[AUDIT] PASSOU IF 1');
+
+            // 2️⃣ REMOVER EXPIRADOS
+            const expiresAt = encerramento;
+            if (expiresAt && expiresAt < now) {
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 2: expirado');
+                console.log('[AUDIT] motivo: encerramento < now');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: expirado em ${new Date(expiresAt).toLocaleString()}`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+            if (isTarget) console.log('[AUDIT] PASSOU IF 2');
+
+            // 3️⃣ VERIFICAR VIP (REQUERIDO vs EXCLUSIVO)
+            if (exclusivoVip && !vipAtivo) {
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 3: exclusivo VIP5');
+                console.log('[AUDIT] motivo: exclusivoVip && !vipAtivo');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: exclusivo VIP5 ativo (usuário sem VIP)`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+            if (isTarget) console.log('[AUDIT] PASSOU IF 3A');
+
+            if (requiredVip > 0 && vipLevel < requiredVip) {
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 3B: requiredVip');
+                console.log('[AUDIT] motivo: requiredVip > 0 && vipLevel < requiredVip');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: requer VIP ${requiredVip} (usuário tem ${vipLevel})`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+            if (isTarget) console.log('[AUDIT] PASSOU IF 3B');
+
+            // 4️⃣ VERIFICAR DISPONIBILIDADE POR DATAS
+            /* Produto só aparece na aba VIP se estiver entre Abertura VIP e Abertura Pública */
+            if (aberturaPublica && now >= aberturaPublica) {
+              /* Abertura Pública atingida: produto deve sair da aba VIP e ir para produtos.html */
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 4: abertura pública atingida');
+                console.log('[AUDIT] motivo: produto deve aparecer apenas em produtos.html agora');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: abertura pública atingida (produto agora em produtos.html)`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+
+            if (aberturaPublica && now < aberturaPublica) {
+              if (aberturaVip && vipAtivo && now >= aberturaVip) {
+                if (isTarget) {
+                  console.log('[AUDIT] PASSOU IF 4: período VIP exclusivo');
+                }
+                console.log(`[FILTER] "${nomeProduto}" permitido: período VIP exclusivo (VIP ativo)`);
+                if (isTarget) console.groupEnd();
+                return true;
+              }
+              if (isTarget) {
+                console.log('[AUDIT] FALHOU IF 4: abertura pública ainda não chegou');
+                console.log('[AUDIT] motivo: aberturaPublica && now < aberturaPublica');
+              }
+              console.log(`[FILTER] "${nomeProduto}" descartado: produto ainda não está aberto (abre em ${new Date(aberturaPublica).toLocaleString()})`);
+              if (isTarget) console.groupEnd();
+              return false;
+            }
+
+            /* Se chegou aqui sem Abertura Pública definida, aceitar o produto */
+            if (isTarget) {
+              console.log('[AUDIT] PASSOU IF 4: sem Abertura Pública definida ou produto sem período de transição');
+              console.log('[AUDIT] permitido: passou todas as verificações');
+              console.groupEnd();
+            }
+
+            console.log(`[FILTER] "${nomeProduto}" permitido: passou todas as verificações`);
+            return true;
+          })
+          .sort((a, b) => {
+            const ordemA = Number(a.ordem ?? 0);
+            const ordemB = Number(b.ordem ?? 0);
+            if (ordemB !== ordemA) return ordemB - ordemA;
+            const criadoA = _toMs(a.criadoEm);
+            const criadoB = _toMs(b.criadoEm);
+            return criadoB - criadoA;
+          });
+
+        console.log("[VIP5-USUARIO] Total produtos após filtro:", produtosAntecipadosUsuario.length);
+        await carregarPromocoesAtivasUsuario(vipAtivo);
+        renderizarProdutosAntecipadosUsuario();
+      } catch (err) {
+        console.error("[VIP5-USUARIO] Erro ao carregar produtos antecipados:", err.message, err);
+        produtosAntecipadosUsuario = [];
+        renderizarProdutosAntecipadosUsuario();
+      }
+    }
+
+    function renderizarProdutosAntecipadosUsuario() {
+      const card = document.getElementById("produtos-antecipados-card");
+      const list = document.getElementById("produtos-list");
+      const count = document.getElementById("produtos-count");
+
+      if (!card || !list || !count) return;
+      card.style.display = "flex";
+
+      const input = document.getElementById("produtos-search-input");
+      const category = document.getElementById("produtos-category-filter");
+      const query = input ? input.value.trim().toLowerCase() : "";
+      const filtroCategoria = category ? category.value : "";
+
+      const visibleItems = produtosAntecipadosUsuario.filter((item) => {
+        const matchesQuery = !query || String(item.nome || "").toLowerCase().includes(query) || String(item.categoria || "").toLowerCase().includes(query) || String(item.abaProduto || item.aba || "").toLowerCase().includes(query);
+        const matchesCategory = !filtroCategoria || String(item.categoria || "").toLowerCase().includes(filtroCategoria) || String(item.abaProduto || item.aba || "").toLowerCase().includes(filtroCategoria);
+        return matchesQuery && matchesCategory;
+      });
+
+      if (!visibleItems.length) {
+        count.style.display = "none";
+        list.innerHTML = `
+          <div class="vip5-sorteio-empty">
+            <span class="vip5-sorteio-empty-icon">🛍️</span>
+            Nenhum produto disponível.
+          </div>
+        `;
+        return;
+      }
+
+      count.textContent = visibleItems.length + (visibleItems.length === 1 ? " disponível" : " disponíveis");
+      count.style.display = "inline-flex";
+      list.innerHTML = "";
+      visibleItems.forEach((item) => {
+        item.promoPreview = getBestPromoForProduct(item);
+        list.appendChild(criarCardProdutoAntecipado(item));
+      });
+    }
+
+    function pesquisarProdutosAntecipadosUsuario() {
+      const input = document.getElementById("produtos-search-input");
+      const category = document.getElementById("produtos-category-filter");
+      const query = input ? input.value.trim().toLowerCase() : "";
+      const filtroCategoria = category ? category.value : "";
+
+      console.log("[VIP5-USUARIO] pesquisarProdutosAntecipadosUsuario:", { query, filtroCategoria });
+      renderizarProdutosAntecipadosUsuario();
+    }
+
+    // ── Handler de participação ───────────────────────────────────────────────
+    window.vip5SorteioParticipar = async function (itemId, btn) {
+      if (!_currentUser || !btn || !btn.classList) return;
+      try { console.trace("[VIP5-USUARIO] participar() called", { itemId, productId: getCurrentProductContext() }); } catch (e) {}
+      const fb    = document.getElementById(`feedback-${itemId}`);
+      const label = btn.querySelector ? btn.querySelector(".btn-label") : null;
+
+      btn.disabled = true;
+      btn.classList.add("loading");
+      if (label) label.textContent = "Registrando...";
+      if (fb) { fb.className = "vip5-sorteio-feedback"; fb.textContent = ""; }
+
+      const productId = getCurrentProductContext();
+
+      // Despacha para o módulo correto com base no tipo registrado em _tipoMap
+      const tipo   = _tipoMap.get(itemId) || "promocao";
+      try { console.trace("[VIP5-USUARIO] about to call registerParticipation", { itemId, tipo, uid: _currentUser && _currentUser.uid }); } catch (e) {}
+      const result = tipo === "sorteio"
+        ? await registerParticipationSorteio(itemId, _currentUser.uid)
+        : await registerParticipationPromocao(itemId, _currentUser.uid, { produtoId: productId || null }, _currentVip);
+
+      btn.classList.remove("loading");
+
+      if (result.success) {
+        btn.classList.add("success");
+        if (label) label.textContent = "✔ Participando!";
+        if (fb) { fb.className = "vip5-sorteio-feedback ok"; fb.textContent = "✅ Sua participação foi registrada com sucesso!"; }
+        console.log("[VIP5-USUARIO] Participação registrada:", itemId, "| tipo:", tipo);
+      } else {
+        btn.disabled = false;
+        if (label) label.textContent = "Participar";
+        const errMsg = result.error || "Tente novamente.";
+        let feedbackText = errMsg;
+        let feedbackCls  = "vip5-sorteio-feedback err";
+        if (/limite|já partici/i.test(errMsg)) {
+          feedbackText = "✔ Você já está participando.";
+          feedbackCls  = "vip5-sorteio-feedback ok";
+          btn.disabled = true;
+          btn.classList.add("success");
+          if (label) label.textContent = "✔ Já participando";
+        } else if (/vaga|esgot/i.test(errMsg)) {
+          feedbackText = "⚠ Todas as vagas foram preenchidas.";
+          feedbackCls  = "vip5-sorteio-feedback warn";
+          btn.disabled = true;
+          if (label) label.textContent = "⚠ Esgotado";
+        }
+        if (fb) { fb.className = feedbackCls; fb.textContent = feedbackText; }
+        console.error("[VIP5-USUARIO] Erro na participação:", result.error);
+      }
+    };
+
+    // ── Inicialização ─────────────────────────────────────────────────────────
+    try {
+      const { user, vipData } = await checkVipExpiration("vip5.html");
+
+      _currentUser = user;
+      _currentVip  = vipData;
+
+      console.log("[VIP5-USUARIO] Acesso VIP válido. uid=" + user.uid);
+      console.log("[VIP5-USUARIO] Dados VIP:", vipData);
+
+      document.getElementById("uid-value").textContent       = user.uid;
+      document.getElementById("code-value").textContent      = vipData.vip5Code || "—";
+      document.getElementById("nivel-vip-value").textContent = vipData.vipNivel ? `VIP ${vipData.vipNivel}` : "—";
+      document.getElementById("badge-vip").textContent       = vipData.vipNivel ? `VIP ${vipData.vipNivel}` : "VIP5";
+      document.getElementById("activated-value").textContent = formatDate(vipData.vip5ActivatedAt);
+      document.getElementById("expires-value").textContent   = formatDate(vipData.vip5ExpiresAt);
+
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("content").style.display = "flex";
+
+      startCountdown(vipData.vip5ExpiresAt, vipData.vip5ActivatedAt);
+
+      // Carrega promoções + sorteios sem bloquear a exibição do conteúdo VIP
+      vip5SorteioLoadItems(user.uid, vipData).catch((err) => {
+        console.error("[VIP5-USUARIO] Erro ao carregar itens:", err.message, err);
+      });
+
+      carregarProdutosAntecipadosUsuario(user.uid).catch((err) => {
+        console.error("[VIP5-USUARIO] Erro ao carregar produtos antecipados:", err.message, err);
+      });
+
+      document.getElementById("btn-logout").addEventListener("click", async () => {
+        console.log("[VIP5-USUARIO] Fazendo logout...");
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+        try {
+          await signOut(auth);
+          console.log("[VIP5-USUARIO] Logout realizado. Redirecionando para vip5.html");
+          window.location.href = "vip5.html";
+        } catch (err) {
+          console.error("[VIP5-USUARIO] Erro no logout:", err.code, err.message, err);
+          showError("Erro ao sair: " + err.message);
+        }
+      });
+
+    } catch (err) {
+      console.error("[VIP5-USUARIO] Erro ao verificar VIP:", err.code, err.message, err);
+      showError("Erro ao verificar acesso VIP: " + (err.message || "Tente novamente."));
+    }
+
+  // ── Helpers: per-card countdown ──────────────────────────────────────────
+  function vip5SorteioInitCountdownElement(cdElem) {
+    const end = cdElem.getAttribute('data-end');
+    if (!end) return;
+    const endDate = new Date(end);
+    function tick() {
+      const now = new Date();
+      const diff = endDate - now;
+      const timeEl = cdElem.querySelector('.cd-time') || cdElem;
+      if (!timeEl) return;
+      if (diff <= 0) {
+        timeEl.textContent = 'Encerrado';
+        cdElem.classList.add('countdown-expired');
+        return;
+      }
+      const days = Math.floor(diff / (1000*60*60*24));
+      const hours = Math.floor((diff / (1000*60*60)) % 24);
+      const mins = Math.floor((diff / (1000*60)) % 60);
+      const secs = Math.floor((diff / 1000) % 60);
+      timeEl.textContent = `${days>0?days+'d ':''}${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    cdElem._timerId = id;
+  }
+
+    // ── Cadastrar Código ────────────────────────────────────────────────────────
+    const registerCodeInput = document.getElementById("register-code-input");
+    const registerCodeSorteio = document.getElementById("register-code-sorteio");
+    const registerCodeBtn = document.getElementById("register-code-btn");
+    const registerCodeStatus = document.getElementById("register-code-status");
+
+    // Populate sorteios dropdown com os sorteios ativos
+    let activeSorteiosForCodeReg = [];
+    if (registerCodeSorteio) {
+      const unsubscribeSorteios = subscribeToActiveSorteios({
+        isVip: true,
+        limit: 20,
+        onChange: (sorteios) => {
+          activeSorteiosForCodeReg = sorteios || [];
+          console.log("[VIP5-USUARIO] Sorteios ativos atualizados para dropdown:", activeSorteiosForCodeReg.length);
+          
+          // Limpar opções existentes (mantém placeholder)
+          while (registerCodeSorteio.options.length > 1) {
+            registerCodeSorteio.remove(1);
+          }
+          
+          // Adicionar sorteios
+          activeSorteiosForCodeReg.forEach((s) => {
+            const option = document.createElement("option");
+            option.value = s.id;
+            option.textContent = `${s.nome || "Sorteio"} (${s.id})`;
+            registerCodeSorteio.appendChild(option);
+          });
+        }
+      });
+      
+      // Armazenar unsubscribe para cleanup
+      window._codeRegSorteiosUnsub = unsubscribeSorteios;
+    }
+
+    if (registerCodeBtn && registerCodeInput) {
+      registerCodeBtn.addEventListener("click", async () => {
+        const code = registerCodeInput.value.trim().toUpperCase();
+        const selectedSorteioId = registerCodeSorteio?.value?.trim() || null;
+
+        // Validar código vazio
+        if (!code) {
+          registerCodeStatus.textContent = "⚠ Digite um código válido.";
+          registerCodeStatus.style.color = "#ef4444";
+          registerCodeStatus.style.display = "block";
+          return;
+        }
+
+        registerCodeBtn.disabled = true;
+        registerCodeBtn.textContent = "Verificando...";
+        registerCodeStatus.textContent = "";
+        registerCodeStatus.style.display = "none";
+
+        try {
+          if (!_currentUser) {
+            throw new Error("Usuário não autenticado.");
+          }
+
+          console.log("[VIP5-USUARIO] Validando código:", code);
+          const codeData = await getCode(code);
+
+          // 1. Validar: Existe
+          if (!codeData) {
+            throw new Error("❌ Código não encontrado.");
+          }
+
+          console.log("[VIP5-USUARIO] Código encontrado:", codeData);
+
+          // 2. Validar: Está ativo
+          if (codeData.status !== "ativo") {
+            throw new Error(`❌ Código inativo (status: ${codeData.status}).`);
+          }
+
+          // 3. Validar: Não foi utilizado
+          if (isCodeUsed(codeData)) {
+            throw new Error("❌ Este código já foi utilizado.");
+          }
+
+          // 4. Validar: Pertence ao sorteio escolhido (se aplicável)
+          if (codeData.sorteioId) {
+            // Código está vinculado a um sorteio específico
+            if (selectedSorteioId && selectedSorteioId !== codeData.sorteioId) {
+              throw new Error(`❌ Este código pertence a outro sorteio. Selecione: ${codeData.sorteioId}`);
+            }
+            console.log("[VIP5-USUARIO] Código vinculado ao sorteio:", codeData.sorteioId);
+          }
+
+          const days = getCodeDays(codeData, 30);
+          if (!Number.isFinite(days) || days < 1) {
+            throw new Error("❌ Código com configuração inválida.");
+          }
+
+          // Todos os validações passaram - proceder com ativação
+          console.log("[VIP5-USUARIO] Validações OK. Ativando código...");
+          registerCodeBtn.textContent = "Ativando...";
+
+          // Ativar código e salvar VIP do usuário em uma operação atômica
+          console.log("[VIP5-USUARIO] Ativando código e salvando VIP por", days, "dias...");
+          const expiresAt = await activateVipCode(code, _currentUser.uid, days);
+          console.log("[VIP5-USUARIO] Código ativado com sucesso. expiresAt=", expiresAt);
+
+          // Recarregar o estado VIP mais recente para não depender de uma cópia antiga em memória
+          const refreshedVipData = await getUserVip(_currentUser.uid);
+          if (refreshedVipData) {
+            _currentVip = refreshedVipData;
+          }
+
+          // Registrar participação automaticamente se sorteio foi selecionado ou vinculado ao código
+          const sorteioParticipacao = codeData.sorteioId || selectedSorteioId;
+          if (sorteioParticipacao) {
+            console.log("[VIP5-USUARIO] Registrando participação no sorteio:", sorteioParticipacao);
+            registerCodeBtn.textContent = "Registrando participação...";
+            
+            try {
+              // Verificar se já é participante
+              const checkResult = await canParticipateSorteio(sorteioParticipacao, _currentUser.uid, _currentVip);
+              console.log("[VIP5-USUARIO] Verificação de elegibilidade:", checkResult);
+
+              if (checkResult.success && checkResult.data?.canParticipate === true) {
+                // Registrar participação
+                const participationResult = await registerParticipationSorteio(
+                  sorteioParticipacao,
+                  _currentUser.uid,
+                  {
+                    viaCode: true,
+                    codeUsed: code,
+                    activatedAt: new Date().toISOString()
+                  }
+                );
+
+                if (participationResult.success) {
+                  console.log("[VIP5-USUARIO] Participação registrada com sucesso:", participationResult.data);
+                  registerCodeStatus.textContent = `✅ Código ativado e você foi registrado no sorteio!`;
+                } else {
+                  // Participação não registrada, mas código foi ativado
+                  console.warn("[VIP5-USUARIO] Aviso ao registrar participação:", participationResult.error);
+                  registerCodeStatus.textContent = `✅ Código ativado! (Participação: ${participationResult.error})`;
+                }
+              } else {
+                // Não pode participar (já é participante, vagas esgotadas, etc)
+                console.log("[VIP5-USUARIO] Usuário não elegível para participação:", checkResult.data?.reason);
+                const reason = checkResult.data?.reason || "Não elegível para participação";
+                registerCodeStatus.textContent = `✅ Código ativado! (${reason})`;
+              }
+            } catch (participationError) {
+              console.error("[VIP5-USUARIO] Erro ao registrar participação:", participationError.message);
+              // Código foi ativado, mas participação falhou - mostrar aviso, não erro
+              registerCodeStatus.textContent = `✅ Código ativado! (Erro ao registrar sorteio)`;
+            }
+          } else {
+            registerCodeStatus.textContent = `✅ Código ativado com sucesso!`;
+          }
+
+          registerCodeStatus.style.color = "#10b981";
+          registerCodeStatus.style.display = "block";
+
+          // Limpar input e recarregar após 2s
+          registerCodeInput.value = "";
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } catch (err) {
+          console.error("[VIP5-USUARIO] Erro ao ativar código:", err.message, err);
+          const errorMsg = err.message || "Erro desconhecido. Tente novamente.";
+          registerCodeStatus.textContent = errorMsg;
+          registerCodeStatus.style.color = "#ef4444";
+          registerCodeStatus.style.display = "block";
+        } finally {
+          registerCodeBtn.disabled = false;
+          registerCodeBtn.textContent = "Confirmar";
+        }
+      });
+    }
+
+    // ── Cleanup on page unload ──────────────────────────────────────────────────
+    window.addEventListener("beforeunload", () => {
+      console.log("[VIP5-USUARIO] Limpando listeners antes de descarregar...");
+      if (window._codeRegSorteiosUnsub && typeof window._codeRegSorteiosUnsub === "function") {
+        window._codeRegSorteiosUnsub();
+      }
+    });
+
+  </script>
+</body>
+</html>
