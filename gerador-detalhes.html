@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Detalhes de um código do Gerador." />
+    <title>Gerador - Detalhes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .details-grid {
+        display: grid;
+        gap: 18px;
+      }
+      .details-grid form,
+      .detail-panel {
+        display: grid;
+        gap: 16px;
+      }
+      .detail-panel {
+        padding: 22px;
+        border-radius: 24px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+      }
+      .detail-panel h2 {
+        margin: 0;
+      }
+      .detail-block {
+        display: grid;
+        gap: 8px;
+      }
+      .detail-label {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      .detail-value {
+        font-weight: 700;
+        font-size: 1.05rem;
+        word-break: break-word;
+      }
+      .numbers-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .pill {
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        font-weight: 700;
+      }
+      .actions-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .qr-block {
+        display: grid;
+        gap: 14px;
+        align-items: center;
+      }
+      .qr-block canvas {
+        width: 200px;
+        height: 200px;
+        background: white;
+        border-radius: 18px;
+      }
+      .page-header { margin-bottom: 20px; }
+      @media (max-width: 700px) {
+        .actions-row { justify-content: stretch; }
+        .numbers-wrap { justify-content: stretch; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div>
+            <h1>Gerador SaaS</h1>
+            <p>Visualização de código</p>
+          </div>
+        </div>
+        <nav class="nav-links">
+          <a class="nav-btn" href="gerador-codigos.html">Códigos</a>
+          <a class="nav-btn" href="gerador-validar.html">Validar</a>
+          <a class="nav-btn active" href="gerador-detalhes.html">Detalhes</a>
+          <a class="nav-btn" href="gerador-admin.html">Dashboard</a>
+          <a class="nav-btn" href="gerador.html">Gerador</a>
+        </nav>
+        <div class="sidebar-footer">
+          <p>Consulte qualquer código diretamente na coleção vip5_gerador_codigos.</p>
+        </div>
+      </aside>
+      <main class="main-content">
+        <div class="page-header">
+          <h1>Detalhes do código</h1>
+          <p>Informe o código para ver todos os dados, números sorteados e ações de compartilhamento.</p>
+        </div>
+        <div class="glass-card details-grid">
+          <form id="detailsForm">
+            <label>
+              <span>Código para consulta</span>
+              <input id="detailsInput" type="text" placeholder="EXEMPLO1234ABCD" autocomplete="off" />
+            </label>
+            <div class="actions-row">
+              <button type="submit" class="primary-btn">Buscar</button>
+              <button id="themeSwitcher" type="button" class="secondary-btn">Alternar tema</button>
+            </div>
+          </form>
+
+          <div id="detailsContainer"></div>
+        </div>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script type="module" src="gerador-detalhes.js"></script>
+  </body>
+</html>

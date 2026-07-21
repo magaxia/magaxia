@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Painel de códigos do Gerador - SaaS profissional." />
+    <title>Gerador - Códigos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+      }
+      .page-header h1 {
+        margin: 0;
+        font-size: clamp(2rem, 2.5vw, 2.6rem);
+      }
+      .page-header p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        max-width: 620px;
+      }
+      .toolbar-grid {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 16px;
+        align-items: center;
+      }
+      .filter-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+      .filter-panel label {
+        display: grid;
+        gap: 8px;
+        color: var(--text);
+      }
+      .filter-panel input,
+      .filter-panel select {
+        width: 100%;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .stat-card {
+        padding: 22px;
+        border-radius: 24px;
+        background: var(--panel-strong);
+        border: 1px solid var(--border);
+      }
+      .stat-card h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .stat-card strong {
+        font-size: 2rem;
+        display: block;
+      }
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .data-table th,
+      .data-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .data-table th {
+        color: var(--muted);
+        font-size: 0.92rem;
+        text-align: left;
+        font-weight: 600;
+      }
+      .data-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .table-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .badge.ativo { color: var(--success); background: rgba(45, 212, 191, 0.14); }
+      .badge.usado { color: var(--danger); background: rgba(255, 92, 122, 0.14); }
+      .table-footer {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 16px;
+      }
+      .pagination-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .table-summary {
+        color: var(--muted);
+      }
+      .panel-card {
+        padding: 20px;
+      }
+      @media (max-width: 900px) {
+        .data-table th,
+        .data-table td { padding: 12px 10px; }
+      }
+      @media (max-width: 700px) {
+        .filter-panel { grid-template-columns: 1fr; }
+        .toolbar-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div>
+            <h1>Gerador SaaS</h1>
+            <p>Administração de códigos</p>
+          </div>
+        </div>
+        <nav class="nav-links">
+          <a class="nav-btn active" href="gerador-codigos.html">Códigos</a>
+          <a class="nav-btn" href="gerador-validar.html">Validar</a>
+          <a class="nav-btn" href="gerador-detalhes.html">Detalhes</a>
+          <a class="nav-btn" href="gerador-admin.html">Dashboard</a>
+          <a class="nav-btn" href="gerador.html">Gerador</a>
+        </nav>
+        <div class="sidebar-footer">
+          <p>Exclusivo para o Gerador, sem qualquer vínculo VIP.</p>
+        </div>
+      </aside>
+      <main class="main-content">
+        <div class="page-header">
+          <div>
+            <h1>Controle de códigos</h1>
+            <p>Visualize, filtre, exporte e gerencie todos os códigos do Gerador na coleção <strong>vip5_gerador_codigos</strong>.</p>
+          </div>
+          <div class="table-actions">
+            <button id="toggle-theme" class="secondary-btn">Alternar tema</button>
+            <button id="reload-list" class="secondary-btn">Recarregar</button>
+          </div>
+        </div>
+        <div class="stats-grid" id="dashboardCards"></div>
+        <div class="glass-card panel-card">
+          <div class="filter-panel">
+            <label>
+              <span>Pesquisar</span>
+              <input id="searchTerm" type="search" placeholder="Digite código, tipo ou sorteio" />
+            </label>
+            <label>
+              <span>Status</span>
+              <select id="statusFilter">
+                <option value="all">Todos</option>
+                <option value="ativo">Ativo</option>
+                <option value="usado">Usado</option>
+              </select>
+            </label>
+            <label>
+              <span>Tipo de sorteio</span>
+              <select id="typeFilter"><option value="all">Todos</option></select>
+            </label>
+            <label>
+              <span>Ordenar por</span>
+              <select id="sortField">
+                <option value="createdAt_desc">Mais recentes</option>
+                <option value="createdAt_asc">Antigos</option>
+                <option value="codigo_asc">Código A → Z</option>
+                <option value="codigo_desc">Código Z → A</option>
+                <option value="status_asc">Status</option>
+              </select>
+            </label>
+            <label>
+              <span>Itens por página</span>
+              <select id="pageSize">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </label>
+          </div>
+          <div class="table-actions" style="margin-bottom: 16px;">
+            <button id="export-csv" class="secondary-btn">Exportar CSV</button>
+            <button id="export-xlsx" class="secondary-btn">Exportar Excel</button>
+            <button id="export-pdf" class="secondary-btn">Exportar PDF</button>
+          </div>
+          <div id="statusMessage" class="card-footer table-summary"></div>
+          <div id="tableContainer"></div>
+          <div class="table-footer">
+            <div class="pagination-row">
+              <button id="prevPage" class="secondary-btn">Anterior</button>
+              <button id="nextPage" class="secondary-btn">Próxima</button>
+              <span id="pagerInfo"></span>
+            </div>
+            <div id="summaryText" class="table-summary"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="gerador-codigos.js"></script>
+  </body>
+</html>

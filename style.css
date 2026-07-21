@@ -199,6 +199,20 @@ body.theme-light .sidebar {
   transform: translateY(-2px);
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.hero-actions a.secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .large-btn {
   width: 100%;
   padding: 16px;

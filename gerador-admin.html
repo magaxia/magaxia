@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerador - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 18px; }
+      .summary-card { padding: 18px; border-radius: 24px; background: var(--panel-strong); border: 1px solid var(--border); }
+      .summary-card h3 { margin: 0 0 8px; color: var(--muted); font-size: 0.95rem; }
+      .summary-card strong { font-size: 1.8rem; }
+      .empty-state { padding: 20px; border-radius: 20px; }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div>
+            <h1>Gerador SaaS</h1>
+            <p>Dashboard</p>
+          </div>
+        </div>
+        <nav class="nav-links">
+          <a class="nav-btn" href="gerador-codigos.html">Códigos</a>
+          <a class="nav-btn" href="gerador-validar.html">Validar</a>
+          <a class="nav-btn" href="gerador-detalhes.html">Detalhes</a>
+          <a class="nav-btn active" href="gerador-admin.html">Dashboard</a>
+          <a class="nav-btn" href="gerador.html">Gerador</a>
+        </nav>
+      </aside>
+      <main class="main-content">
+        <div class="page-header">
+          <h1>Dashboard do Gerador</h1>
+          <p>Estatísticas rápidas dos códigos persistidos na coleção vip5_gerador_codigos.</p>
+        </div>
+        <div class="glass-card panel-card" style="margin-bottom: 18px;">
+          <div class="filter-panel" style="margin-bottom: 0;">
+            <label>
+              <span>Tipo</span>
+              <select id="adminTypeFilter">
+                <option value="all">Todos</option>
+              </select>
+            </label>
+            <label>
+              <span>Status</span>
+              <select id="adminStatusFilter">
+                <option value="all">Todos</option>
+                <option value="ativo">Ativo</option>
+                <option value="usado">Usado</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div id="dashboardSummary" class="dashboard-grid"></div>
+        <div class="glass-card panel-card">
+          <h2>Resumo operacional</h2>
+          <div id="activityChart" class="dashboard-grid"></div>
+          <p>Este painel é independente e não acessa o sistema VIP.</p>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="gerador-admin.js"></script>
+  </body>
+</html>

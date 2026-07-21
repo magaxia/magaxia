@@ -1,8 +1,10 @@
 import { db } from "./vip5-firebase.js";
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
+  getDocs,
   serverTimestamp,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -33,13 +35,11 @@ function buildGeneratorCode() {
 }
 
 export async function validateGeneratorCode(code) {
-  const safeCode = normalizeCode(code);
-  if (!safeCode) {
+  const data = await getGeneratorCode(code);
+  if (!data) {
     return false;
   }
-  const ref = doc(generatorCollection, safeCode);
-  const snap = await getDoc(ref);
-  return !snap.exists();
+  return String(data.status || "").toLowerCase() === "ativo" && data.usado !== true;
 }
 
 export async function getGeneratorCode(code) {
@@ -55,6 +55,22 @@ export async function getGeneratorCode(code) {
   }
 
   return { id: snap.id, ...snap.data() };
+}
+
+export async function listGeneratorCodes() {
+  const snapshot = await getDocs(generatorCollection);
+  return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+}
+
+export async function deleteGeneratorCode(code) {
+  const safeCode = normalizeCode(code);
+  if (!safeCode) {
+    throw new Error("Código inválido.");
+  }
+
+  const ref = doc(generatorCollection, safeCode);
+  await deleteDoc(ref);
+  return true;
 }
 
 async function generateUniqueCode(existingCodes = new Set()) {
